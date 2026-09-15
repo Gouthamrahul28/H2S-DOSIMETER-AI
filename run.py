@@ -32,7 +32,7 @@ def main():
         "backend.main:app",
         host=config.HOST,
         port=config.PORT,
-        reload=False,
+        reload=True,
         log_level="info"
     )
 
