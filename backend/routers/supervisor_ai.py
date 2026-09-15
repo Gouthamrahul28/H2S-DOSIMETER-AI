@@ -158,49 +158,6 @@ def get_active_model(db: Session = Depends(get_db)):
         "total_test_samples": len(parity_points)
     }
 
-    # 3. Optical Feature Correlation Matrix (Heatmap 1)
-    feature_correlation = {
-        "features": ["H2S PPM", "Red (R)", "Green (G)", "Blue (B)", "CIE L*", "CIE a*", "CIE b*", "Hue ∠"],
-        "short_names": ["PPM", "R", "G", "B", "L*", "a*", "b*", "Hue"],
-        "matrix": [
-            [ 1.00,  0.89,   0.98,  -0.97,  0.93,  -0.74,   0.99,   0.99],
-            [ 0.89,  1.00,   0.92,  -0.86,  0.88,  -0.58,   0.91,   0.90],
-            [ 0.98,  0.92,   1.00,  -0.96,  0.97,  -0.78,   0.99,   0.98],
-            [-0.97, -0.86,  -0.96,   1.00, -0.91,   0.72,  -0.98,  -0.97],
-            [ 0.93,  0.88,   0.97,  -0.91,  1.00,  -0.81,   0.95,   0.94],
-            [-0.74, -0.58,  -0.78,   0.72, -0.81,   1.00,  -0.77,  -0.75],
-            [ 0.99,  0.91,   0.99,  -0.98,  0.95,  -0.77,   1.00,   0.99],
-            [ 0.99,  0.90,   0.98,  -0.97,  0.94,  -0.75,   0.99,   1.00]
-        ],
-        "interpretations": {
-            "PPM_Green (G)": "+0.98 (Primary Indicator): Free yellow PAN emergence causes dramatic rise in green channel reflectance.",
-            "PPM_Blue (B)": "-0.97 (Chelate Depletion): Cu(II)-PAN consumption causes steady reduction in blue absorbance.",
-            "PPM_CIE b*": "+0.99 (Yellow Shift): Direct linear migration from purple negative b* to yellow positive b*.",
-            "PPM_Hue ∠": "+0.99 (Spectrum Arc): Continuous clockwise rotation from 342.5° (purple) to 51.1° (yellow)."
-        }
-    }
-
-    # 4. Spatiotemporal Facility Exposure Risk Heatmap (Heatmap 2)
-    exposure_heatmap = {
-        "zones": [
-            {"id": "ZA", "name": "Zone A: Desulfurization Stripper", "type": "High Risk", "color": "#ef4444"},
-            {"id": "ZB", "name": "Zone B: Wellhead & Separators", "type": "Process Area", "color": "#f59e0b"},
-            {"id": "ZC", "name": "Zone C: Acid Gas Flare Header", "type": "Flare Line", "color": "#dc2626"},
-            {"id": "ZD", "name": "Zone D: Compressor Station", "type": "Mechanical", "color": "#38bdf8"},
-            {"id": "ZE", "name": "Zone E: Perimeter Control Room", "type": "Safe Baseline", "color": "#10b981"}
-        ],
-        "time_blocks": ["00-03h", "03-06h", "06-09h", "09-12h", "12-15h", "15-18h", "18-21h", "21-24h"],
-        "grid": [
-            [ 4.2,  3.8,  8.5, 18.2, 24.5, 14.0,  9.2,  5.1],
-            [ 1.5,  1.2,  3.4,  7.8,  9.5,  6.2,  3.1,  1.8],
-            [ 0.8,  0.5,  2.1, 45.0, 12.4,  3.5,  1.2,  0.9],
-            [ 2.1,  1.8,  4.5,  6.2,  5.8,  4.1,  2.5,  1.9],
-            [ 0.1,  0.1,  0.2,  0.4,  0.5,  0.3,  0.2,  0.1]
-        ],
-        "max_ppm": 45.0,
-        "active_dosimeters": 36
-    }
-
     return {
         "version": m.version,
         "model_name": m.model_name,
@@ -219,11 +176,8 @@ def get_active_model(db: Session = Depends(get_db)):
             "points": parity_points,
             "stats": parity_stats
         },
-        "feature_correlation": feature_correlation,
-        "exposure_heatmap": exposure_heatmap,
         "deployed_at": m.deployed_at.isoformat() if m.deployed_at else None
     }
-
 
 @router.post("/rollback")
 def rollback_model(payload: ModelRollbackRequest, db: Session = Depends(get_db)):
