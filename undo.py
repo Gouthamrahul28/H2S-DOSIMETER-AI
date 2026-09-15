@@ -99,7 +99,7 @@ def list_model_versions():
     print(f"Currently Active Model: {active}\n")
     for v_name, meta in data.get("versions", {}).items():
         is_active = " [ACTIVE]" if v_name == active else ""
-        print(f"• Version: {v_name}{is_active}")
+        print(f"* Version: {v_name}{is_active}")
         print(f"  Name: {meta.get('model_name')}")
         print(f"  Accuracy: {meta.get('test_accuracy', 'N/A')}")
         print(f"  Status: {meta.get('approval_status')}")
