@@ -347,8 +347,74 @@
             </div>
           </div>
 
+          <!-- Row 4: Heatmap Analysis: Chemical Optical Feature Correlation & Facility Exposure Risk -->
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:24px; margin-bottom:16px;">
+            <div>
+              <h3 style="font-size:18px; font-weight:700;">AI Correlation & Facility Spatiotemporal Heatmaps</h3>
+              <p style="font-size:13px; color:var(--text-muted);">Pearson correlation matrix across optical features (R, G, B, L*, a*, b*, Hue) and facility zone exposure intensity.</p>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <span class="badge-cat badge-green" style="font-size:11px;">Max |r| = 0.99 (Hue & b*)</span>
+              <span class="badge-cat badge-yellow" style="font-size:11px;">5 Plant Zones Monitored</span>
+            </div>
+          </div>
+
+          <div class="accuracy-grid">
+            <!-- Heatmap Card 1: Optical Feature Correlation Matrix Heatmap -->
+            <div class="chart-card">
+              <div class="chart-card-header">
+                <div class="chart-title">
+                  <span>🔥 Chemical Feature Correlation Matrix (Pearson r)</span>
+                </div>
+                <span style="font-size:11px; color:var(--text-muted);">8×8 Feature Covariance</span>
+              </div>
+              <div class="heatmap-container" id="corr-heatmap-container">
+                <div id="corr-heatmap-content" style="width:100%; overflow-x:auto;">
+                  <!-- Rendered dynamically -->
+                </div>
+                <div id="corr-tooltip" class="chart-tooltip-box"></div>
+                <div class="heatmap-scale-bar">
+                  <span>-1.0 (Inverse)</span>
+                  <div class="heatmap-gradient" style="background:linear-gradient(90deg, #1d4ed8, #0f172a 50%, #ef4444);"></div>
+                  <span>+1.0 (Direct)</span>
+                </div>
+              </div>
+              <div style="margin-top:10px; font-size:11px; color:var(--text-muted); display:flex; justify-content:space-between;">
+                <span>Green (+0.98): PAN Release</span>
+                <span>Blue (-0.97): Chelate Depletion</span>
+                <span>Hue (+0.99): Spectral Angle</span>
+              </div>
+            </div>
+
+            <!-- Heatmap Card 2: Facility Spatiotemporal Exposure Risk Heatmap -->
+            <div class="chart-card">
+              <div class="chart-card-header">
+                <div class="chart-title">
+                  <span>🗺️ Facility Exposure Risk Heatmap (Zone × Shift)</span>
+                </div>
+                <span style="font-size:11px; color:#38bdf8;">Live 24h Aggregation</span>
+              </div>
+              <div class="heatmap-container" id="exposure-heatmap-container">
+                <div id="exposure-heatmap-content" style="width:100%; overflow-x:auto;">
+                  <!-- Rendered dynamically -->
+                </div>
+                <div id="exposure-tooltip" class="chart-tooltip-box"></div>
+                <div class="heatmap-scale-bar">
+                  <span>0 ppm (Safe)</span>
+                  <div class="heatmap-gradient" style="background:linear-gradient(90deg, rgba(16,185,129,0.3), rgba(234,179,8,0.6) 35%, rgba(249,115,22,0.8) 65%, #dc2626);"></div>
+                  <span>50+ ppm (Critical)</span>
+                </div>
+              </div>
+              <div style="margin-top:10px; font-size:11px; color:var(--text-muted); display:flex; justify-content:space-between;">
+                <span>Safe (&lt;1 ppm): Teal</span>
+                <span>Caution (5-15): Amber</span>
+                <span>Hazard (&gt;30 ppm): Crimson</span>
+              </div>
+            </div>
+          </div>
 
           <!-- Model Version Registry Table -->
+
           <div class="glass-card" style="margin-bottom: 28px;">
             <h3 style="font-size:16px; margin-bottom:14px;">Model Version Registry & Deployment Actions</h3>
             <table style="font-size:13px;">

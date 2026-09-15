@@ -596,3 +596,63 @@ input[type="range"] {
   white-space: nowrap;
 }
 
+/* Heatmap Component Styles */
+.heatmap-container {
+  overflow-x: auto;
+  padding: 8px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.heatmap-table {
+  border-collapse: separate;
+  border-spacing: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+}
+
+.heatmap-th {
+  padding: 4px 6px;
+  color: var(--text-secondary);
+  font-weight: 700;
+  text-align: center;
+}
+
+.heatmap-cell {
+  width: 44px;
+  height: 38px;
+  border-radius: 4px;
+  text-align: center;
+  vertical-align: middle;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  position: relative;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.heatmap-cell:hover {
+  transform: scale(1.12);
+  z-index: 10;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.6);
+  border: 1px solid #ffffff;
+}
+
+.heatmap-scale-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.heatmap-gradient {
+  width: 140px;
+  height: 10px;
+  border-radius: 5px;
+}
+
