@@ -4,7 +4,7 @@
     "v0.9": {
       "model_name": "MobileNetV3_Initial_Pilot",
       "test_accuracy": 0.918,
-      "approval_status": "Retired (Archived)",
+      "approval_status": "Approved (Active)",
       "created_at": "2026-08-26 07:26:16.119539"
     },
     "v1.0": {
