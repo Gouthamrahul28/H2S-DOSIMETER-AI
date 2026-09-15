@@ -134,84 +134,141 @@ const simPpmLabel = document.getElementById("worker-sim-ppm-val");
 const roiPreview = document.getElementById("strip-reaction-preview");
 const rejectionCard = document.getElementById("scan-rejection-card");
 
+const modeBtnCamera = document.getElementById("mode-btn-camera");
+const modeBtnSim = document.getElementById("mode-btn-sim");
+const cameraControls = document.getElementById("camera-mode-controls");
+const simControls = document.getElementById("sim-mode-controls");
+const videoEl = document.getElementById("webcam-video");
+const photoPreviewEl = document.getElementById("photo-preview-img");
+const fileInputEl = document.getElementById("file-strip-input");
+const btnToggleWebcam = document.getElementById("btn-toggle-webcam");
+const cameraStatusText = document.getElementById("camera-status-text");
+
+let scanMode = "camera"; // "camera" or "sim"
+let webcamStream = null;
+let uploadedPhotoBase64 = null;
 let overrideImageBase64 = null;
 
-function updateReactionColor(ppm) {
-  overrideImageBase64 = null;
+// Mode Switching
+function setScanMode(mode) {
+  scanMode = mode;
   if (rejectionCard) rejectionCard.style.display = "none";
-  const match = getCupanColor(ppm);
-  simPpmLabel.textContent = `${ppm.toFixed(1)} ppm (${match.stage})`;
 
-  const r = match.rgb[0], g = match.rgb[1], b = match.rgb[2];
-  // Calculate relative luminance for text contrast
-  const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-  const textColor = lum > 140 ? "#0f172a" : "#ffffff";
+  if (mode === "camera") {
+    modeBtnCamera.style.background = "#0284c7";
+    modeBtnCamera.style.color = "#fff";
+    modeBtnCamera.style.fontWeight = "700";
 
-  roiPreview.style.background = `rgb(${r}, ${g}, ${b})`;
-  roiPreview.style.color = textColor;
-  roiPreview.innerHTML = `Cu-PAN Reaction<br><b>${match.stage} (${ppm} ppm)</b><br><span style="font-size:9px; opacity:0.85;">${match.name}</span>`;
-}
+    modeBtnSim.style.background = "transparent";
+    modeBtnSim.style.color = "#94a3b8";
+    modeBtnSim.style.fontWeight = "normal";
 
-simPpmSlider.addEventListener("input", (e) => {
-  updateReactionColor(parseFloat(e.target.value));
-});
+    cameraControls.style.display = "block";
+    simControls.style.display = "none";
 
-// Helper to synthesize a realistic 224x224 test strip in canvas
-function generateTestStripBase64(rgb) {
-  const canvas = document.createElement("canvas");
-  canvas.width = 224;
-  canvas.height = 224;
-  const ctx = canvas.getContext("2d");
-  ctx.fillStyle = "#f5f5f5";
-  ctx.fillRect(0, 0, 224, 224);
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(10, 10, 20, 20);
-  ctx.fillStyle = "#141414";
-  ctx.fillRect(10, 194, 20, 20);
-  ctx.fillStyle = `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
-  ctx.fillRect(40, 40, 144, 144);
-  const imgData = ctx.getImageData(0, 0, 224, 224);
-  for (let i = 0; i < imgData.data.length; i += 4) {
-    const noise = (Math.random() - 0.5) * 6;
-    imgData.data[i] = Math.min(255, Math.max(0, imgData.data[i] + noise));
-    imgData.data[i+1] = Math.min(255, Math.max(0, imgData.data[i+1] + noise));
-    imgData.data[i+2] = Math.min(255, Math.max(0, imgData.data[i+2] + noise));
+    // Restore camera view
+    if (uploadedPhotoBase64) {
+      photoPreviewEl.style.display = "block";
+      roiPreview.style.display = "none";
+    } else if (webcamStream) {
+      videoEl.style.display = "block";
+      roiPreview.style.display = "none";
+    } else {
+      roiPreview.style.display = "flex";
+      roiPreview.style.background = "#111827";
+      roiPreview.style.color = "#38bdf8";
+      roiPreview.innerHTML = "Position<br>Strip Here";
+    }
+  } else {
+    modeBtnSim.style.background = "#0284c7";
+    modeBtnSim.style.color = "#fff";
+    modeBtnSim.style.fontWeight = "700";
+
+    modeBtnCamera.style.background = "transparent";
+    modeBtnCamera.style.color = "#94a3b8";
+    modeBtnCamera.style.fontWeight = "normal";
+
+    cameraControls.style.display = "none";
+    simControls.style.display = "block";
+
+    videoEl.style.display = "none";
+    photoPreviewEl.style.display = "none";
+    roiPreview.style.display = "flex";
+    updateReactionColor(parseFloat(simPpmSlider.value));
   }
-  ctx.putImageData(imgData, 0, 0);
-  return canvas.toDataURL("image/png").split(",")[1];
 }
 
-// Quick Test Buttons
-document.getElementById("btn-test-green")?.addEventListener("click", () => {
-  overrideImageBase64 = generateTestStripBase64([0, 210, 0]);
-  roiPreview.style.background = "rgb(0, 210, 0)";
-  roiPreview.style.color = "#000";
-  roiPreview.innerHTML = `⚠️ ALIEN COLOR<br><b>Pure Green</b><br><span style="font-size:9px;">Excluded from Cu-PAN</span>`;
-  simPpmLabel.textContent = "Alien (Green)";
-  if (rejectionCard) rejectionCard.style.display = "none";
+modeBtnCamera?.addEventListener("click", () => setScanMode("camera"));
+modeBtnSim?.addEventListener("click", () => setScanMode("sim"));
+
+// Real Hardware Webcam Toggle
+btnToggleWebcam?.addEventListener("click", async () => {
+  if (webcamStream) {
+    // Stop live stream
+    webcamStream.getTracks().forEach(t => t.stop());
+    webcamStream = null;
+    videoEl.style.display = "none";
+    videoEl.srcObject = null;
+    btnToggleWebcam.textContent = "📹 Start Camera";
+    btnToggleWebcam.style.background = "";
+    cameraStatusText.textContent = "Camera stopped. Pick photo or start camera.";
+    if (!uploadedPhotoBase64) {
+      roiPreview.style.display = "flex";
+    }
+  } else {
+    // Start live stream
+    try {
+      photoPreviewEl.style.display = "none";
+      uploadedPhotoBase64 = null;
+      cameraStatusText.textContent = "Requesting device camera access...";
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: "environment" },
+          width: { ideal: 640 },
+          height: { ideal: 480 }
+        }
+      });
+      webcamStream = stream;
+      videoEl.srcObject = stream;
+      videoEl.style.display = "block";
+      roiPreview.style.display = "none";
+      btnToggleWebcam.textContent = "⏹ Stop Camera";
+      btnToggleWebcam.style.background = "#dc2626";
+      cameraStatusText.textContent = "✓ Camera active. Align strip in guide.";
+    } catch (err) {
+      console.warn("Webcam access error:", err);
+      cameraStatusText.textContent = "⚠️ Camera not available. Use 'Pick Photo'.";
+      alert("Hardware Camera Unavailable: " + err.message + "\n\nYou can use the 'Pick Photo' button to select or take any photo on your device!");
+    }
+  }
 });
 
-document.getElementById("btn-test-blue")?.addEventListener("click", () => {
-  overrideImageBase64 = generateTestStripBase64([0, 0, 220]);
-  roiPreview.style.background = "rgb(0, 0, 220)";
-  roiPreview.style.color = "#fff";
-  roiPreview.innerHTML = `⚠️ ALIEN COLOR<br><b>Pure Blue</b><br><span style="font-size:9px;">Excluded from Cu-PAN</span>`;
-  simPpmLabel.textContent = "Alien (Blue)";
-  if (rejectionCard) rejectionCard.style.display = "none";
-});
+// Real Photo File Input
+fileInputEl?.addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
 
-document.getElementById("btn-test-s0")?.addEventListener("click", () => {
-  simPpmSlider.value = 0;
-  updateReactionColor(0);
-});
+  // Stop webcam if running
+  if (webcamStream) {
+    webcamStream.getTracks().forEach(t => t.stop());
+    webcamStream = null;
+    videoEl.style.display = "none";
+    videoEl.srcObject = null;
+    btnToggleWebcam.textContent = "📹 Start Camera";
+    btnToggleWebcam.style.background = "";
+  }
 
-document.getElementById("btn-test-s10")?.addEventListener("click", () => {
-  simPpmSlider.value = 110;
-  updateReactionColor(110);
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    uploadedPhotoBase64 = evt.target.result;
+    photoPreviewEl.src = uploadedPhotoBase64;
+    photoPreviewEl.style.display = "block";
+    roiPreview.style.display = "none";
+    cameraStatusText.textContent = `✓ Loaded photo: ${file.name}`;
+  };
+  reader.readAsDataURL(file);
 });
-
-// Initialize color
-updateReactionColor(18.5);
 
 // 4. Capture & Scan Submission
 document.getElementById("btn-capture-scan").addEventListener("click", async () => {
@@ -220,21 +277,41 @@ document.getElementById("btn-capture-scan").addEventListener("click", async () =
   btn.disabled = true;
   if (rejectionCard) rejectionCard.style.display = "none";
 
-  const ppm = parseFloat(simPpmSlider.value);
-
   try {
     const payload = {
       worker_id: currentWorker.id,
       strip_id: currentStripId
     };
 
-    if (overrideImageBase64) {
-      payload.image_base64 = overrideImageBase64;
+    if (scanMode === "camera") {
+      if (webcamStream && videoEl.videoWidth > 0) {
+        // Snap frame from hardware webcam
+        const canvas = document.getElementById("capture-canvas");
+        canvas.width = videoEl.videoWidth;
+        canvas.height = videoEl.videoHeight;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+        payload.image_base64 = canvas.toDataURL("image/jpeg", 0.9);
+      } else if (uploadedPhotoBase64) {
+        // Use real uploaded photo
+        payload.image_base64 = uploadedPhotoBase64;
+      } else {
+        alert("Please click 'Start Camera' or 'Pick Photo' to provide a real strip image, or switch to 'Chemical Sim' mode!");
+        btn.textContent = "⚡ SCAN NOW (AI Analysis)";
+        btn.disabled = false;
+        return;
+      }
     } else {
-      payload.simulated_ppm = ppm;
+      // Simulation mode
+      if (overrideImageBase64) {
+        payload.image_base64 = overrideImageBase64;
+      } else {
+        payload.simulated_ppm = parseFloat(simPpmSlider.value);
+      }
     }
 
     const res = await API.submitScan(payload);
+
 
     // Populate Result Screen (Section 3.1 & Page 8)
     document.getElementById("res-ppm").textContent = `${res.predicted_ppm} ppm`;
