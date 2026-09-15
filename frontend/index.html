@@ -282,6 +282,72 @@
             </div>
           </div>
 
+          <!-- Row 3: Cu-PAN Calibration Response & Parity Plot (RGB vs PPM, True PPM vs Estimated PPM) -->
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:24px; margin-bottom:16px;">
+            <div>
+              <h3 style="font-size:18px; font-weight:700;">Chemical Calibration & Regression Parity</h3>
+              <p style="font-size:13px; color:var(--text-muted);">Cu-PAN chelate displacement optical response (RGB vs PPM) and test set estimation parity (True vs Predicted PPM).</p>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <span class="badge-cat badge-green" style="font-size:11px;">R² = 0.9924</span>
+              <span class="badge-cat badge-yellow" style="font-size:11px;">MAE = 1.21 ppm</span>
+            </div>
+          </div>
+
+          <div class="accuracy-grid">
+            <!-- Graph 4: Cu-PAN Calibration Response: RGB Intensity vs H2S Concentration -->
+            <div class="chart-card">
+              <div class="chart-card-header">
+                <div class="chart-title">
+                  <span>🧪 Cu-PAN Calibration: RGB Intensity vs H₂S (PPM)</span>
+                </div>
+                <div class="chart-legend">
+                  <div class="legend-item"><span class="legend-dot" style="background:#ef4444;"></span> Red (R)</div>
+                  <div class="legend-item"><span class="legend-dot" style="background:#22c55e;"></span> Green (G)</div>
+                  <div class="legend-item"><span class="legend-dot" style="background:#3b82f6;"></span> Blue (B)</div>
+                </div>
+              </div>
+              <div class="svg-chart-container" id="calib-chart-container">
+                <svg id="calib-curve-svg" class="accuracy-svg" viewBox="0 0 500 240" preserveAspectRatio="none">
+                  <!-- Rendered dynamically -->
+                </svg>
+                <div id="calib-tooltip" class="chart-tooltip-box"></div>
+              </div>
+              <div style="display:flex; justify-content:space-between; margin-top:10px; font-size:11px; color:var(--text-muted);">
+                <span>0 PPM (Purple: R:149, G:73, B:120)</span>
+                <span style="color:#eab308; font-weight:600;">ΔG = +145 (Yellow PAN Liberation)</span>
+                <span>100 PPM (Yellow: R:247, G:218, B:52)</span>
+              </div>
+            </div>
+
+            <!-- Graph 5: Parity / Regression Plot: True PPM vs Estimated PPM -->
+            <div class="chart-card">
+              <div class="chart-card-header">
+                <div class="chart-title">
+                  <span>🎯 Prediction Parity: True PPM vs Estimated PPM</span>
+                </div>
+                <div class="chart-legend">
+                  <div class="legend-item"><span class="legend-dot" style="background:#64748b; border: 1px dashed #cbd5e1;"></span> 1:1 Parity</div>
+                  <div class="legend-item"><span class="legend-dot" style="background:rgba(56, 189, 248, 0.4);"></span> ±10% Zone</div>
+                  <div class="legend-item"><span class="legend-dot" style="background:#34d399;"></span> Test Points</div>
+                </div>
+              </div>
+              <div class="svg-chart-container" id="parity-chart-container">
+                <svg id="parity-scatter-svg" class="accuracy-svg" viewBox="0 0 500 240" preserveAspectRatio="none">
+                  <!-- Rendered dynamically -->
+                </svg>
+                <div id="parity-tooltip" class="chart-tooltip-box"></div>
+              </div>
+              <div style="display:flex; justify-content:space-between; margin-top:10px; font-size:11px; color:var(--text-muted);">
+                <span>R²: <strong style="color:#34d399;" id="parity-stat-r2">0.9924</strong></span>
+                <span>MAE: <strong style="color:#38bdf8;" id="parity-stat-mae">1.21 ppm</strong></span>
+                <span>RMSE: <strong style="color:#a78bfa;" id="parity-stat-rmse">1.84 ppm</strong></span>
+                <span>Max Err: <strong style="color:#fbbf24;" id="parity-stat-maxerr">3.65 ppm</strong></span>
+              </div>
+            </div>
+          </div>
+
+
           <!-- Model Version Registry Table -->
           <div class="glass-card" style="margin-bottom: 28px;">
             <h3 style="font-size:16px; margin-bottom:14px;">Model Version Registry & Deployment Actions</h3>

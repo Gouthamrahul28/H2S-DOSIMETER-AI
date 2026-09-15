@@ -156,11 +156,13 @@ async function loadAIModelCenter() {
     f1El.textContent = `${Math.round(activeModel.metrics.f1_macro * 1000) / 10}%`;
   }
 
-  // Render All 4 Accuracy Graphs
+  // Render All Accuracy & Calibration Graphs
   renderLearningCurve(activeModel.training_curve || []);
   renderVersionComparison(activeModel.model_comparison || []);
   renderPerClassAccuracy(activeModel.per_class_metrics || []);
   renderConfusionMatrix(activeModel.confusion_matrix, activeModel.classes);
+  renderCalibrationCurve(activeModel.calibration_curve || []);
+  renderParityPlot(activeModel.parity_plot || {});
 
   const models = await API.getModels();
   const tbody = document.getElementById("models-table-body");
@@ -401,6 +403,233 @@ function renderConfusionMatrix(matrix, classes) {
   }
   html += `</div></div>`;
   container.innerHTML = html;
+}
+
+// Graph 4: Cu-PAN Calibration Response (RGB Intensity vs H2S PPM)
+function renderCalibrationCurve(curve) {
+  const svg = document.getElementById("calib-curve-svg");
+  if (!svg || !curve || curve.length === 0) return;
+
+  const w = 500, h = 240;
+  const padL = 45, padR = 25, padT = 20, padB = 30;
+  const plotW = w - padL - padR;
+  const plotH = h - padT - padB;
+
+  const maxPpm = 120;
+  const x = ppm => padL + (ppm / maxPpm) * plotW;
+  const y = rgb => padT + ((255 - rgb) / 255) * plotH;
+
+  // Build grid lines
+  let gridLines = "";
+  // Y-axis: RGB 0 to 255
+  [0, 50, 100, 150, 200, 255].forEach(val => {
+    const yPos = y(val);
+    gridLines += `
+      <line x1="${padL}" y1="${yPos}" x2="${w - padR}" y2="${yPos}" stroke="rgba(255,255,255,0.06)" stroke-dasharray="3,3" />
+      <text x="${padL - 8}" y="${yPos + 3}" fill="#64748b" font-size="9" text-anchor="end">${val}</text>
+    `;
+  });
+
+  // X-axis: 0 to 120 PPM
+  [0, 20, 40, 60, 80, 100, 120].forEach(ppm => {
+    const xPos = x(ppm);
+    gridLines += `
+      <line x1="${xPos}" y1="${padT}" x2="${xPos}" y2="${h - padB}" stroke="rgba(255,255,255,0.04)" />
+      <text x="${xPos}" y="${h - padB + 16}" fill="#64748b" font-size="9" text-anchor="middle">${ppm} ppm</text>
+    `;
+  });
+
+  // Polylines for R, G, B
+  const rPts = curve.map(pt => `${x(pt.ppm).toFixed(1)},${y(pt.r).toFixed(1)}`).join(" ");
+  const gPts = curve.map(pt => `${x(pt.ppm).toFixed(1)},${y(pt.g).toFixed(1)}`).join(" ");
+  const bPts = curve.map(pt => `${x(pt.ppm).toFixed(1)},${y(pt.b).toFixed(1)}`).join(" ");
+
+  svg.innerHTML = `
+    <defs>
+      <filter id="glowGreen" x="-20%" y="-20%" width="140%" height="140%">
+        <feGaussianBlur stdDeviation="2" result="blur" />
+        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+      </filter>
+    </defs>
+    ${gridLines}
+    <!-- Red channel polyline -->
+    <polyline points="${rPts}" fill="none" stroke="#ef4444" stroke-width="2.2" opacity="0.9" />
+    <!-- Blue channel polyline -->
+    <polyline points="${bPts}" fill="none" stroke="#3b82f6" stroke-width="2.2" opacity="0.9" />
+    <!-- Green channel polyline (Primary displacement indicator) -->
+    <polyline points="${gPts}" fill="none" stroke="#22c55e" stroke-width="2.8" filter="url(#glowGreen)" />
+    <!-- Data points for hover -->
+    ${curve.map(pt => `
+      <circle cx="${x(pt.ppm).toFixed(1)}" cy="${y(pt.g).toFixed(1)}" r="4" fill="#0f172a" stroke="#22c55e" stroke-width="1.8" class="calib-point" data-ppm="${pt.ppm}" data-r="${pt.r}" data-g="${pt.g}" data-b="${pt.b}" data-stage="${pt.stage}" style="cursor:pointer;" />
+    `).join("")}
+  `;
+
+  // Tooltip interaction
+  const tooltip = document.getElementById("calib-tooltip");
+  const container = document.getElementById("calib-chart-container");
+  if (tooltip && container) {
+    const points = svg.querySelectorAll(".calib-point");
+    points.forEach(p => {
+      p.addEventListener("mouseenter", (e) => {
+        const ppm = parseFloat(e.target.getAttribute("data-ppm")).toFixed(1);
+        const r = e.target.getAttribute("data-r");
+        const g = e.target.getAttribute("data-g");
+        const b = e.target.getAttribute("data-b");
+        const stage = e.target.getAttribute("data-stage");
+
+        const rect = container.getBoundingClientRect();
+        const ptX = e.clientX - rect.left;
+        const ptY = e.clientY - rect.top;
+
+        tooltip.style.left = `${ptX}px`;
+        tooltip.style.top = `${ptY}px`;
+        tooltip.innerHTML = `
+          <strong>${ppm} PPM</strong> <span style="color:#94a3b8; font-size:10px;">(${stage})</span><br>
+          <span style="color:#ef4444;">● R: ${r}</span> | <span style="color:#22c55e;">● G: ${g}</span> | <span style="color:#3b82f6;">● B: ${b}</span>
+          <div style="margin-top:4px; display:flex; align-items:center; gap:6px;">
+            <span style="width:14px; height:14px; border-radius:3px; background:rgb(${r},${g},${b}); border:1px solid #fff; display:inline-block;"></span>
+            <span style="font-family:'JetBrains Mono'; font-size:10px; color:#cbd5e1;">rgb(${r}, ${g}, ${b})</span>
+          </div>
+        `;
+        tooltip.style.display = "block";
+      });
+      p.addEventListener("mouseleave", () => {
+        tooltip.style.display = "none";
+      });
+    });
+  }
+}
+
+// Graph 5: Parity Plot: True PPM vs Estimated PPM
+function renderParityPlot(parityData) {
+  const svg = document.getElementById("parity-scatter-svg");
+  if (!svg || !parityData) return;
+
+  const points = parityData.points || [];
+  const stats = parityData.stats || {};
+
+  // Update summary stats pills
+  if (stats.r_squared !== undefined) {
+    const r2El = document.getElementById("parity-stat-r2");
+    if (r2El) r2El.textContent = stats.r_squared.toFixed(4);
+  }
+  if (stats.mae !== undefined) {
+    const maeEl = document.getElementById("parity-stat-mae");
+    if (maeEl) maeEl.textContent = `${stats.mae.toFixed(2)} ppm`;
+  }
+  if (stats.rmse !== undefined) {
+    const rmseEl = document.getElementById("parity-stat-rmse");
+    if (rmseEl) rmseEl.textContent = `${stats.rmse.toFixed(2)} ppm`;
+  }
+  if (stats.max_error !== undefined) {
+    const maxEl = document.getElementById("parity-stat-maxerr");
+    if (maxEl) maxEl.textContent = `${stats.max_error.toFixed(2)} ppm`;
+  }
+
+  const w = 500, h = 240;
+  const padL = 45, padR = 25, padT = 20, padB = 30;
+  const plotW = w - padL - padR;
+  const plotH = h - padT - padB;
+
+  const maxVal = 120;
+  const x = val => padL + (val / maxVal) * plotW;
+  const y = val => padT + ((maxVal - val) / maxVal) * plotH;
+
+  // Build grid lines
+  let gridLines = "";
+  [0, 20, 40, 60, 80, 100, 120].forEach(val => {
+    const yPos = y(val);
+    const xPos = x(val);
+    // Horizontal
+    gridLines += `
+      <line x1="${padL}" y1="${yPos}" x2="${w - padR}" y2="${yPos}" stroke="rgba(255,255,255,0.06)" stroke-dasharray="3,3" />
+      <text x="${padL - 8}" y="${yPos + 3}" fill="#64748b" font-size="9" text-anchor="end">${val}</text>
+    `;
+    // Vertical
+    gridLines += `
+      <line x1="${xPos}" y1="${padT}" x2="${xPos}" y2="${h - padB}" stroke="rgba(255,255,255,0.04)" />
+      <text x="${xPos}" y="${h - padB + 16}" fill="#64748b" font-size="9" text-anchor="middle">${val}</text>
+    `;
+  });
+
+  // Ideal 1:1 Parity Line: (0, 0) to (120, 120)
+  const x0 = x(0), y0 = y(0);
+  const x120 = x(120), y120 = y(120);
+  const parityLine = `<line x1="${x0}" y1="${y0}" x2="${x120}" y2="${y120}" stroke="#64748b" stroke-width="1.8" stroke-dasharray="4,4" />`;
+
+  // +/- 10% Tolerance Cone polygon
+  const topPts = [0, 20, 40, 60, 80, 100, 120].map(p => {
+    const up = Math.min(120, p * 1.1 + 1.0);
+    return `${x(p).toFixed(1)},${y(up).toFixed(1)}`;
+  });
+  const botPts = [120, 100, 80, 60, 40, 20, 0].map(p => {
+    const low = Math.max(0, p * 0.9 - 1.0);
+    return `${x(p).toFixed(1)},${y(low).toFixed(1)}`;
+  });
+  const conePolyPts = topPts.join(" ") + " " + botPts.join(" ");
+
+  // Category color mapping
+  const catColors = {
+    "C0": "#954978",
+    "C1": "#C1586A",
+    "C2": "#E99053",
+    "C3": "#EEB944",
+    "C4": "#F7DA34"
+  };
+
+  // Scatter dots
+  const scatterDots = points.map(pt => {
+    const cx = x(pt.true_ppm).toFixed(1);
+    const cy = y(pt.estimated_ppm).toFixed(1);
+    const color = catColors[pt.category] || "#34d399";
+    return `
+      <circle cx="${cx}" cy="${cy}" r="4.5" fill="${color}" stroke="#ffffff" stroke-width="1.2" class="parity-point" data-cat="${pt.category}" data-true="${pt.true_ppm}" data-est="${pt.estimated_ppm}" data-err="${pt.error}" style="cursor:pointer;" />
+    `;
+  }).join("");
+
+  svg.innerHTML = `
+    ${gridLines}
+    <!-- Tolerance Cone -->
+    <polygon points="${conePolyPts}" fill="rgba(56, 189, 248, 0.08)" stroke="rgba(56, 189, 248, 0.25)" stroke-dasharray="2,2" />
+    <!-- 1:1 Parity Line -->
+    ${parityLine}
+    <!-- Scatter Points -->
+    ${scatterDots}
+  `;
+
+  // Tooltip interaction
+  const tooltip = document.getElementById("parity-tooltip");
+  const container = document.getElementById("parity-chart-container");
+  if (tooltip && container) {
+    const dots = svg.querySelectorAll(".parity-point");
+    dots.forEach(d => {
+      d.addEventListener("mouseenter", (e) => {
+        const cat = e.target.getAttribute("data-cat");
+        const truePpm = parseFloat(e.target.getAttribute("data-true")).toFixed(1);
+        const estPpm = parseFloat(e.target.getAttribute("data-est")).toFixed(1);
+        const err = parseFloat(e.target.getAttribute("data-err"));
+        const absErr = Math.abs(err).toFixed(2);
+        const sign = err >= 0 ? "+" : "";
+
+        const rect = container.getBoundingClientRect();
+        const ptX = e.clientX - rect.left;
+        const ptY = e.clientY - rect.top;
+
+        tooltip.style.left = `${ptX}px`;
+        tooltip.style.top = `${ptY}px`;
+        tooltip.innerHTML = `
+          <strong>${cat} Validation Sample</strong><br>
+          <span>True H₂S: <strong>${truePpm} ppm</strong></span><br>
+          <span>Predicted: <strong style="color:#38bdf8;">${estPpm} ppm</strong></span><br>
+          <span>Error: <strong style="color:${absErr > 2.0 ? '#f59e0b' : '#34d399'};">${sign}${err.toFixed(2)} ppm</strong></span>
+        `;
+        tooltip.style.display = "block";
+      });
+      d.addEventListener("mouseleave", () => {
+        tooltip.style.display = "none";
+      });
+    });
+  }
 }
 
 window.quickRollback = async function(version) {

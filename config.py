@@ -6,7 +6,7 @@ Featuring SIH26118 Cu-PAN (Purple -> Yellow) Calibration Color Reference Scale
 
 import os
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Tuple
 
 # Base Directories
 BASE_DIR = Path(__file__).resolve().parent
@@ -94,6 +94,29 @@ CUPAN_LADDER: List[Dict[str, Any]] = [
         "hue": 94.4, "appearance": "Free PAN — response ceiling, full yellow", "category": "C4"
     }
 ]
+
+def get_cupan_rgb_for_ppm(ppm: float) -> Tuple[int, int, int]:
+    """
+    Computes interpolated RGB coordinates along the continuous Cu-PAN displacement ladder.
+    Anchors: S0 (0.0ppm) -> S1 (0.8ppm) -> S2 (2.5ppm) -> S3 (6.0ppm) -> S4 (12.0ppm) ->
+             S5 (22.0ppm) -> S6 (38.0ppm) -> S7 (55.0ppm) -> S8 (72.0ppm) -> S9 (90.0ppm) -> S10 (110.0ppm)
+    """
+    anchors = [0.0, 0.8, 2.5, 6.0, 12.0, 22.0, 38.0, 55.0, 72.0, 90.0, 110.0]
+    if ppm <= 0.0:
+        return tuple(CUPAN_LADDER[0]["rgb"])
+    if ppm >= 110.0:
+        return tuple(CUPAN_LADDER[10]["rgb"])
+    for i in range(len(anchors) - 1):
+        p1, p2 = anchors[i], anchors[i+1]
+        if p1 <= ppm <= p2:
+            frac = (ppm - p1) / (p2 - p1)
+            c1 = CUPAN_LADDER[i]["rgb"]
+            c2 = CUPAN_LADDER[i+1]["rgb"]
+            r = int(round(c1[0] + frac * (c2[0] - c1[0])))
+            g = int(round(c1[1] + frac * (c2[1] - c1[1])))
+            b = int(round(c1[2] + frac * (c2[2] - c1[2])))
+            return (r, g, b)
+    return tuple(CUPAN_LADDER[10]["rgb"])
 
 # Strict Spectral Gating Constraints
 # Cu-PAN reaction only spans Purple-Magenta (320°-360°) and Red-Coral-Orange-Yellow (0°-105°).
