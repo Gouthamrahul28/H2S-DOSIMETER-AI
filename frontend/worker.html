@@ -153,8 +153,11 @@
       </div>
 
       <!-- Quick Test Strips -->
-      <div style="background:rgba(255,255,255,0.03); padding:12px; border-radius:10px; margin-bottom:24px;">
-        <div style="font-size:11px; text-transform:uppercase; color:var(--text-muted); margin-bottom:8px;">Test Presets:</div>
+      <div style="background:rgba(255,255,255,0.03); padding:12px; border-radius:10px; margin-bottom:20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <span style="font-size:11px; text-transform:uppercase; color:var(--text-muted);">Test Presets:</span>
+          <button class="btn btn-secondary" id="btn-worker-quick-issue" style="padding:4px 8px; font-size:11px; color:#38bdf8; border-color:rgba(56,189,248,0.4);">+ Issue Fresh Strip</button>
+        </div>
         <div style="display:flex; flex-wrap:wrap; gap:6px;">
           <button class="btn btn-secondary" style="padding:4px 8px; font-size:11px;" onclick="document.getElementById('strip-input-id').value='STR_0421'">STR_0421 (Valid)</button>
           <button class="btn btn-secondary" style="padding:4px 8px; font-size:11px;" onclick="document.getElementById('strip-input-id').value='STR_EXPIRED'">STR_EXPIRED (Fail)</button>

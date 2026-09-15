@@ -71,6 +71,9 @@
             <svg style="width:16px;height:16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
             Refresh
           </button>
+          <button class="btn btn-secondary" id="btn-issue-strip" style="color:#38bdf8; border-color:rgba(56,189,248,0.4);">
+            + Issue New Strip
+          </button>
           <button class="btn btn-primary" id="btn-quick-scan">
             + Simulate Worker Scan
           </button>
@@ -401,6 +404,39 @@
       <div style="display:flex; justify-content:flex-end; gap:10px;">
         <button class="btn btn-secondary" id="btn-cancel-scan">Cancel</button>
         <button class="btn btn-primary" id="btn-execute-scan">Submit Scan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Issue New Strip Modal -->
+  <div id="issue-strip-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); backdrop-filter:blur(8px); z-index:100; align-items:center; justify-content:center;">
+    <div class="glass-card" style="max-width:460px; width:90%; border:1px solid #38bdf8;">
+      <h3 style="color:#38bdf8; margin-bottom:12px;">Issue / Register Fresh Strip</h3>
+      <p style="font-size:13px; color:var(--text-secondary); margin-bottom:18px;">
+        Registers a fresh H₂S optical indicator strip and assigns it to a worker.
+      </p>
+      <div style="margin-bottom:14px;">
+        <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:6px;">Assign to Worker:</label>
+        <select id="issue-worker-select" style="width:100%; padding:10px; background:#0f172a; color:#fff; border:1px solid var(--border-color); border-radius:8px;"></select>
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:6px;">New Strip ID:</label>
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="issue-strip-id" style="flex:1; padding:10px; background:#0f172a; color:#38bdf8; border:1px solid var(--border-color); border-radius:8px; font-family:'JetBrains Mono'; font-weight:700;">
+          <button class="btn btn-secondary" id="btn-gen-strip-id" style="font-size:12px; padding:6px 10px;">Auto</button>
+        </div>
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:6px;">Batch Number:</label>
+        <input type="text" id="issue-batch-id" value="BATCH_2024_Q4_LOT_03" style="width:100%; padding:10px; background:#0f172a; color:#fff; border:1px solid var(--border-color); border-radius:8px;">
+      </div>
+      <div style="margin-bottom:20px;">
+        <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:6px;">Shelf Validity (Days):</label>
+        <input type="number" id="issue-days-valid" value="90" min="1" max="365" style="width:100%; padding:10px; background:#0f172a; color:#fff; border:1px solid var(--border-color); border-radius:8px;">
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:10px;">
+        <button class="btn btn-secondary" id="btn-cancel-issue-strip">Cancel</button>
+        <button class="btn btn-primary" id="btn-submit-issue-strip">Issue & Activate Strip ✓</button>
       </div>
     </div>
   </div>

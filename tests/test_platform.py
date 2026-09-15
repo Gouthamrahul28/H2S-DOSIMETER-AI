@@ -45,6 +45,15 @@ def test_worker_authentication():
 
 def test_strip_validation_rules():
     """Verify Section 2.2 strict 7-rule validation checks."""
+    # Ensure test strip STR_0421 is active and reset
+    db = SessionLocal()
+    st = db.query(Strip).filter(Strip.id == "STR_0421").first()
+    if st:
+        st.status = "ACTIVE"
+        st.use_count = 0
+        db.commit()
+    db.close()
+
     # 1. Valid strip
     res_valid = client.post("/api/strips/validate", json={"worker_id": "EMP_00542", "strip_id": "STR_0421"})
     assert res_valid.status_code == 200

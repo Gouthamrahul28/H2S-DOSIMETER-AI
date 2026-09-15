@@ -16,13 +16,33 @@ export const API = {
     return await res.json();
   },
 
-  // Strip Validation
+  // Strip Management & Validation
   async validateStrip(workerId, stripId) {
     const res = await fetch(`${API_BASE}/api/strips/validate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ worker_id: workerId, strip_id: stripId })
     });
+    return await res.json();
+  },
+
+  async createStrip(stripId, batchId, assignedWorkerId, daysValid = 90) {
+    const res = await fetch(`${API_BASE}/api/strips`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        strip_id: stripId,
+        batch_id: batchId,
+        assigned_worker_id: assignedWorkerId,
+        days_valid: daysValid
+      })
+    });
+    if (!res.ok) throw await res.json();
+    return await res.json();
+  },
+
+  async getStrips() {
+    const res = await fetch(`${API_BASE}/api/strips`);
     return await res.json();
   },
 

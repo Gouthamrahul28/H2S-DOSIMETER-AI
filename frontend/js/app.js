@@ -345,9 +345,14 @@ async function loadWorkers() {
     </div>
   `).join("");
 
-  // Populate scan simulator worker dropdown
+  // Populate scan simulator & issue strip worker dropdown
   const workerSelect = document.getElementById("scan-worker-select");
   workerSelect.innerHTML = workers.map(w => `<option value="${w.id}">${w.name} (${w.id})</option>`).join("");
+
+  const issueWorkerSelect = document.getElementById("issue-worker-select");
+  if (issueWorkerSelect) {
+    issueWorkerSelect.innerHTML = workers.map(w => `<option value="${w.id}">${w.name} (${w.id} - ${w.department})</option>`).join("");
+  }
 
   if (workers.length > 0) {
     window.selectWorker(workers[0].id);
@@ -450,6 +455,61 @@ document.getElementById("btn-execute-scan").addEventListener("click", async () =
 document.getElementById("btn-refresh").addEventListener("click", () => {
   loadDashboard();
 });
+
+// Issue Strip Modal
+const issueStripModal = document.getElementById("issue-strip-modal");
+const btnIssueStrip = document.getElementById("btn-issue-strip");
+const btnCancelIssueStrip = document.getElementById("btn-cancel-issue-strip");
+const btnSubmitIssueStrip = document.getElementById("btn-submit-issue-strip");
+const btnGenStripId = document.getElementById("btn-gen-strip-id");
+const issueStripIdInput = document.getElementById("issue-strip-id");
+
+function generateRandomStripId() {
+  const num = Math.floor(1000 + Math.random() * 9000);
+  return `STR_${num}`;
+}
+
+if (btnIssueStrip) {
+  btnIssueStrip.addEventListener("click", () => {
+    issueStripIdInput.value = generateRandomStripId();
+    issueStripModal.style.display = "flex";
+  });
+}
+
+if (btnGenStripId) {
+  btnGenStripId.addEventListener("click", () => {
+    issueStripIdInput.value = generateRandomStripId();
+  });
+}
+
+if (btnCancelIssueStrip) {
+  btnCancelIssueStrip.addEventListener("click", () => {
+    issueStripModal.style.display = "none";
+  });
+}
+
+if (btnSubmitIssueStrip) {
+  btnSubmitIssueStrip.addEventListener("click", async () => {
+    const stripId = issueStripIdInput.value.trim();
+    const batchId = document.getElementById("issue-batch-id").value.trim();
+    const workerId = document.getElementById("issue-worker-select").value;
+    const daysValid = parseInt(document.getElementById("issue-days-valid").value, 10) || 90;
+
+    if (!stripId) {
+      alert("Please enter or generate a Strip ID.");
+      return;
+    }
+
+    try {
+      await API.createStrip(stripId, batchId, workerId, daysValid);
+      issueStripModal.style.display = "none";
+      alert(`Strip ${stripId} registered and assigned to ${workerId} successfully! Status: ACTIVE.`);
+      loadDashboard();
+    } catch (err) {
+      alert("Error issuing strip: " + (err.detail || JSON.stringify(err)));
+    }
+  });
+}
 
 // Initial Load
 document.addEventListener("DOMContentLoaded", () => {

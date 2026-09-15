@@ -64,6 +64,27 @@ document.getElementById("btn-verify-strip").addEventListener("click", async () =
   }
 });
 
+// Quick Issue Fresh Strip for Logged-In Worker
+const btnQuickIssue = document.getElementById("btn-worker-quick-issue");
+if (btnQuickIssue) {
+  btnQuickIssue.addEventListener("click", async () => {
+    if (!currentWorker) return;
+    const randId = `STR_${Math.floor(1000 + Math.random() * 9000)}`;
+    const errBanner = document.getElementById("strip-error-banner");
+    try {
+      await API.createStrip(randId, "BATCH_2024_Q4_LOT_03", currentWorker.id, 90);
+      document.getElementById("strip-input-id").value = randId;
+      errBanner.style.background = "rgba(16, 185, 129, 0.2)";
+      errBanner.style.borderColor = "rgba(16, 185, 129, 0.5)";
+      errBanner.style.color = "#34d399";
+      errBanner.innerHTML = `<strong>✓ Fresh Strip Issued!</strong><br>${randId} is active and assigned to you. Click "Verify Strip Validity".`;
+      errBanner.style.display = "block";
+    } catch (err) {
+      alert("Error issuing strip: " + (err.detail || "Service error"));
+    }
+  });
+}
+
 document.getElementById("btn-back-strip").addEventListener("click", () => {
   showScreen(screenStrip);
 });
