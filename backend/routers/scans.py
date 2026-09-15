@@ -1,0 +1,259 @@
+"""
+Scan Recording & Analysis Router
+Implements Sections 2.3, 3.1, 6.2 & 10 (Pages 7-8, 22, 27)
+"""
+
+from fastapi import APIRouter, Depends, HTTPException, Body
+from sqlalchemy.orm import Session
+from typing import List, Optional
+from datetime import datetime
+import uuid
+import numpy as np
+from PIL import Image, ImageDraw
+import io
+import os
+
+from backend.database import get_db
+from backend.models import Scan, Strip, Worker, AuditLog
+from backend.schemas import ScanSubmissionRequest, ScanResponse
+from backend.services.strip_validator import StripValidator
+from backend.services.cv_pipeline import CVPipeline
+from backend.services.inference_service import InferenceService
+from backend.services.alert_engine import AlertEngine
+import config
+
+router = APIRouter(prefix="/api/scans", tags=["Scans"])
+
+def generate_synthetic_strip_image(ppm: float) -> np.ndarray:
+    """Generates a realistic 224x224 synthetic H2S strip image for simulated/testing scans."""
+    # Interpolate color based on PPM
+    if ppm <= 1.0:
+        base_color = (235, 230, 210)  # Pale off-white / light yellow
+    elif ppm <= 10.0:
+        factor = (ppm - 1.0) / 9.0
+        base_color = (int(235 - 25 * factor), int(230 - 40 * factor), int(210 - 70 * factor))
+    elif ppm <= 50.0:
+        factor = (ppm - 10.0) / 40.0
+        base_color = (int(210 - 35 * factor), int(190 - 55 * factor), int(140 - 65 * factor))
+    elif ppm <= 100.0:
+        factor = (ppm - 50.0) / 50.0
+        base_color = (int(175 - 60 * factor), int(135 - 65 * factor), int(75 - 35 * factor))
+    else:
+        factor = min(1.0, (ppm - 100.0) / 100.0)
+        base_color = (int(115 - 65 * factor), int(70 - 35 * factor), int(40 - 10 * factor))
+
+    img = Image.new("RGB", (224, 224), (245, 245, 245))
+    draw = ImageDraw.Draw(img)
+    # Draw central indicator reaction square with slight noise
+    draw.rectangle([40, 40, 184, 184], fill=base_color, outline=(180, 180, 180), width=2)
+    # Reference white marker on edge
+    draw.rectangle([10, 10, 30, 30], fill=(255, 255, 255), outline=(200, 200, 200))
+    # Reference black marker
+    draw.rectangle([10, 194, 30, 214], fill=(20, 20, 20), outline=(200, 200, 200))
+    arr = np.array(img).astype(np.float32)
+    noise = np.random.normal(0, 3, arr.shape)
+    arr = np.clip(arr + noise, 0, 255).astype(np.uint8)
+    return arr
+
+@router.post("", response_model=ScanResponse)
+def submit_scan(payload: ScanSubmissionRequest, db: Session = Depends(get_db)):
+    """
+    Submits an H2S indicator strip scan:
+    1. Pre-scan strip validity check (7 rules)
+    2. Image quality verification (blur, lighting, glare)
+    3. ROI extraction and white-balance color constancy
+    4. AI Model inference (MobileNetV3 / calibrated color space)
+    5. Safety rule engine & threshold evaluation
+    6. Audit record creation
+    """
+    # 1. Validate Strip
+    valid, reason_code, msg, strip_details = StripValidator.validate_strip(db, payload.worker_id, payload.strip_id)
+    if not valid:
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "STRIP_VALIDATION_FAILED", "reason_code": reason_code, "message": msg}
+        )
+
+    strip = db.query(Strip).filter(Strip.id == payload.strip_id).first()
+
+    # 2. Acquire or Generate Image
+    if payload.image_base64:
+        raw_img = CVPipeline.load_image_from_bytes_or_base64(payload.image_base64)
+        if raw_img is None:
+            raise HTTPException(status_code=400, detail="Invalid image encoding format.")
+        
+        # Quality Check
+        quality = CVPipeline.check_image_quality(raw_img)
+        if not quality["passed"]:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "error": "IMAGE_QUALITY_CHECK_FAILED",
+                    "quality_metrics": quality,
+                    "message": "Image quality failed. " + " ".join(quality["issues"])
+                }
+            )
+        processed_img = CVPipeline.extract_roi_and_normalize(raw_img)
+    else:
+        # Generate simulated strip image
+        target_ppm = payload.simulated_ppm if payload.simulated_ppm is not None else 18.5
+        processed_img = generate_synthetic_strip_image(target_ppm)
+        quality = {
+            "passed": True,
+            "quality_score": 0.98,
+            "lighting_status": "Good",
+            "focus_status": "Sharp",
+            "distance_status": "Optimal (~10cm)",
+            "blur_metric": 210.4,
+            "mean_luminance": 132.0,
+            "glare_percentage": 0.0,
+            "issues": []
+        }
+
+    # 3. Save Image File
+    scan_id = f"SCAN_{datetime.utcnow().strftime('%Y%m%d')}_{uuid.uuid4().hex[:6].upper()}"
+    filename = f"{scan_id}.jpg"
+    filepath = config.UPLOAD_DIR / filename
+    try:
+        pil_save = Image.fromarray(processed_img)
+        pil_save.save(filepath, format="JPEG", quality=90)
+    except Exception:
+        pass
+
+    # 4. AI Inference
+    prediction = InferenceService.predict(processed_img, model_version=config.DEFAULT_MODEL_VERSION)
+    if payload.simulated_ppm is not None:
+        target_val = float(payload.simulated_ppm)
+        prediction["predicted_ppm"] = target_val
+        for c_k, c_v in config.H2S_CATEGORIES.items():
+            if c_v["min_ppm"] <= target_val <= c_v["max_ppm"] or (c_k == "C4" and target_val > 100):
+                prediction["predicted_class"] = c_k
+                prediction["predicted_ppm_range"] = c_v["ppm_range"]
+                prediction["exposure_level"] = c_v["exposure_level"]
+                prediction["worker_action"] = c_v["worker_action"]
+                prediction["alert_level"] = c_v["alert_level"]
+                prediction["color_hex"] = c_v["color_hex"]
+                prediction["badge_class"] = c_v["badge_class"]
+                break
+
+    # 5. Evaluate Safety Rules & Alerts
+    ppm = prediction["predicted_ppm"]
+    exceeded, alert_trig, alert_lvl, alert_msg = AlertEngine.evaluate_and_create_alert(
+        db, scan_id, payload.worker_id, ppm
+    )
+
+    # 6. Update Strip Use Count
+    strip.use_count += 1
+    if strip.use_count >= strip.max_uses:
+        strip.status = "USED"
+
+    # 7. Persist Scan Audit Record (Page 27)
+    scan = Scan(
+        scan_id=scan_id,
+        worker_id=payload.worker_id,
+        strip_id=payload.strip_id,
+        strip_batch=strip.batch_id,
+        timestamp=datetime.utcnow(),
+        phone_model=payload.phone_model,
+        image_file=filename,
+        image_quality_score=quality["quality_score"],
+        model_version=prediction["model_version"],
+        model_confidence=prediction["model_confidence"],
+        predicted_class=prediction["predicted_class"],
+        predicted_ppm=prediction["predicted_ppm"],
+        predicted_ppm_range=prediction["predicted_ppm_range"],
+        safety_threshold_exceeded=exceeded,
+        alert_triggered=alert_trig,
+        supervisor_reviewed=False,
+        approved_for_training=False
+    )
+    db.add(scan)
+    db.commit()
+
+    return ScanResponse(
+        scan_id=scan.scan_id,
+        worker_id=scan.worker_id,
+        strip_id=scan.strip_id,
+        strip_batch=scan.strip_batch,
+        timestamp=scan.timestamp.isoformat(),
+        predicted_class=prediction["predicted_class"],
+        predicted_ppm=prediction["predicted_ppm"],
+        predicted_ppm_range=prediction["predicted_ppm_range"],
+        model_confidence=prediction["model_confidence"],
+        model_version=prediction["model_version"],
+        exposure_level=prediction["exposure_level"],
+        worker_action=prediction["worker_action"],
+        alert_level=alert_lvl if alert_lvl else "Green",
+        safety_threshold_exceeded=exceeded,
+        alert_triggered=alert_trig,
+        color_hex=prediction["color_hex"],
+        badge_class=prediction["badge_class"],
+        image_quality=quality
+    )
+
+@router.get("")
+def list_scans(
+    worker_id: Optional[str] = None,
+    predicted_class: Optional[str] = None,
+    alerts_only: bool = False,
+    limit: int = 50,
+    db: Session = Depends(get_db)
+):
+    """List recent scans for supervisor dashboard."""
+    q = db.query(Scan)
+    if worker_id:
+        q = q.filter(Scan.worker_id == worker_id)
+    if predicted_class:
+        q = q.filter(Scan.predicted_class == predicted_class)
+    if alerts_only:
+        q = q.filter(Scan.alert_triggered == True)
+
+    scans = q.order_by(Scan.timestamp.desc()).limit(limit).all()
+    results = []
+    for s in scans:
+        cat_info = config.H2S_CATEGORIES.get(s.predicted_class, {})
+        worker = db.query(Worker).filter(Worker.id == s.worker_id).first()
+        results.append({
+            "scan_id": s.scan_id,
+            "worker_id": s.worker_id,
+            "worker_name": worker.name if worker else s.worker_id,
+            "strip_id": s.strip_id,
+            "strip_batch": s.strip_batch,
+            "timestamp": s.timestamp.isoformat(),
+            "predicted_class": s.predicted_class,
+            "predicted_ppm": s.predicted_ppm,
+            "predicted_ppm_range": s.predicted_ppm_range,
+            "model_confidence": s.model_confidence,
+            "safety_threshold_exceeded": s.safety_threshold_exceeded,
+            "alert_triggered": s.alert_triggered,
+            "supervisor_reviewed": s.supervisor_reviewed,
+            "color_hex": cat_info.get("color_hex", "#ffffff"),
+            "badge_class": cat_info.get("badge_class", "badge-green"),
+            "exposure_level": cat_info.get("exposure_level", "Unknown"),
+            "worker_action": cat_info.get("worker_action", "Normal")
+        })
+    return results
+
+@router.post("/{scan_id}/review")
+def review_scan(
+    scan_id: str,
+    ground_truth_ppm: Optional[float] = Body(None),
+    approve_for_training: bool = Body(True),
+    notes: Optional[str] = Body(None),
+    db: Session = Depends(get_db)
+):
+    """Supervisor reviews scan and flags it for continuous retraining (Page 22 & 27)."""
+    scan = db.query(Scan).filter(Scan.scan_id == scan_id).first()
+    if not scan:
+        raise HTTPException(status_code=404, detail="Scan not found")
+
+    scan.supervisor_reviewed = True
+    scan.review_timestamp = datetime.utcnow()
+    scan.approved_for_training = approve_for_training
+    if ground_truth_ppm is not None:
+        scan.ground_truth_ppm = ground_truth_ppm
+    if notes:
+        scan.notes = notes
+
+    db.commit()
+    return {"message": f"Scan {scan_id} reviewed and approved for continuous training dataset."}

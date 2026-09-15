@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>H₂S Worker Mobile Scanner</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background: #020617;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .phone-frame {
+      width: 380px;
+      height: 740px;
+      background: #0b0f19;
+      border: 3px solid #334155;
+      border-radius: 40px;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 30px rgba(59, 130, 246, 0.2);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+    .camera-notch {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 120px;
+      height: 20px;
+      background: #1e293b;
+      border-radius: 20px;
+      z-index: 50;
+    }
+    .worker-screen {
+      flex: 1;
+      padding: 40px 24px 24px;
+      display: none;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+    .worker-screen.active {
+      display: flex;
+    }
+    .viewfinder {
+      width: 100%;
+      height: 240px;
+      background: #111827;
+      border: 2px dashed #38bdf8;
+      border-radius: 16px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    .roi-guide {
+      width: 140px;
+      height: 140px;
+      border: 2px solid #22c55e;
+      border-radius: 8px;
+      box-shadow: 0 0 15px rgba(34, 197, 94, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #22c55e;
+      font-size: 11px;
+      text-align: center;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+    .corner-bracket {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      border: 3px solid #38bdf8;
+    }
+    .corner-tl { top: 12px; left: 12px; border-right: none; border-bottom: none; }
+    .corner-tr { top: 12px; right: 12px; border-left: none; border-bottom: none; }
+    .corner-bl { bottom: 12px; left: 12px; border-right: none; border-top: none; }
+    .corner-br { bottom: 12px; right: 12px; border-left: none; border-top: none; }
+    .guidance-box {
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 20px;
+    }
+    .guidance-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13px;
+      margin-bottom: 6px;
+    }
+    .guidance-item:last-child { margin-bottom: 0; }
+  </style>
+</head>
+<body>
+  <div class="phone-frame">
+    <div class="camera-notch"></div>
+
+    <!-- 1. LOGIN SCREEN -->
+    <div id="screen-login" class="worker-screen active">
+      <div style="text-align:center; margin-top:20px; margin-bottom:32px;">
+        <div class="brand-icon" style="margin:0 auto 12px; width:52px; height:52px; font-size:22px;">H₂S</div>
+        <h2 style="font-size:20px; font-weight:800;">Worker Terminal</h2>
+        <p style="font-size:13px; color:var(--text-muted);">Industrial Optical Dosimeter</p>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:16px; flex:1;">
+        <div>
+          <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:6px;">Worker ID / Badge:</label>
+          <input type="text" id="login-worker-id" value="EMP_00542" style="width:100%; padding:12px; background:#0f172a; color:#fff; border:1px solid var(--border-color); border-radius:10px; font-size:15px; font-family:'JetBrains Mono';">
+        </div>
+
+        <div>
+          <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:6px;">4-Digit Security PIN:</label>
+          <input type="password" id="login-pin" value="1234" maxlength="6" style="width:100%; padding:12px; background:#0f172a; color:#fff; border:1px solid var(--border-color); border-radius:10px; font-size:18px; text-align:center; letter-spacing:4px;">
+        </div>
+
+        <div id="login-error" style="display:none; color:#f87171; font-size:13px; background:rgba(239,68,68,0.1); padding:10px; border-radius:8px; border:1px solid rgba(239,68,68,0.3);"></div>
+
+        <button class="btn btn-primary" id="btn-login" style="margin-top:auto; width:100%; justify-content:center; padding:14px; font-size:16px;">
+          Authenticate Worker →
+        </button>
+      </div>
+    </div>
+
+    <!-- 2. STRIP VALIDATION SCREEN -->
+    <div id="screen-strip-validate" class="worker-screen">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <span style="font-size:13px; color:var(--text-muted);">Step 1 of 3: Validate Strip</span>
+        <span class="badge-cat badge-green" id="worker-profile-pill">EMP_00542</span>
+      </div>
+
+      <h3 style="font-size:18px; margin-bottom:8px;">Optical Strip Verification</h3>
+      <p style="font-size:13px; color:var(--text-secondary); margin-bottom:24px;">
+        Scan or enter the unique 8-character ID stamped on your indicator strip pouch.
+      </p>
+
+      <div style="margin-bottom:20px;">
+        <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:6px;">Strip Identifier:</label>
+        <input type="text" id="strip-input-id" value="STR_0421" style="width:100%; padding:12px; background:#0f172a; color:#38bdf8; border:1px solid var(--border-color); border-radius:10px; font-size:16px; font-family:'JetBrains Mono'; font-weight:700;">
+      </div>
+
+      <!-- Quick Test Strips -->
+      <div style="background:rgba(255,255,255,0.03); padding:12px; border-radius:10px; margin-bottom:24px;">
+        <div style="font-size:11px; text-transform:uppercase; color:var(--text-muted); margin-bottom:8px;">Test Presets:</div>
+        <div style="display:flex; flex-wrap:wrap; gap:6px;">
+          <button class="btn btn-secondary" style="padding:4px 8px; font-size:11px;" onclick="document.getElementById('strip-input-id').value='STR_0421'">STR_0421 (Valid)</button>
+          <button class="btn btn-secondary" style="padding:4px 8px; font-size:11px;" onclick="document.getElementById('strip-input-id').value='STR_EXPIRED'">STR_EXPIRED (Fail)</button>
+          <button class="btn btn-secondary" style="padding:4px 8px; font-size:11px;" onclick="document.getElementById('strip-input-id').value='STR_USED'">STR_USED (Fail)</button>
+        </div>
+      </div>
+
+      <!-- Validation Error Banner (Section 2.2) -->
+      <div id="strip-error-banner" style="display:none; color:#f87171; font-size:13px; background:rgba(239,68,68,0.15); padding:12px; border-radius:10px; border:1px solid rgba(239,68,68,0.4); margin-bottom:20px;"></div>
+
+      <button class="btn btn-primary" id="btn-verify-strip" style="margin-top:auto; width:100%; justify-content:center; padding:14px;">
+        Verify Strip Validity ✓
+      </button>
+    </div>
+
+    <!-- 3. CAMERA SCANNING SCREEN -->
+    <div id="screen-camera" class="worker-screen">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+        <span style="font-size:13px; color:var(--text-muted);">Step 2 of 3: Camera Scan</span>
+        <button class="btn btn-secondary" id="btn-back-strip" style="padding:4px 8px; font-size:11px;">Back</button>
+      </div>
+
+      <div class="viewfinder" id="camera-viewfinder">
+        <div class="corner-bracket corner-tl"></div>
+        <div class="corner-bracket corner-tr"></div>
+        <div class="corner-bracket corner-bl"></div>
+        <div class="corner-bracket corner-br"></div>
+        <div class="roi-guide" id="strip-reaction-preview">
+          Position<br>Strip Here
+        </div>
+      </div>
+
+      <!-- Section 2.3 Scan Guidance Display -->
+      <div class="guidance-box">
+        <div style="font-size:11px; text-transform:uppercase; color:var(--text-muted); margin-bottom:8px; font-weight:700;">Pre-Scan Environmental Checks:</div>
+        <div class="guidance-item">
+          <span style="color:var(--text-secondary);">Lighting:</span>
+          <span style="color:#22c55e; font-weight:700;">✓ Good (132 lx)</span>
+        </div>
+        <div class="guidance-item">
+          <span style="color:var(--text-secondary);">Distance:</span>
+          <span style="color:#22c55e; font-weight:700;">✓ ~10 cm</span>
+        </div>
+        <div class="guidance-item">
+          <span style="color:var(--text-secondary);">Focus:</span>
+          <span style="color:#22c55e; font-weight:700;">✓ Sharp (Score: 210)</span>
+        </div>
+        <div class="guidance-item">
+          <span style="color:var(--text-secondary);">Glare / Reflection:</span>
+          <span style="color:#22c55e; font-weight:700;">✓ 0.0% Nominal</span>
+        </div>
+      </div>
+
+      <!-- Test PPM concentration slider for instant demo scan -->
+      <div style="margin-bottom:16px;">
+        <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-muted); margin-bottom:4px;">
+          <span>Simulate Strip PPM Reaction:</span>
+          <span id="worker-sim-ppm-val" style="color:#38bdf8; font-weight:700;">18.5 ppm</span>
+        </div>
+        <input type="range" id="worker-sim-ppm" min="0" max="120" step="1" value="18">
+      </div>
+
+      <button class="btn btn-primary" id="btn-capture-scan" style="margin-top:auto; width:100%; justify-content:center; padding:14px; font-size:16px; background:linear-gradient(135deg, #10b981, #059669);">
+        ⚡ SCAN NOW (AI Analysis)
+      </button>
+    </div>
+
+    <!-- 4. RESULT DISPLAY SCREEN -->
+    <div id="screen-result" class="worker-screen">
+      <div style="text-align:center; margin-top:10px; margin-bottom:20px;">
+        <div id="res-badge" class="badge-cat badge-orange" style="font-size:14px; padding:6px 14px; margin-bottom:10px;">
+          CAUTION (C2)
+        </div>
+        <div style="font-size:42px; font-weight:800; color:#fff;" id="res-ppm">18.5 ppm</div>
+        <div style="font-size:13px; color:var(--text-muted);" id="res-ppm-range">Range: 15-22 ppm</div>
+      </div>
+
+      <div class="guidance-box" style="border-left:4px solid #f97316;" id="res-guidance-box">
+        <div style="font-size:11px; text-transform:uppercase; color:var(--text-muted); margin-bottom:4px; font-weight:700;">Mandatory Safety Action:</div>
+        <div style="font-size:15px; font-weight:700; color:#fff; margin-bottom:6px;" id="res-worker-action">Enhance Ventilation</div>
+        <div style="font-size:12px; color:var(--text-secondary);" id="res-exposure-level">Moderate hazard zone. Monitor closely and notify supervisor.</div>
+      </div>
+
+      <div style="background:rgba(255,255,255,0.03); border-radius:12px; padding:12px; margin-bottom:20px; font-size:12px;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+          <span style="color:var(--text-muted);">AI Model:</span>
+          <span style="color:#60a5fa;" id="res-model-ver">MobileNetV3 v1.0</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+          <span style="color:var(--text-muted);">Confidence:</span>
+          <span style="color:#22c55e; font-weight:700;" id="res-confidence">95.6%</span>
+        </div>
+        <div style="display:flex; justify-content:space-between;">
+          <span style="color:var(--text-muted);">Scan ID:</span>
+          <code style="color:var(--text-secondary);" id="res-scan-id">SCAN_20250120_001</code>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" id="btn-finish-scan" style="margin-top:auto; width:100%; justify-content:center; padding:14px;">
+        Complete Scan & Return
+      </button>
+    </div>
+  </div>
+
+  <script type="module" src="/static/js/worker.js"></script>
+</body>
+</html>
