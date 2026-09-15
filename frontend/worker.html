@@ -212,12 +212,32 @@
       </div>
 
       <!-- Test PPM concentration slider for instant demo scan -->
-      <div style="margin-bottom:16px;">
+      <div style="margin-bottom:12px;">
         <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-muted); margin-bottom:4px;">
-          <span>Simulate Strip PPM Reaction:</span>
-          <span id="worker-sim-ppm-val" style="color:#38bdf8; font-weight:700;">18.5 ppm</span>
+          <span>Cu-PAN PPM Reaction:</span>
+          <span id="worker-sim-ppm-val" style="color:#38bdf8; font-weight:700;">18.5 ppm (S5)</span>
         </div>
-        <input type="range" id="worker-sim-ppm" min="0" max="120" step="1" value="18">
+        <input type="range" id="worker-sim-ppm" min="0" max="110" step="1" value="18">
+      </div>
+
+      <!-- Cu-PAN Color Spectrum & Foreign Color Gating Test -->
+      <div style="background:rgba(255,255,255,0.03); border-radius:10px; padding:10px; margin-bottom:14px; border:1px solid var(--border-color);">
+        <div style="font-size:11px; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; font-weight:700;">Cu-PAN Spectrum & Alien Color Test:</div>
+        <div style="display:flex; flex-wrap:wrap; gap:6px;">
+          <button type="button" class="btn btn-secondary" id="btn-test-green" style="padding:4px 8px; font-size:11px; color:#4ade80; border-color:rgba(74,222,128,0.4);">🟢 Green (Alien 422)</button>
+          <button type="button" class="btn btn-secondary" id="btn-test-blue" style="padding:4px 8px; font-size:11px; color:#60a5fa; border-color:rgba(96,165,250,0.4);">🔵 Blue (Alien 422)</button>
+          <button type="button" class="btn btn-secondary" id="btn-test-s0" style="padding:4px 8px; font-size:11px; color:#d946ef; border-color:rgba(217,70,239,0.4);">🟣 S0 0ppm</button>
+          <button type="button" class="btn btn-secondary" id="btn-test-s10" style="padding:4px 8px; font-size:11px; color:#facc15; border-color:rgba(250,204,21,0.4);">🟡 S10 110ppm</button>
+        </div>
+      </div>
+
+      <!-- Spectral Rejection Error Modal / Card -->
+      <div id="scan-rejection-card" style="display:none; background:rgba(239,68,68,0.15); border:1px solid #ef4444; border-radius:12px; padding:12px; margin-bottom:14px; color:#fca5a5; font-size:12px;">
+        <div style="font-weight:700; font-size:13px; color:#f87171; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+          <span>⛔</span> <span id="rejection-title">INVALID COLOR SPECTRUM (422)</span>
+        </div>
+        <div id="rejection-desc" style="line-height:1.4; margin-bottom:6px;"></div>
+        <div style="background:rgba(0,0,0,0.3); padding:6px; border-radius:6px; font-family:'JetBrains Mono'; font-size:11px; color:#cbd5e1;" id="rejection-tech-details"></div>
       </div>
 
       <button class="btn btn-primary" id="btn-capture-scan" style="margin-top:auto; width:100%; justify-content:center; padding:14px; font-size:16px; background:linear-gradient(135deg, #10b981, #059669);">

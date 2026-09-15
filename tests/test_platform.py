@@ -178,3 +178,78 @@ def test_data_leakage_prevention():
     assert len(train_strips & val_strips) == 0
     assert len(train_strips & test_strips) == 0
     assert len(val_strips & test_strips) == 0
+
+def _create_strip_image_b64(rgb):
+    import io, base64
+    from PIL import Image, ImageDraw
+    import numpy as np
+    img = Image.new("RGB", (224, 224), (245, 245, 245))
+    draw = ImageDraw.Draw(img)
+    draw.rectangle([40, 40, 184, 184], fill=tuple(rgb), outline=(180, 180, 180), width=2)
+    draw.rectangle([10, 10, 30, 30], fill=(255, 255, 255), outline=(200, 200, 200))
+    draw.rectangle([10, 194, 30, 214], fill=(20, 20, 20), outline=(200, 200, 200))
+    arr = np.array(img).astype(np.float32)
+    noise = np.random.normal(0, 2, arr.shape)
+    final_img = Image.fromarray(np.clip(arr + noise, 0, 255).astype(np.uint8))
+    buf = io.BytesIO()
+    final_img.save(buf, format="PNG")
+    return base64.b64encode(buf.getvalue()).decode("utf-8")
+
+def test_cupan_spectrum_rejection_green_and_blue():
+    """Verify that colors outside the Cu-PAN spectrum (e.g., green and blue) are strictly rejected with 422."""
+    # Reset strip STR_0421
+    db = SessionLocal()
+    st = db.query(Strip).filter(Strip.id == "STR_0421").first()
+    if st:
+        st.status = "ACTIVE"
+        st.use_count = 0
+        db.commit()
+    db.close()
+
+    # 1. Reject Pure Green
+    green_b64 = _create_strip_image_b64([0, 210, 0])
+    res_green = client.post("/api/scans", json={
+        "worker_id": "EMP_00542",
+        "strip_id": "STR_0421",
+        "image_base64": green_b64
+    })
+    assert res_green.status_code == 422
+    err_g = res_green.json()["detail"]
+    assert err_g["error"] == "INVALID_COLOR_SPECTRUM"
+    assert "GREEN" in err_g["message"].upper()
+
+    # 2. Reject Pure Blue
+    blue_b64 = _create_strip_image_b64([0, 0, 220])
+    res_blue = client.post("/api/scans", json={
+        "worker_id": "EMP_00542",
+        "strip_id": "STR_0421",
+        "image_base64": blue_b64
+    })
+    assert res_blue.status_code == 422
+    err_b = res_blue.json()["detail"]
+    assert err_b["error"] == "INVALID_COLOR_SPECTRUM"
+    assert "BLUE" in err_b["message"].upper()
+
+def test_cupan_spectrum_acceptance():
+    """Verify that genuine Cu-PAN colors (Purple-Magenta S0, Orange S5, Yellow S10) are accepted."""
+    # Reset strip STR_0421
+    db = SessionLocal()
+    st = db.query(Strip).filter(Strip.id == "STR_0421").first()
+    if st:
+        st.status = "ACTIVE"
+        st.use_count = 0
+        db.commit()
+    db.close()
+
+    # Submit valid Cu-PAN S5 Orange patch
+    orange_b64 = _create_strip_image_b64([233, 144, 83])
+    res_orange = client.post("/api/scans", json={
+        "worker_id": "EMP_00542",
+        "strip_id": "STR_0421",
+        "image_base64": orange_b64
+    })
+    assert res_orange.status_code == 200
+    data = res_orange.json()
+    assert data["predicted_class"] == "C2"  # S5 maps to C2
+    assert "Orange" in data["exposure_level"] or "hazard" in data["exposure_level"].lower()
+

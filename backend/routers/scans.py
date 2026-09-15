@@ -25,35 +25,38 @@ import config
 router = APIRouter(prefix="/api/scans", tags=["Scans"])
 
 def generate_synthetic_strip_image(ppm: float) -> np.ndarray:
-    """Generates a realistic 224x224 synthetic H2S strip image for simulated/testing scans."""
-    # Interpolate color based on PPM
+    """Generates a realistic 224x224 synthetic H2S strip image matching the Cu-PAN spectrum (Purple -> Yellow)."""
+    # Interpolate along Cu-PAN rungs
     if ppm <= 1.0:
-        base_color = (235, 230, 210)  # Pale off-white / light yellow
+        # S0 to S1: Purple-Magenta
+        f = ppm / 1.0
+        base_color = (int(149 + 22 * f), int(73 + 5 * f), int(120 - 6 * f))
     elif ppm <= 10.0:
-        factor = (ppm - 1.0) / 9.0
-        base_color = (int(235 - 25 * factor), int(230 - 40 * factor), int(210 - 70 * factor))
+        # S2 to S3: Rose-Red to Coral
+        f = (ppm - 1.0) / 9.0
+        base_color = (int(193 + 16 * f), int(88 + 14 * f), int(106 - 8 * f))
     elif ppm <= 50.0:
-        factor = (ppm - 10.0) / 40.0
-        base_color = (int(210 - 35 * factor), int(190 - 55 * factor), int(140 - 65 * factor))
+        # S4 to S6: Salmon-Orange to Amber-Orange
+        f = (ppm - 10.0) / 40.0
+        base_color = (int(223 + 13 * f), int(122 + 43 * f), int(91 - 17 * f))
     elif ppm <= 100.0:
-        factor = (ppm - 50.0) / 50.0
-        base_color = (int(175 - 60 * factor), int(135 - 65 * factor), int(75 - 35 * factor))
+        # S7 to S8: Amber to Golden Yellow
+        f = (ppm - 50.0) / 50.0
+        base_color = (int(238 + 1 * f), int(185 + 16 * f), int(68 - 6 * f))
     else:
-        factor = min(1.0, (ppm - 100.0) / 100.0)
-        base_color = (int(115 - 65 * factor), int(70 - 35 * factor), int(40 - 10 * factor))
+        # S9 to S10: Yellow (Full Free PAN)
+        base_color = (247, 218, 52)
 
     img = Image.new("RGB", (224, 224), (245, 245, 245))
     draw = ImageDraw.Draw(img)
     # Draw central indicator reaction square with slight noise
     draw.rectangle([40, 40, 184, 184], fill=base_color, outline=(180, 180, 180), width=2)
-    # Reference white marker on edge
+    # Calibration neutral reference markers
     draw.rectangle([10, 10, 30, 30], fill=(255, 255, 255), outline=(200, 200, 200))
-    # Reference black marker
     draw.rectangle([10, 194, 30, 214], fill=(20, 20, 20), outline=(200, 200, 200))
     arr = np.array(img).astype(np.float32)
-    noise = np.random.normal(0, 3, arr.shape)
-    arr = np.clip(arr + noise, 0, 255).astype(np.uint8)
-    return arr
+    noise = np.random.normal(0, 2, arr.shape)
+    return np.clip(arr + noise, 0, 255).astype(np.uint8)
 
 @router.post("", response_model=ScanResponse)
 def submit_scan(payload: ScanSubmissionRequest, db: Session = Depends(get_db)):
@@ -62,9 +65,10 @@ def submit_scan(payload: ScanSubmissionRequest, db: Session = Depends(get_db)):
     1. Pre-scan strip validity check (7 rules)
     2. Image quality verification (blur, lighting, glare)
     3. ROI extraction and white-balance color constancy
-    4. AI Model inference (MobileNetV3 / calibrated color space)
-    5. Safety rule engine & threshold evaluation
-    6. Audit record creation
+    4. Cu-PAN Spectral Gatekeeper: Rejects alien colors like Green and Blue
+    5. AI Model inference (Cu-PAN calibration ladder)
+    6. Safety rule engine & threshold evaluation
+    7. Audit record creation
     """
     # 1. Validate Strip
     valid, reason_code, msg, strip_details = StripValidator.validate_strip(db, payload.worker_id, payload.strip_id)
@@ -110,7 +114,7 @@ def submit_scan(payload: ScanSubmissionRequest, db: Session = Depends(get_db)):
             "issues": []
         }
 
-    # 3. Save Image File
+    # 3. Generate Scan ID & Save Image
     scan_id = f"SCAN_{datetime.utcnow().strftime('%Y%m%d')}_{uuid.uuid4().hex[:6].upper()}"
     filename = f"{scan_id}.jpg"
     filepath = config.UPLOAD_DIR / filename
@@ -120,8 +124,21 @@ def submit_scan(payload: ScanSubmissionRequest, db: Session = Depends(get_db)):
     except Exception:
         pass
 
-    # 4. AI Inference
+    # 4. AI Inference & Cu-PAN Spectral Gating
     prediction = InferenceService.predict(processed_img, model_version=config.DEFAULT_MODEL_VERSION)
+    if not prediction.get("spectrum_valid", True):
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "INVALID_COLOR_SPECTRUM",
+                "foreign_color": prediction.get("foreign_color"),
+                "message": prediction["message"],
+                "hue_angle": prediction.get("hue_angle"),
+                "min_delta_e": prediction.get("min_delta_e"),
+                "accepted_spectrum": "Cu-PAN (Purple-Magenta -> Rose-Red -> Coral -> Orange -> Amber -> Yellow). Colors like Green and Blue are physically invalid."
+            }
+        )
+
     if payload.simulated_ppm is not None:
         target_val = float(payload.simulated_ppm)
         prediction["predicted_ppm"] = target_val
