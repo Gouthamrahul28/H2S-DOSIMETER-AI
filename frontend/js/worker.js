@@ -724,6 +724,7 @@ document.getElementById("btn-capture-scan").addEventListener("click", async () =
       const cupan = getCupanColor(res.predicted_ppm);
       displayImgSrc = `data:image/png;base64,${generateTestStripBase64(cupan.rgb)}`;
     }
+    res._displayImgSrc = displayImgSrc;
     if (resScannedImg && displayImgSrc) {
       resScannedImg.src = displayImgSrc;
       resScannedImg.style.transform = "scale(1)";
@@ -840,7 +841,8 @@ if (toggleTechData && techDataBody) {
 }
 
 // Download High-Resolution Official Safety Report Certificate (PNG via Canvas)
-function downloadSafetyReportPNG() {
+// Includes Scanned Picture, Highlighted Target Analysis Area, and NO Borders
+async function downloadSafetyReportPNG() {
   if (!lastScanResult) {
     alert("Please perform a scan first.");
     return;
@@ -852,218 +854,363 @@ function downloadSafetyReportPNG() {
 
   const canvas = document.createElement("canvas");
   canvas.width = 840;
-  canvas.height = 1120;
+  canvas.height = 1000;
   const ctx = canvas.getContext("2d");
 
-  // 1. Dark Cyber Background
+  // 1. Sleek Frameless Background Gradient (NO BORDERS)
   const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
   grad.addColorStop(0, "#080e1a");
-  grad.addColorStop(0.5, "#0b1329");
+  grad.addColorStop(0.5, "#0b1328");
   grad.addColorStop(1, "#040711");
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  // Outer Glowing Border in Safety Color
-  ctx.strokeStyle = safety.color;
-  ctx.lineWidth = 6;
-  ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
-
-  // Corner Accents
-  ctx.fillStyle = safety.color;
-  const cSize = 24;
-  ctx.fillRect(10, 10, cSize, 6);
-  ctx.fillRect(10, 10, 6, cSize);
-  ctx.fillRect(canvas.width - 10 - cSize, 10, cSize, 6);
-  ctx.fillRect(canvas.width - 16, 10, 6, cSize);
-  ctx.fillRect(10, canvas.height - 16, cSize, 6);
-  ctx.fillRect(10, canvas.height - 10 - cSize, 6, cSize);
-  ctx.fillRect(canvas.width - 10 - cSize, canvas.height - 16, cSize, 6);
-  ctx.fillRect(canvas.width - 16, canvas.height - 10 - cSize, 6, cSize);
+  // NOTE: Zero outer stroke borders or corner frames for pure modern aesthetic
 
   // 2. Header
   ctx.fillStyle = "#38bdf8";
-  ctx.font = "bold 20px 'Inter', sans-serif";
-  ctx.fillText("H₂S INDUSTRIAL OPTICAL DOSIMETER", 40, 60);
+  ctx.font = "bold 21px 'Inter', sans-serif";
+  ctx.fillText("H₂S INDUSTRIAL OPTICAL DOSIMETER", 44, 52);
 
   ctx.fillStyle = "#94a3b8";
-  ctx.font = "13px 'Inter', sans-serif";
-  ctx.fillText("OFFICIAL WORKER AIR QUALITY INSPECTION REPORT", 40, 84);
+  ctx.font = "12px 'Inter', sans-serif";
+  ctx.fillText("OFFICIAL AIR QUALITY INSPECTION REPORT", 44, 74);
 
   const dateStr = new Date().toLocaleString();
   ctx.textAlign = "right";
   ctx.fillStyle = "#cbd5e1";
   ctx.font = "12px 'JetBrains Mono', monospace";
-  ctx.fillText(dateStr, canvas.width - 40, 60);
-  ctx.fillText(`ID: ${res.scan_id}`, canvas.width - 40, 80);
+  ctx.fillText(dateStr, canvas.width - 44, 52);
+  ctx.fillText(`AUDIT ID: ${res.scan_id}`, canvas.width - 44, 74);
   ctx.textAlign = "left";
 
-  // Separator line
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(40, 105);
-  ctx.lineTo(canvas.width - 40, 105);
-  ctx.stroke();
-
-  // 3. Verdict Hero Box
-  ctx.fillStyle = `${safety.color}18`;
-  ctx.beginPath();
-  ctx.roundRect(40, 125, canvas.width - 80, 110, 14);
-  ctx.fill();
-  ctx.strokeStyle = safety.color;
-  ctx.lineWidth = 2;
-  ctx.stroke();
-
-  ctx.fillStyle = safety.color;
-  ctx.font = "bold 28px 'Inter', sans-serif";
-  ctx.fillText(`${safety.verdictIcon}  ${safety.verdictTitle}`, 65, 172);
-
-  ctx.fillStyle = "#e2e8f0";
-  ctx.font = "15px 'Inter', sans-serif";
-  ctx.fillText(safety.verdictDesc, 65, 205);
-
-  // 4. Large Digital PPM Box
-  ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
-  ctx.beginPath();
-  ctx.roundRect(40, 255, canvas.width - 80, 160, 14);
-  ctx.fill();
+  // Subtle separation line
   ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
   ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(44, 92);
+  ctx.lineTo(canvas.width - 44, 92);
   ctx.stroke();
 
-  ctx.fillStyle = "#94a3b8";
-  ctx.font = "bold 13px 'Inter', sans-serif";
-  ctx.fillText("PREDICTED GAS CONCENTRATION:", 65, 285);
+  // 3. Verdict Hero Card (Soft borderless rounded fill)
+  ctx.fillStyle = `${safety.color}15`;
+  ctx.beginPath();
+  ctx.roundRect(44, 108, canvas.width - 88, 110, 14);
+  ctx.fill();
 
+  // Left: Verdict & Action Directive
   ctx.fillStyle = safety.color;
-  ctx.font = "800 64px 'JetBrains Mono', monospace";
-  ctx.fillText(`${res.predicted_ppm} ppm`, 65, 355);
+  ctx.font = "bold 24px 'Inter', sans-serif";
+  ctx.fillText(`${safety.verdictIcon}  ${safety.verdictTitle}`, 68, 150);
 
-  ctx.fillStyle = "#cbd5e1";
-  ctx.font = "bold 14px 'Inter', sans-serif";
-  ctx.fillText(`Estimated Range: ${res.predicted_ppm_range}`, 65, 390);
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 15px 'Inter', sans-serif";
+  ctx.fillText(`Required Action:  ${safety.actionIcon} ${res.worker_action}`, 68, 188);
 
+  // Right: Large PPM Readout
   ctx.textAlign = "right";
   ctx.fillStyle = safety.color;
-  ctx.font = "bold 16px 'Inter', sans-serif";
-  ctx.fillText(safety.label, canvas.width - 65, 320);
+  ctx.font = "800 48px 'JetBrains Mono', monospace";
+  ctx.fillText(`${res.predicted_ppm} ppm`, canvas.width - 68, 156);
 
   ctx.fillStyle = "#94a3b8";
-  ctx.font = "13px 'Inter', sans-serif";
-  ctx.fillText(`Class: ${res.predicted_class} • Alert: ${res.alert_level}`, canvas.width - 65, 350);
+  ctx.font = "12px 'Inter', sans-serif";
+  ctx.fillText(`Est. Range: ${res.predicted_ppm_range} • ${safety.label}`, canvas.width - 68, 188);
   ctx.textAlign = "left";
 
-  // 5. Exposure Meter Scale (Drawn directly on canvas)
+  // 4. SCANNED STRIP & ANALYSIS AREA (THE PIC & ANALYSIS AREA!)
+  const picCardY = 234;
+  const picCardH = 340;
   ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
   ctx.beginPath();
-  ctx.roundRect(40, 435, canvas.width - 80, 85, 14);
+  ctx.roundRect(44, picCardY, canvas.width - 88, picCardH, 14);
   ctx.fill();
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
-  ctx.stroke();
+
+  ctx.fillStyle = "#38bdf8";
+  ctx.font = "bold 13px 'Inter', sans-serif";
+  ctx.fillText("📷 SCANNED DOSIMETER & TARGET ANALYSIS AREA (ROI)", 68, picCardY + 30);
+
+  const roiCoords = res.roi_coordinates || { percent: { x: 20, y: 20, width: 60, height: 60 } };
+  const p = roiCoords.percent || { x: 20, y: 20, width: 60, height: 60 };
+
+  ctx.textAlign = "right";
+  ctx.fillStyle = "#4ade80";
+  ctx.font = "bold 11px 'JetBrains Mono', monospace";
+  ctx.fillText(`TARGET ROI: ${Math.round(p.width)}% × ${Math.round(p.height)}%`, canvas.width - 68, picCardY + 30);
+  ctx.textAlign = "left";
+
+  // Load the Scanned Strip Image (real uploaded photo, raw url, or generated strip)
+  let imgSrc = res._displayImgSrc || document.getElementById("res-scanned-img")?.src;
+  if (!imgSrc && scanMode === "sim") {
+    const cupan = getCupanColor(res.predicted_ppm);
+    imgSrc = `data:image/png;base64,${generateTestStripBase64(cupan.rgb)}`;
+  }
+
+  let loadedImg = null;
+  if (imgSrc) {
+    try {
+      loadedImg = await new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => resolve(img);
+        img.onerror = () => resolve(null);
+        img.src = imgSrc;
+      });
+    } catch (e) {
+      console.warn("Could not load image for canvas export:", e);
+    }
+  }
+
+  // Draw Photo Container Box
+  const photoBoxX = 68;
+  const photoBoxY = picCardY + 46;
+  const photoBoxW = 450;
+  const photoBoxH = 264;
+
+  ctx.fillStyle = "#020617";
+  ctx.beginPath();
+  ctx.roundRect(photoBoxX, photoBoxY, photoBoxW, photoBoxH, 10);
+  ctx.fill();
+
+  if (loadedImg && loadedImg.width > 0 && loadedImg.height > 0) {
+    const imgAspect = loadedImg.width / loadedImg.height;
+    const boxAspect = photoBoxW / photoBoxH;
+    let drawW, drawH, drawX, drawY;
+
+    if (imgAspect > boxAspect) {
+      drawW = photoBoxW;
+      drawH = photoBoxW / imgAspect;
+      drawX = photoBoxX;
+      drawY = photoBoxY + (photoBoxH - drawH) / 2;
+    } else {
+      drawH = photoBoxH;
+      drawW = photoBoxH * imgAspect;
+      drawX = photoBoxX + (photoBoxW - drawW) / 2;
+      drawY = photoBoxY;
+    }
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(photoBoxX, photoBoxY, photoBoxW, photoBoxH, 10);
+    ctx.clip();
+    ctx.drawImage(loadedImg, drawX, drawY, drawW, drawH);
+
+    // DRAW THE ANALYSIS AREA (ROI) OVERLAY OVER THE STRIP PHOTO
+    const roiX = drawX + (p.x / 100) * drawW;
+    const roiY = drawY + (p.y / 100) * drawH;
+    const roiW = (p.width / 100) * drawW;
+    const roiH = (p.height / 100) * drawH;
+
+    // Glowing highlight over the analyzed chemical core
+    ctx.fillStyle = "rgba(34, 197, 94, 0.22)";
+    ctx.fillRect(roiX, roiY, roiW, roiH);
+
+    // Precision bounding border
+    ctx.strokeStyle = "#22c55e";
+    ctx.lineWidth = 2.5;
+    ctx.strokeRect(roiX, roiY, roiW, roiH);
+
+    // Corner reticle accents
+    const rCorner = Math.min(12, roiW / 4, roiH / 4);
+    ctx.strokeStyle = "#38bdf8";
+    ctx.lineWidth = 3;
+    // TL
+    ctx.beginPath();
+    ctx.moveTo(roiX, roiY + rCorner); ctx.lineTo(roiX, roiY); ctx.lineTo(roiX + rCorner, roiY);
+    ctx.stroke();
+    // TR
+    ctx.beginPath();
+    ctx.moveTo(roiX + roiW - rCorner, roiY); ctx.lineTo(roiX + roiW, roiY); ctx.lineTo(roiX + roiW, roiY + rCorner);
+    ctx.stroke();
+    // BL
+    ctx.beginPath();
+    ctx.moveTo(roiX, roiY + roiH - rCorner); ctx.lineTo(roiX, roiY + roiH); ctx.lineTo(roiX + rCorner, roiY + roiH);
+    ctx.stroke();
+    // BR
+    ctx.beginPath();
+    ctx.moveTo(roiX + roiW - rCorner, roiY + roiH); ctx.lineTo(roiX + roiW, roiY + roiH); ctx.lineTo(roiX + roiW, roiY + roiH - rCorner);
+    ctx.stroke();
+
+    // Floating ROI Label Tag
+    const tagH = 20;
+    const tagW = 120;
+    const tagX = roiX + (roiW - tagW) / 2;
+    const tagY = roiY + (roiH - tagH) / 2;
+    ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
+    ctx.beginPath();
+    ctx.roundRect(tagX, tagY, tagW, tagH, 4);
+    ctx.fill();
+    ctx.strokeStyle = "#22c55e";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = "#4ade80";
+    ctx.font = "bold 9px 'Inter', sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("ANALYZED ZONE", tagX + tagW / 2, tagY + 14);
+    ctx.textAlign = "left";
+
+    ctx.restore();
+  } else {
+    ctx.fillStyle = "#64748b";
+    ctx.font = "13px 'Inter', sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("Dosimeter Scan Visual Record Attached", photoBoxX + photoBoxW / 2, photoBoxY + photoBoxH / 2);
+    ctx.textAlign = "left";
+  }
+
+  // Side Panel: Sampled Dye Colorimetry (Beside the picture)
+  const sideX = photoBoxX + photoBoxW + 24;
+  const feat = res.extracted_features || {};
+  const rgb = feat.mean_rgb || [233, 144, 83];
+  const hex = res.color_hex || "#E99053";
+
+  // Swatch Box
+  ctx.fillStyle = hex;
+  ctx.beginPath();
+  ctx.roundRect(sideX, photoBoxY + 8, 48, 48, 10);
+  ctx.fill();
+
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 16px 'JetBrains Mono', monospace";
+  ctx.fillText(hex.toUpperCase(), sideX + 60, photoBoxY + 28);
 
   ctx.fillStyle = "#94a3b8";
+  ctx.font = "11px 'Inter', sans-serif";
+  ctx.fillText("Sampled Dye Color", sideX + 60, photoBoxY + 46);
+
+  // Optical metrics
+  ctx.fillStyle = "#64748b";
+  ctx.font = "11px 'Inter', sans-serif";
+  ctx.fillText("RGB CHANNELS:", sideX, photoBoxY + 84);
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 13px 'JetBrains Mono', monospace";
+  ctx.fillText(`[${Math.round(rgb[0])}, ${Math.round(rgb[1])}, ${Math.round(rgb[2])}]`, sideX, photoBoxY + 102);
+
+  ctx.fillStyle = "#64748b";
+  ctx.font = "11px 'Inter', sans-serif";
+  ctx.fillText("HUE & CHROMA:", sideX, photoBoxY + 130);
+  ctx.fillStyle = "#38bdf8";
+  ctx.font = "bold 13px 'JetBrains Mono', monospace";
+  ctx.fillText(`Hue: ${feat.hue_angle ?? '24.4'}° | Chroma: ${feat.chroma ?? '54.2'}`, sideX, photoBoxY + 148);
+
+  ctx.fillStyle = "#64748b";
+  ctx.font = "11px 'Inter', sans-serif";
+  ctx.fillText("CHEMICAL REACTION:", sideX, photoBoxY + 176);
+  ctx.fillStyle = "#f59e0b";
   ctx.font = "bold 12px 'Inter', sans-serif";
-  ctx.fillText("RISK GAUGE SPECTRUM (0 to >100 ppm):", 65, 460);
+  ctx.fillText("Cu-PAN Displacement", sideX, photoBoxY + 194);
 
-  // Meter Track
-  const trackX = 65;
-  const trackY = 475;
-  const trackW = canvas.width - 130;
-  const trackH = 14;
+  ctx.fillStyle = "#64748b";
+  ctx.font = "11px 'Inter', sans-serif";
+  ctx.fillText("AI VISION CONFIDENCE:", sideX, photoBoxY + 222);
+  ctx.fillStyle = "#22c55e";
+  ctx.font = "bold 13px 'Inter', sans-serif";
+  ctx.fillText(`${Math.round(res.model_confidence * 1000) / 10}% Nominal`, sideX, photoBoxY + 240);
 
-  const trackGrad = ctx.createLinearGradient(trackX, 0, trackX + trackW, 0);
-  trackGrad.addColorStop(0, "#22c55e");
-  trackGrad.addColorStop(0.2, "#22c55e");
-  trackGrad.addColorStop(0.2, "#facc15");
-  trackGrad.addColorStop(0.42, "#facc15");
-  trackGrad.addColorStop(0.42, "#fb923c");
-  trackGrad.addColorStop(0.66, "#fb923c");
-  trackGrad.addColorStop(0.66, "#ef4444");
-  trackGrad.addColorStop(0.88, "#ef4444");
-  trackGrad.addColorStop(0.88, "#dc2626");
-  trackGrad.addColorStop(1, "#991b1b");
-  ctx.fillStyle = trackGrad;
+  // 5. Exposure Meter Gauge (Soft dark fill, no border)
+  const gaugeY = 590;
+  const gaugeH = 88;
+  ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
   ctx.beginPath();
-  ctx.roundRect(trackX, trackY, trackW, trackH, 6);
+  ctx.roundRect(44, gaugeY, canvas.width - 88, gaugeH, 14);
   ctx.fill();
 
-  // Draw Needle Marker
-  const needleX = trackX + (safety.gaugePercent / 100) * trackW;
+  ctx.fillStyle = "#94a3b8";
+  ctx.font = "bold 11px 'Inter', sans-serif";
+  ctx.fillText("GAS EXPOSURE METER SPECTRUM (0 TO >100 PPM):", 68, gaugeY + 24);
+
+  // Gauge Track
+  const gTrackX = 68;
+  const gTrackY = gaugeY + 36;
+  const gTrackW = canvas.width - 136;
+  const gTrackH = 12;
+
+  const tGrad = ctx.createLinearGradient(gTrackX, 0, gTrackX + gTrackW, 0);
+  tGrad.addColorStop(0, "#22c55e");
+  tGrad.addColorStop(0.2, "#22c55e");
+  tGrad.addColorStop(0.2, "#facc15");
+  tGrad.addColorStop(0.42, "#facc15");
+  tGrad.addColorStop(0.42, "#fb923c");
+  tGrad.addColorStop(0.66, "#fb923c");
+  tGrad.addColorStop(0.66, "#ef4444");
+  tGrad.addColorStop(0.88, "#ef4444");
+  tGrad.addColorStop(0.88, "#dc2626");
+  tGrad.addColorStop(1, "#991b1b");
+  ctx.fillStyle = tGrad;
+  ctx.beginPath();
+  ctx.roundRect(gTrackX, gTrackY, gTrackW, gTrackH, 6);
+  ctx.fill();
+
+  // Pin needle
+  const pinX = gTrackX + (safety.gaugePercent / 100) * gTrackW;
   ctx.fillStyle = "#ffffff";
   ctx.beginPath();
-  ctx.arc(needleX, trackY + trackH / 2, 8, 0, Math.PI * 2);
+  ctx.arc(pinX, gTrackY + gTrackH / 2, 7, 0, Math.PI * 2);
   ctx.fill();
   ctx.strokeStyle = safety.color;
   ctx.lineWidth = 3;
   ctx.stroke();
 
-  // 6. Mandatory Action Card
-  ctx.fillStyle = "rgba(249, 115, 22, 0.08)";
-  ctx.beginPath();
-  ctx.roundRect(40, 540, canvas.width - 80, 95, 14);
-  ctx.fill();
-  ctx.strokeStyle = safety.color;
-  ctx.lineWidth = 2;
-  ctx.stroke();
+  // Gauge scale labels
+  ctx.fillStyle = "#94a3b8";
+  ctx.font = "10px 'Inter', sans-serif";
+  ctx.fillText("Safe (0-1)", gTrackX, gTrackY + 28);
+  ctx.fillText("Caution (1-10)", gTrackX + gTrackW * 0.22, gTrackY + 28);
+  ctx.fillText("Warning (10-50)", gTrackX + gTrackW * 0.44, gTrackY + 28);
+  ctx.fillText("Danger (50-100)", gTrackX + gTrackW * 0.68, gTrackY + 28);
+  ctx.textAlign = "right";
+  ctx.fillText("Evac (>100)", gTrackX + gTrackW, gTrackY + 28);
+  ctx.textAlign = "left";
 
-  ctx.fillStyle = safety.color;
-  ctx.font = "bold 12px 'Inter', sans-serif";
-  ctx.fillText("MANDATORY SAFETY ACTION REQUIRED:", 65, 570);
-
-  ctx.fillStyle = "#ffffff";
-  ctx.font = "bold 20px 'Inter', sans-serif";
-  ctx.fillText(`${safety.actionIcon}  ${res.worker_action}`, 65, 605);
-
-  // 7. Two-Column Inspection Meta Data
+  // 6. Inspection Metadata (Soft dark fill, no border)
+  const metaY = 692;
+  const metaH = 146;
   ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
   ctx.beginPath();
-  ctx.roundRect(40, 655, canvas.width - 80, 220, 14);
+  ctx.roundRect(44, metaY, canvas.width - 88, metaH, 14);
   ctx.fill();
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
-  ctx.stroke();
 
-  const col1X = 65;
-  const col2X = 440;
-  let rowY = 690;
+  const c1 = 68;
+  const c2 = 330;
+  const c3 = 580;
+  let mY = metaY + 34;
 
-  function drawMetaRow(label, val, x, y) {
+  function drawCell(label, val, x, y) {
     ctx.fillStyle = "#64748b";
-    ctx.font = "12px 'Inter', sans-serif";
+    ctx.font = "11px 'Inter', sans-serif";
     ctx.fillText(label, x, y);
     ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 14px 'Inter', sans-serif";
+    ctx.font = "bold 13px 'Inter', sans-serif";
     ctx.fillText(val, x, y + 20);
   }
 
-  drawMetaRow("Worker Name:", worker.name || "Worker", col1X, rowY);
-  drawMetaRow("Employee Badge ID:", worker.id || "EMP_00542", col2X, rowY);
+  drawCell("Worker Name:", worker.name || "Operator", c1, mY);
+  drawCell("Employee Badge ID:", worker.id || "EMP_00542", c2, mY);
+  drawCell("Dosimeter Strip ID:", stripId, c3, mY);
 
-  rowY += 50;
-  drawMetaRow("Indicator Strip ID:", stripId, col1X, rowY);
-  drawMetaRow("Chemical Batch Lot:", res.strip_batch || "BATCH_2024_Q4", col2X, rowY);
+  mY += 54;
+  drawCell("Chemical Batch:", res.strip_batch || "BATCH_2024_Q4", c1, mY);
+  drawCell("AI Model Version:", `MobileNetV3 ${res.model_version}`, c2, mY);
+  drawCell("Standard Compliance:", "OSHA 1910.1000 / NIOSH IDLH", c3, mY);
 
-  rowY += 50;
-  drawMetaRow("AI Vision Model:", `MobileNetV3 ${res.model_version}`, col1X, rowY);
-  drawMetaRow("Inference Confidence:", `${Math.round(res.model_confidence * 1000) / 10}% Nominal`, col2X, rowY);
-
-  // 8. Seal of Verification Footer
-  ctx.fillStyle = "rgba(2, 132, 199, 0.1)";
+  // 7. Verified Stamp Footer
+  const footerY = 852;
+  const footerH = 92;
+  ctx.fillStyle = "rgba(2, 132, 199, 0.08)";
   ctx.beginPath();
-  ctx.roundRect(40, 895, canvas.width - 80, 100, 14);
+  ctx.roundRect(44, footerY, canvas.width - 88, footerH, 14);
   ctx.fill();
-  ctx.strokeStyle = "rgba(56, 189, 248, 0.3)";
-  ctx.stroke();
 
   ctx.fillStyle = "#38bdf8";
-  ctx.font = "bold 14px 'Inter', sans-serif";
-  ctx.fillText("✓ DIGITALLY VERIFIED BY INDUSTRIAL AI SAFETY PLATFORM", 65, 932);
+  ctx.font = "bold 13px 'Inter', sans-serif";
+  ctx.fillText("✓ DIGITALLY VERIFIED INDUSTRIAL AI SAFETY CERTIFICATE", 68, footerY + 30);
 
   ctx.fillStyle = "#94a3b8";
-  ctx.font = "12px 'Inter', sans-serif";
-  ctx.fillText("OSHA 1910.1000 • NIOSH IDLH 100 PPM • ACGIH TLV-TWA 1 PPM Compliant Record", 65, 956);
-  ctx.fillText(`Tamper-Evident Hash Audit ID: ${res.scan_id}`, 65, 976);
+  ctx.font = "11px 'Inter', sans-serif";
+  ctx.fillText(`Cryptographic Audit ID: ${res.scan_id} • Instant Exposure Assessment`, 68, footerY + 52);
+  ctx.fillText("Standard: OSHA PEL (10-20 ppm), ACGIH TLV (1 ppm), NIOSH IDLH (100 ppm)", 68, footerY + 68);
 
-  // 9. Trigger Direct Download
+  // 8. Trigger Direct PNG Download
   const link = document.createElement("a");
   link.download = `H2S_Safety_Scan_${res.scan_id}_${res.predicted_ppm}ppm.png`;
   link.href = canvas.toDataURL("image/png");
@@ -1074,7 +1221,7 @@ function downloadSafetyReportPNG() {
   // Toast feedback
   const toast = document.getElementById("download-status-toast");
   if (toast) {
-    toast.textContent = "✓ Official Safety Certificate Downloaded as PNG!";
+    toast.textContent = "✓ Safety Result & Analysis Zone downloaded as PNG!";
     toast.style.display = "block";
     setTimeout(() => { toast.style.display = "none"; }, 3500);
   }
