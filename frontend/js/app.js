@@ -539,7 +539,7 @@ function renderParityPlot(parityData) {
   }
 
   const w = 500, h = 240;
-  const padL = 50, padR = 20, padT = 18, padB = 34;
+  const padL = 54, padR = 18, padT = 18, padB = 34;
   const plotW = w - padL - padR;
   const plotH = h - padT - padB;
 
@@ -556,7 +556,7 @@ function renderParityPlot(parityData) {
     // Horizontal
     gridLines += `
       <line x1="${padL}" y1="${yPos}" x2="${w - padR}" y2="${yPos}" stroke="rgba(255,255,255,0.06)" stroke-dasharray="3,3" />
-      <text x="${padL - 6}" y="${yPos + 3}" fill="#64748b" font-size="9" text-anchor="end">${val}</text>
+      <text x="${padL - 7}" y="${yPos + 3}" fill="#64748b" font-size="9" text-anchor="end">${val}</text>
     `;
     // Vertical
     gridLines += `
@@ -649,7 +649,7 @@ function renderParityPlot(parityData) {
 
     <!-- Axis Titles / Names -->
     <text x="${padL + plotW / 2}" y="${h - 4}" fill="#cbd5e1" font-size="9.5" font-weight="700" text-anchor="middle" letter-spacing="0.4">True H₂S Concentration (PPM) →</text>
-    <text transform="rotate(-90)" x="${-(padT + plotH / 2)}" y="13" fill="#cbd5e1" font-size="9.5" font-weight="700" text-anchor="middle" letter-spacing="0.4">← Estimated PPM (AI Model)</text>
+    <text transform="rotate(-90)" x="${-(padT + plotH / 2)}" y="14" fill="#cbd5e1" font-size="9.5" font-weight="700" text-anchor="middle" letter-spacing="0.4">← Estimated PPM (AI Model)</text>
 
     <!-- Tolerance Cone -->
     <polygon points="${conePolyPts}" fill="rgba(56, 189, 248, 0.08)" stroke="rgba(56, 189, 248, 0.25)" stroke-dasharray="2,2" />
