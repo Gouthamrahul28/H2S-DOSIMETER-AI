@@ -17,21 +17,18 @@
       padding: 20px;
     }
     .phone-frame {
-      width: 100%;
-      max-width: 540px;
-      height: 94vh;
-      max-height: 940px;
-      min-height: 660px;
-      background: #080e1a;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 32px;
-      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 40px rgba(56, 189, 248, 0.15);
+      width: 380px;
+      height: 740px;
+      background: #0b0f19;
+      border: 3px solid #334155;
+      border-radius: 40px;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 30px rgba(59, 130, 246, 0.2);
       display: flex;
       flex-direction: column;
       overflow: hidden;
       position: relative;
     }
-    @media (max-width: 540px) {
+    @media (max-width: 420px) {
       body { padding: 0; }
       .phone-frame {
         width: 100vw;
@@ -40,6 +37,7 @@
         max-height: 100vh;
         border-radius: 0;
         border: none;
+        box-shadow: none;
       }
     }
     .camera-notch {
@@ -304,41 +302,41 @@
       </button>
     </div>
 
-    <!-- 4. RESULT DISPLAY SCREEN (Matches Official Inspection Report Layout) -->
-    <div id="screen-result" class="worker-screen" style="padding: 22px 16px 18px;">
+    <!-- 4. RESULT DISPLAY SCREEN (Matches Official Inspection Report Layout in Mobile Ratio) -->
+    <div id="screen-result" class="worker-screen" style="padding: 38px 14px 20px;">
       <!-- REPORT HEADER -->
-      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.08);">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.08);">
         <div>
-          <div style="color:#38bdf8; font-weight:800; font-size:15px; letter-spacing:0.3px; line-height:1.2;">H₂S INDUSTRIAL OPTICAL DOSIMETER</div>
-          <div style="color:#94a3b8; font-size:11px; font-weight:500;">OFFICIAL AIR QUALITY INSPECTION REPORT</div>
+          <div style="color:#38bdf8; font-weight:800; font-size:12px; letter-spacing:0.2px; line-height:1.2;">H₂S INDUSTRIAL OPTICAL DOSIMETER</div>
+          <div style="color:#94a3b8; font-size:9.5px; font-weight:500;">OFFICIAL AIR QUALITY INSPECTION REPORT</div>
         </div>
         <div style="text-align:right;">
-          <div style="color:#cbd5e1; font-family:'JetBrains Mono',monospace; font-size:10.5px;" id="res-report-date">9/16/2026, 3:09:23 PM</div>
-          <div style="color:#cbd5e1; font-family:'JetBrains Mono',monospace; font-size:10.5px;" id="res-report-audit-id">AUDIT ID: SCAN_001</div>
+          <div style="color:#cbd5e1; font-family:'JetBrains Mono',monospace; font-size:9px;" id="res-report-date">9/16/2026, 3:09:23 PM</div>
+          <div style="color:#cbd5e1; font-family:'JetBrains Mono',monospace; font-size:9px;" id="res-report-audit-id">AUDIT ID: SCAN_001</div>
         </div>
       </div>
 
       <!-- 1. VERDICT & PPM HERO CARD -->
-      <div id="res-verdict-card" style="background:rgba(250,204,21,0.08); border-radius:14px; padding:12px 14px; margin-bottom:12px; transition:all 0.3s ease;">
+      <div id="res-verdict-card" style="background:rgba(250,204,21,0.08); border-radius:12px; padding:10px 12px; margin-bottom:10px; transition:all 0.3s ease;">
         <!-- Top Row: Verdict Title Left, PPM Value Right -->
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:8px;">
-          <div id="res-verdict-title" style="font-size:17px; font-weight:800; color:#facc15; display:flex; align-items:center; gap:6px; letter-spacing:-0.2px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; gap:6px;">
+          <div id="res-verdict-title" style="font-size:13px; font-weight:800; color:#facc15; display:flex; align-items:center; gap:5px; line-height:1.2;">
             <span id="res-verdict-icon">🟡</span>
             <span id="res-verdict-text">CAUTION — TRACE GAS DETECTED</span>
           </div>
-          <div id="res-ppm" style="font-size:38px; font-weight:800; font-family:'JetBrains Mono',monospace; color:#facc15; line-height:1;">
-            8.8 <span style="font-size:18px; font-weight:600; opacity:0.8; font-family:'Inter',sans-serif;">ppm</span>
+          <div id="res-ppm" style="font-size:28px; font-weight:800; font-family:'JetBrains Mono',monospace; color:#facc15; line-height:1; white-space:nowrap;">
+            8.8 <span style="font-size:14px; font-weight:600; opacity:0.8; font-family:'Inter',sans-serif;">ppm</span>
           </div>
         </div>
 
         <!-- Bottom Row: Action Left, Range Right -->
-        <div style="display:flex; justify-content:space-between; align-items:center; font-size:11.5px; flex-wrap:wrap; gap:6px;">
-          <div style="display:flex; align-items:center; gap:5px; color:#ffffff;">
-            <span style="color:var(--text-muted); font-weight:600;">Required Action:</span>
+        <div style="display:flex; justify-content:space-between; align-items:center; font-size:9.5px; flex-wrap:wrap; gap:4px; padding-top:4px; border-top:1px solid rgba(255,255,255,0.06);">
+          <div style="display:flex; align-items:center; gap:4px; color:#ffffff;">
+            <span style="color:var(--text-muted); font-weight:500;">Required Action:</span>
             <span id="res-action-icon">🔍</span>
             <strong id="res-worker-action">Monitor closely</strong>
           </div>
-          <div style="color:#94a3b8; font-size:11px; display:flex; align-items:center; gap:6px;">
+          <div style="color:#94a3b8; font-size:9px; display:flex; align-items:center; gap:4px;">
             <span id="res-ppm-range">Est. Range: 7.3-10.0 ppm</span>
             <span>•</span>
             <span id="res-safe-status-label" style="font-weight:700; color:#facc15;">🟡 CAUTION LEVEL</span>
@@ -356,73 +354,73 @@
       </div>
 
       <!-- 2. SCANNED DOSIMETER & TARGET ANALYSIS AREA (ROI) CARD -->
-      <div style="background:rgba(15, 23, 42, 0.85); border-radius:14px; padding:12px; margin-bottom:12px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-          <div style="color:#38bdf8; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; display:flex; align-items:center; gap:5px;">
+      <div style="background:rgba(15, 23, 42, 0.85); border-radius:12px; padding:10px; margin-bottom:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <div style="color:#38bdf8; font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; display:flex; align-items:center; gap:4px;">
             <span>📷</span> SCANNED DOSIMETER &amp; TARGET ANALYSIS AREA (ROI)
           </div>
-          <span id="res-roi-badge" style="color:#4ade80; font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:700; background:rgba(34,197,94,0.12); padding:2px 6px; border-radius:4px;">
+          <span id="res-roi-badge" style="color:#4ade80; font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; background:rgba(34,197,94,0.12); padding:1px 5px; border-radius:4px;">
             TARGET ROI: 60% × 60%
           </span>
         </div>
 
-        <!-- Two-Column Grid: Photo Left, Colorimetry Right -->
-        <div class="result-proof-grid" style="display:grid; grid-template-columns: 1.15fr 0.85fr; gap:12px; align-items:stretch;">
+        <!-- Two-Column Grid: Photo Left, Colorimetry Right (Side-by-Side in Mobile Ratio) -->
+        <div class="result-proof-grid" style="display:grid; grid-template-columns: 140px 1fr; gap:10px; align-items:stretch;">
           <!-- Left: Photo Viewport -->
-          <div style="position:relative; background:#020617; border-radius:10px; min-height:180px; overflow:hidden; display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,0.06);">
+          <div style="position:relative; background:#020617; border-radius:8px; height:160px; overflow:hidden; display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,0.06);">
             <img id="res-scanned-img" src="" alt="Scanned Strip" style="width:100%; height:100%; object-fit:contain; display:block;">
             
             <!-- ROI Target Overlay -->
-            <div id="res-roi-overlay" style="position:absolute; top:20%; left:20%; width:60%; height:60%; border:2.5px solid #22c55e; background:rgba(34,197,94,0.18); display:flex; align-items:center; justify-content:center; pointer-events:none; transition:all 0.3s ease;">
-              <div style="position:absolute; top:-3px; left:-3px; width:10px; height:10px; border-top:3px solid #38bdf8; border-left:3px solid #38bdf8;"></div>
-              <div style="position:absolute; top:-3px; right:-3px; width:10px; height:10px; border-top:3px solid #38bdf8; border-right:3px solid #38bdf8;"></div>
-              <div style="position:absolute; bottom:-3px; left:-3px; width:10px; height:10px; border-bottom:3px solid #38bdf8; border-left:3px solid #38bdf8;"></div>
-              <div style="position:absolute; bottom:-3px; right:-3px; width:10px; height:10px; border-bottom:3px solid #38bdf8; border-right:3px solid #38bdf8;"></div>
-              <div id="res-roi-tag" style="background:rgba(0,0,0,0.8); border:1px solid #22c55e; border-radius:4px; padding:2px 6px; font-size:9px; font-weight:700; color:#4ade80; text-transform:uppercase; letter-spacing:0.5px;">
+            <div id="res-roi-overlay" style="position:absolute; top:20%; left:20%; width:60%; height:60%; border:2px solid #22c55e; background:rgba(34,197,94,0.18); display:flex; align-items:center; justify-content:center; pointer-events:none; transition:all 0.3s ease;">
+              <div style="position:absolute; top:-2px; left:-2px; width:7px; height:7px; border-top:2px solid #38bdf8; border-left:2px solid #38bdf8;"></div>
+              <div style="position:absolute; top:-2px; right:-2px; width:7px; height:7px; border-top:2px solid #38bdf8; border-right:2px solid #38bdf8;"></div>
+              <div style="position:absolute; bottom:-2px; left:-2px; width:7px; height:7px; border-bottom:2px solid #38bdf8; border-left:2px solid #38bdf8;"></div>
+              <div style="position:absolute; bottom:-2px; right:-2px; width:7px; height:7px; border-bottom:2px solid #38bdf8; border-right:2px solid #38bdf8;"></div>
+              <div id="res-roi-tag" style="background:rgba(0,0,0,0.85); border:1px solid #22c55e; border-radius:3px; padding:1px 4px; font-size:7.5px; font-weight:700; color:#4ade80; text-transform:uppercase; letter-spacing:0.3px; white-space:nowrap;">
                 ANALYZED ZONE
               </div>
             </div>
 
-            <button type="button" id="btn-toggle-roi-zoom" style="position:absolute; bottom:6px; right:6px; background:rgba(0,0,0,0.6); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; font-size:9.5px; padding:2px 6px; border-radius:4px; cursor:pointer; font-weight:700;">
+            <button type="button" id="btn-toggle-roi-zoom" style="position:absolute; bottom:4px; right:4px; background:rgba(0,0,0,0.65); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; font-size:8.5px; padding:2px 5px; border-radius:4px; cursor:pointer; font-weight:700;">
               🔍 Zoom
             </button>
           </div>
 
           <!-- Right: Colorimetric Analysis Panel -->
-          <div style="display:flex; flex-direction:column; justify-content:space-between; gap:6px; font-size:11px;">
+          <div style="display:flex; flex-direction:column; justify-content:space-between; gap:4px; font-size:9.5px; overflow:hidden;">
             <!-- Swatch & Hex -->
-            <div style="display:flex; align-items:center; gap:8px;">
-              <div id="res-swatch-box" style="width:42px; height:42px; border-radius:8px; background:#D16662; box-shadow:0 0 10px rgba(0,0,0,0.5); flex-shrink:0;"></div>
-              <div>
-                <div id="res-swatch-hex" style="font-size:15px; font-weight:800; font-family:'JetBrains Mono',monospace; color:#ffffff;">#D16662</div>
-                <div style="font-size:10px; color:#94a3b8;">Sampled Dye Color</div>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <div id="res-swatch-box" style="width:32px; height:32px; border-radius:6px; background:#D16662; box-shadow:0 0 8px rgba(0,0,0,0.5); flex-shrink:0;"></div>
+              <div style="overflow:hidden;">
+                <div id="res-swatch-hex" style="font-size:12.5px; font-weight:800; font-family:'JetBrains Mono',monospace; color:#ffffff; line-height:1.1;">#D16662</div>
+                <div style="font-size:8px; color:#94a3b8; white-space:nowrap;">Sampled Dye Color</div>
               </div>
             </div>
 
             <!-- RGB Channels -->
             <div>
-              <div style="font-size:9px; color:#64748b; text-transform:uppercase; font-weight:700;">RGB CHANNELS:</div>
-              <div id="res-rgb-val" style="font-size:12.5px; font-weight:700; font-family:'JetBrains Mono',monospace; color:#ffffff;">[160, 124, 113]</div>
+              <div style="font-size:7.5px; color:#64748b; text-transform:uppercase; font-weight:700; line-height:1;">RGB CHANNELS:</div>
+              <div id="res-rgb-val" style="font-size:10.5px; font-weight:700; font-family:'JetBrains Mono',monospace; color:#ffffff; margin-top:1px;">[160, 124, 113]</div>
             </div>
 
             <!-- Hue & Chroma -->
             <div>
-              <div style="font-size:9px; color:#64748b; text-transform:uppercase; font-weight:700;">HUE &amp; CHROMA:</div>
-              <div style="font-size:12px; font-weight:700; font-family:'JetBrains Mono',monospace; color:#38bdf8;">
-                Hue: <span id="res-hue-val">42.8°</span> | Chroma: <span id="res-chroma-val">17</span>
+              <div style="font-size:7.5px; color:#64748b; text-transform:uppercase; font-weight:700; line-height:1;">HUE &amp; CHROMA:</div>
+              <div style="font-size:10px; font-weight:700; font-family:'JetBrains Mono',monospace; color:#38bdf8; margin-top:1px; white-space:nowrap;">
+                Hue: <span id="res-hue-val">42.8°</span> | <span id="res-chroma-val">17</span>
               </div>
             </div>
 
             <!-- Chemical Reaction -->
             <div>
-              <div style="font-size:9px; color:#64748b; text-transform:uppercase; font-weight:700;">CHEMICAL REACTION:</div>
-              <div id="res-reaction-val" style="font-size:12px; font-weight:700; color:#f59e0b;">Cu-PAN Displacement</div>
+              <div style="font-size:7.5px; color:#64748b; text-transform:uppercase; font-weight:700; line-height:1;">CHEMICAL REACTION:</div>
+              <div id="res-reaction-val" style="font-size:10px; font-weight:700; color:#f59e0b; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Cu-PAN Displacement</div>
             </div>
 
             <!-- AI Vision Confidence -->
             <div>
-              <div style="font-size:9px; color:#64748b; text-transform:uppercase; font-weight:700;">AI VISION CONFIDENCE:</div>
-              <div id="res-confidence-val" style="font-size:12px; font-weight:700; color:#22c55e;">70% Nominal</div>
+              <div style="font-size:7.5px; color:#64748b; text-transform:uppercase; font-weight:700; line-height:1;">AI VISION CONFIDENCE:</div>
+              <div id="res-confidence-val" style="font-size:10px; font-weight:700; color:#22c55e; margin-top:1px;">70% Nominal</div>
               <span id="res-confidence" style="display:none;"></span>
             </div>
           </div>
@@ -430,18 +428,18 @@
       </div>
 
       <!-- 3. GAS EXPOSURE METER SPECTRUM (0 TO >100 PPM) -->
-      <div style="background:rgba(15, 23, 42, 0.85); border-radius:14px; padding:12px 14px; margin-bottom:12px;">
-        <div style="color:#94a3b8; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">
+      <div style="background:rgba(15, 23, 42, 0.85); border-radius:12px; padding:10px 12px; margin-bottom:10px;">
+        <div style="color:#94a3b8; font-size:8.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:6px;">
           GAS EXPOSURE METER SPECTRUM (0 TO &gt;100 PPM):
         </div>
-        <div class="risk-gauge-track-wrap" style="padding:8px 0 14px;">
-          <div class="risk-gauge-track"></div>
+        <div class="risk-gauge-track-wrap" style="padding:4px 0 10px;">
+          <div class="risk-gauge-track" style="height:7px; border-radius:7px;"></div>
           <div class="risk-gauge-needle" id="res-gauge-needle" style="left:38%;">
-            <div class="risk-gauge-pin" id="res-gauge-pin" style="border-color:#facc15; color:#facc15;"></div>
+            <div class="risk-gauge-pin" id="res-gauge-pin" style="border-color:#facc15; color:#facc15; width:11px; height:11px;"></div>
             <div class="risk-gauge-arrow"></div>
           </div>
         </div>
-        <div class="risk-gauge-labels">
+        <div class="risk-gauge-labels" style="font-size:7.5px;">
           <span style="color:#4ade80;">Safe (0-1)</span>
           <span style="color:#facc15;">Caution (1-10)</span>
           <span style="color:#fb923c;">Warning (10-50)</span>
@@ -452,60 +450,60 @@
       </div>
 
       <!-- 4. INSPECTION METADATA CARD (3-Column Layout) -->
-      <div style="background:rgba(15, 23, 42, 0.85); border-radius:14px; padding:12px 14px; margin-bottom:12px;">
-        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px 8px; font-size:11px;">
+      <div style="background:rgba(15, 23, 42, 0.85); border-radius:12px; padding:10px 12px; margin-bottom:10px;">
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px 6px; font-size:9px;">
           <div>
-            <div style="font-size:9.5px; color:#64748b;">Worker Name:</div>
-            <div id="res-meta-worker-name" style="font-weight:700; color:#ffffff;">John Martinez</div>
+            <div style="font-size:7.5px; color:#64748b; text-transform:uppercase; font-weight:600;">Worker:</div>
+            <div id="res-meta-worker-name" style="font-weight:700; color:#ffffff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">John Martinez</div>
           </div>
           <div>
-            <div style="font-size:9.5px; color:#64748b;">Employee Badge ID:</div>
-            <div id="res-meta-badge-id" style="font-weight:700; color:#ffffff;">EMP_00542</div>
+            <div style="font-size:7.5px; color:#64748b; text-transform:uppercase; font-weight:600;">Badge ID:</div>
+            <div id="res-meta-badge-id" style="font-weight:700; color:#ffffff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">EMP_00542</div>
           </div>
           <div>
-            <div style="font-size:9.5px; color:#64748b;">Dosimeter Strip ID:</div>
-            <div id="res-meta-strip-id" style="font-weight:700; color:#ffffff;">STR_7755</div>
+            <div style="font-size:7.5px; color:#64748b; text-transform:uppercase; font-weight:600;">Strip ID:</div>
+            <div id="res-meta-strip-id" style="font-weight:700; color:#ffffff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">STR_7755</div>
           </div>
           <div>
-            <div style="font-size:9.5px; color:#64748b;">Chemical Batch:</div>
-            <div id="res-meta-batch" style="font-weight:700; color:#ffffff;">BATCH_2024_Q4_LOT_03</div>
+            <div style="font-size:7.5px; color:#64748b; text-transform:uppercase; font-weight:600;">Chemical Batch:</div>
+            <div id="res-meta-batch" style="font-weight:700; color:#ffffff; font-size:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">BATCH_2024_Q4</div>
           </div>
           <div>
-            <div style="font-size:9.5px; color:#64748b;">AI Model Version:</div>
-            <div id="res-meta-model-ver" style="font-weight:700; color:#ffffff;">MobileNetV3 v1.0</div>
+            <div style="font-size:7.5px; color:#64748b; text-transform:uppercase; font-weight:600;">AI Model:</div>
+            <div id="res-meta-model-ver" style="font-weight:700; color:#ffffff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">MobileNetV3 v1.0</div>
             <span id="res-model-ver" style="display:none;"></span>
           </div>
           <div>
-            <div style="font-size:9.5px; color:#64748b;">Standard Compliance:</div>
-            <div id="res-meta-compliance" style="font-weight:700; color:#ffffff;">OSHA 1910.1000 / NIOSH IDLH</div>
+            <div style="font-size:7.5px; color:#64748b; text-transform:uppercase; font-weight:600;">Compliance:</div>
+            <div id="res-meta-compliance" style="font-weight:700; color:#ffffff; font-size:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">OSHA / NIOSH</div>
           </div>
         </div>
         <span id="res-scan-id" style="display:none;"></span>
       </div>
 
       <!-- 5. DIGITALLY VERIFIED INDUSTRIAL AI SAFETY CERTIFICATE -->
-      <div style="background:rgba(2, 132, 199, 0.08); border-radius:12px; padding:10px 14px; margin-bottom:14px; border:1px solid rgba(56,189,248,0.15);">
-        <div style="color:#38bdf8; font-weight:800; font-size:11.5px; margin-bottom:3px; display:flex; align-items:center; gap:5px;">
+      <div style="background:rgba(2, 132, 199, 0.08); border-radius:10px; padding:8px 12px; margin-bottom:10px; border:1px solid rgba(56,189,248,0.15);">
+        <div style="color:#38bdf8; font-weight:800; font-size:9.5px; margin-bottom:2px; display:flex; align-items:center; gap:4px;">
           <span>✓</span> DIGITALLY VERIFIED INDUSTRIAL AI SAFETY CERTIFICATE
         </div>
-        <div id="res-verified-audit-line" style="color:#94a3b8; font-size:10px; margin-bottom:2px;">
-          Cryptographic Audit ID: SCAN_20260916_361C16 • Instant Exposure Assessment
+        <div id="res-verified-audit-line" style="color:#94a3b8; font-size:8px; margin-bottom:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+          Cryptographic Audit ID: SCAN_20260916_361C16 • Instant Assessment
         </div>
-        <div style="color:#64748b; font-size:9.5px;">
+        <div style="color:#64748b; font-size:7.5px;">
           Standard: OSHA PEL (10-20 ppm), ACGIH TLV (1 ppm), NIOSH IDLH (100 ppm)
         </div>
       </div>
 
       <!-- 6. DOWNLOAD & SHARE (MOVED TO THE END OF SCREEN) -->
-      <div class="download-section-card" style="margin-top:0; margin-bottom:12px;">
-        <button type="button" class="btn-download-hero" id="btn-download-result">
+      <div class="download-section-card" style="margin-top:0; margin-bottom:10px;">
+        <button type="button" class="btn-download-hero" id="btn-download-result" style="padding:10px; font-size:12.5px;">
           <span>📥</span> Download Safety Result (PNG)
         </button>
         <div class="download-quick-row">
-          <button type="button" class="btn btn-secondary quick-btn" id="btn-copy-summary">
+          <button type="button" class="btn btn-secondary quick-btn" id="btn-copy-summary" style="padding:6px 8px; font-size:10.5px;">
             📋 Copy Summary
           </button>
-          <button type="button" class="btn btn-secondary quick-btn" id="btn-print-slip">
+          <button type="button" class="btn btn-secondary quick-btn" id="btn-print-slip" style="padding:6px 8px; font-size:10.5px;">
             🖨️ Print Slip
           </button>
         </div>
@@ -513,7 +511,7 @@
       </div>
 
       <!-- 7. Complete & Return -->
-      <button class="btn btn-primary" id="btn-finish-scan" style="margin-top:auto; width:100%; justify-content:center; padding:13px; font-weight:700;">
+      <button class="btn btn-primary" id="btn-finish-scan" style="margin-top:auto; width:100%; justify-content:center; padding:12px; font-weight:700; font-size:13px;">
         Complete Scan & Return
       </button>
     </div>

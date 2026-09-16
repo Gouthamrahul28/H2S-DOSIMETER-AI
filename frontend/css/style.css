@@ -891,7 +891,8 @@ tr:hover td {
   font-weight: 700;
 }
 
-@media (max-width: 480px) {
+/* Keep side-by-side mobile proof layout for mobile ratios (>=320px) */
+@media (max-width: 320px) {
   .result-proof-grid {
     grid-template-columns: 1fr !important;
   }
