@@ -212,19 +212,11 @@ function setScanMode(mode) {
 modeBtnCamera?.addEventListener("click", () => setScanMode("camera"));
 modeBtnSim?.addEventListener("click", () => setScanMode("sim"));
 
-// Dedicated Upload Image Button (Browse gallery / files)
-btnUploadImage?.addEventListener("click", () => {
-  fileGalleryInput?.click();
-});
-
-// Direct Native Camera Shutter (Mobile & Desktop camera)
-btnNativeCamera?.addEventListener("click", () => {
-  fileCameraInput?.click();
-});
-
 // Unified Image File Processor (Used by upload button, camera shutter, and drag-and-drop)
 function handleImageFile(file) {
-  if (!file || !file.type.startsWith("image/")) {
+  if (!file) return;
+  const isImg = (file.type && file.type.startsWith("image/")) || /\.(jpe?g|png|webp|bmp|gif|tiff)$/i.test(file.name);
+  if (!isImg) {
     alert("Please select a valid image file (PNG, JPEG, WEBP).");
     return;
   }
@@ -251,15 +243,24 @@ function handleImageFile(file) {
 
     cameraStatusText.innerHTML = `✓ <strong style='color:#34d399;'>Image Loaded:</strong> <span style='color:#fff;'>${file.name}</span> (${Math.round(file.size/1024)} KB). Click <strong>⚡ SCAN NOW</strong>!`;
   };
+  reader.onerror = function() {
+    alert("Failed to read image file. Please try another image.");
+  };
   reader.readAsDataURL(file);
 }
 
 fileGalleryInput?.addEventListener("change", (e) => {
-  if (e.target.files && e.target.files[0]) handleImageFile(e.target.files[0]);
+  if (e.target.files && e.target.files[0]) {
+    handleImageFile(e.target.files[0]);
+  }
+  e.target.value = ""; // Reset so identical file can be re-selected
 });
 
 fileCameraInput?.addEventListener("change", (e) => {
-  if (e.target.files && e.target.files[0]) handleImageFile(e.target.files[0]);
+  if (e.target.files && e.target.files[0]) {
+    handleImageFile(e.target.files[0]);
+  }
+  e.target.value = ""; // Reset so identical file can be re-selected
 });
 
 // Drag & Drop on Viewfinder Box
@@ -278,6 +279,12 @@ if (cameraViewfinder) {
     cameraViewfinder.style.boxShadow = "";
     if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
       handleImageFile(e.dataTransfer.files[0]);
+    }
+  });
+
+  cameraViewfinder.addEventListener("click", (e) => {
+    if (!webcamStream && scanMode === "camera") {
+      fileGalleryInput?.click();
     }
   });
 }
