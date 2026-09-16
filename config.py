@@ -211,10 +211,10 @@ DEFAULT_SAFETY_THRESHOLDS = {
 # Image & Computer Vision Quality Criteria
 CV_SETTINGS = {
     "input_size": (224, 224),
-    "min_blur_score": 80.0,
-    "min_brightness": 40,
-    "max_brightness": 240,
-    "max_glare_percentage": 0.15
+    "min_blur_score": 10.0,       # Realistic threshold for blur detection (down from overly aggressive 80.0)
+    "min_brightness": 15,         # Accommodates deep purple Cu-PAN S0 and indoor lighting (down from 40)
+    "max_brightness": 250,
+    "max_glare_percentage": 0.20
 }
 
 # Active AI Model Version

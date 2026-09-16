@@ -9,7 +9,7 @@ Implements Section 2.3, 3.1 & 3.2 with SIH26118 Cu-PAN Spectral Gatekeeper:
 
 import numpy as np
 import cv2
-from PIL import Image
+from PIL import Image, ImageOps
 import io
 import base64
 import math
@@ -22,12 +22,24 @@ class CVPipeline:
 
     @staticmethod
     def load_image_from_bytes_or_base64(image_data: str) -> Optional[np.ndarray]:
-        """Loads RGB image from raw bytes, base64 data URI, or binary string."""
+        """Loads RGB image from raw bytes, base64 data URI, or binary string, handling alpha transparency and EXIF orientation."""
         try:
             if image_data.startswith("data:image"):
                 image_data = image_data.split(",")[1]
             decoded = base64.b64decode(image_data)
-            pil_img = Image.open(io.BytesIO(decoded)).convert("RGB")
+            pil_img = Image.open(io.BytesIO(decoded))
+            pil_img = ImageOps.exif_transpose(pil_img)
+
+            # Handle RGBA/transparency: composite over light neutral paper backing (240, 240, 240)
+            if pil_img.mode in ("RGBA", "LA") or (pil_img.mode == "P" and "transparency" in pil_img.info):
+                bg = Image.new("RGB", pil_img.size, (240, 240, 240))
+                if pil_img.mode != "RGBA":
+                    pil_img = pil_img.convert("RGBA")
+                bg.paste(pil_img, mask=pil_img.split()[-1])
+                pil_img = bg
+            else:
+                pil_img = pil_img.convert("RGB")
+
             return np.array(pil_img)
         except Exception:
             return None
@@ -35,26 +47,49 @@ class CVPipeline:
     @staticmethod
     def check_image_quality(img_rgb: np.ndarray) -> Dict[str, Any]:
         """
-        Calculates blur variance, luminance, and glare percentage.
+        Calculates blur variance, luminance, and glare percentage across full frame and central badge ROI.
         Returns quality evaluation metrics and pass/fail decision.
         """
         gray = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2GRAY)
+        h, w = gray.shape
+
+        # Central ROI where dosimeter strip is held
+        cy, cx = h // 2, w // 2
+        dy, dx = max(1, int(h * 0.3)), max(1, int(w * 0.3))
+        roi_gray = gray[max(0, cy - dy):min(h, cy + dy), max(0, cx - dx):min(w, cx + dx)]
+        if roi_gray.size == 0:
+            roi_gray = gray
 
         # 1. Blur Detection using Laplacian Variance
-        laplacian_var = float(cv2.Laplacian(gray, cv2.CV_64F).var())
-        is_sharp = laplacian_var >= config.CV_SETTINGS["min_blur_score"]
+        var_full = float(cv2.Laplacian(gray, cv2.CV_64F).var())
+        var_roi = float(cv2.Laplacian(roi_gray, cv2.CV_64F).var())
+        laplacian_var = max(var_full, var_roi)
+
+        min_blur = float(config.CV_SETTINGS.get("min_blur_score", 10.0))
+        # Uniform paper strips have naturally low high-frequency noise.
+        # Accept if:
+        # - laplacian_var >= min_blur (10.0)
+        # - or clean digital swatch (std < 6.0 and sufficiently bright)
+        # - or high-contrast image (std >= 15.0 and laplacian_var >= 4.0)
+        is_sharp = (laplacian_var >= min_blur) or (np.std(gray) < 6.0 and float(np.mean(gray)) >= 20.0) or (np.std(gray) >= 15.0 and laplacian_var >= 4.0)
 
         # 2. Lighting / Exposure Check
-        mean_luminance = float(np.mean(gray))
-        lighting_good = config.CV_SETTINGS["min_brightness"] <= mean_luminance <= config.CV_SETTINGS["max_brightness"]
+        mean_lum_full = float(np.mean(gray))
+        mean_lum_roi = float(np.mean(roi_gray))
+        # Use the brighter of full image or central badge (handles dark desk, dark uniform, or shadows)
+        mean_luminance = max(mean_lum_full, mean_lum_roi)
 
-        # 3. Glare Detection
-        glare_mask = gray >= 250
-        glare_ratio = float(np.sum(glare_mask) / gray.size)
-        glare_acceptable = glare_ratio <= config.CV_SETTINGS["max_glare_percentage"]
+        min_bright = float(config.CV_SETTINGS.get("min_brightness", 15.0))
+        max_bright = float(config.CV_SETTINGS.get("max_brightness", 250.0))
+        lighting_good = min_bright <= mean_luminance <= max_bright
+
+        # 3. Glare Detection (evaluated on the strip reaction region)
+        glare_mask = roi_gray >= 252
+        glare_ratio = float(np.sum(glare_mask) / roi_gray.size)
+        glare_acceptable = glare_ratio <= float(config.CV_SETTINGS.get("max_glare_percentage", 0.20))
 
         quality_score = round(min(1.0, max(0.2, (
-            (min(laplacian_var, 300.0) / 300.0) * 0.4 +
+            (min(laplacian_var, 150.0) / 150.0) * 0.4 +
             (1.0 - abs(mean_luminance - 130.0) / 130.0) * 0.4 +
             (1.0 - min(glare_ratio, 0.2) / 0.2) * 0.2
         ))), 3)
@@ -63,13 +98,13 @@ class CVPipeline:
 
         issues = []
         if not is_sharp:
-            issues.append("Image is blurry. Please hold steady and refocus.")
-        if mean_luminance < config.CV_SETTINGS["min_brightness"]:
-            issues.append("Environment too dark. Increase ambient lighting.")
-        elif mean_luminance > config.CV_SETTINGS["max_brightness"]:
-            issues.append("Overexposed image. Reduce direct lighting.")
+            issues.append(f"Image is blurry (Score: {round(laplacian_var, 1)} < {min_blur}). Please hold steady and refocus.")
+        if mean_luminance < min_bright:
+            issues.append(f"Environment too dark (Luminance: {round(mean_luminance, 1)} < {min_bright}). Increase ambient lighting.")
+        elif mean_luminance > max_bright:
+            issues.append(f"Overexposed image (Luminance: {round(mean_luminance, 1)} > {max_bright}). Reduce direct lighting.")
         if not glare_acceptable:
-            issues.append("Glare or reflection detected on the strip.")
+            issues.append(f"Glare or reflection detected on the strip ({round(glare_ratio * 100, 1)}%).")
 
         return {
             "passed": passed,
@@ -78,7 +113,7 @@ class CVPipeline:
             "mean_luminance": round(mean_luminance, 1),
             "glare_percentage": round(glare_ratio * 100, 2),
             "issues": issues,
-            "lighting_status": "Good" if lighting_good else ("Too Dark" if mean_luminance < 40 else "Too Bright"),
+            "lighting_status": "Good" if lighting_good else ("Too Dark" if mean_luminance < min_bright else "Too Bright"),
             "focus_status": "Sharp" if is_sharp else "Blurry",
             "distance_status": "Optimal (~10cm)"
         }

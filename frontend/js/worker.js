@@ -477,6 +477,17 @@ document.getElementById("btn-capture-scan").addEventListener("click", async () =
       } else {
         alert("⛔ SPECTRAL REJECTION: " + detail.message);
       }
+    } else if (detail.error === "IMAGE_QUALITY_CHECK_FAILED") {
+      // Display image quality advisory card
+      if (rejectionCard) {
+        document.getElementById("rejection-title").textContent = `IMAGE QUALITY ADVISORY (HTTP 422)`;
+        document.getElementById("rejection-desc").innerHTML = `<strong>${detail.message}</strong><br><span style="color:#94a3b8; font-size:11px;">Please ensure the dosimeter strip is centered inside the viewfinder box.</span>`;
+        const metrics = detail.quality_metrics || {};
+        document.getElementById("rejection-tech-details").textContent = `Sharpness: ${metrics.blur_metric || 'N/A'} | Luminance: ${metrics.mean_luminance || 'N/A'} | Glare: ${metrics.glare_percentage || 0}%`;
+        rejectionCard.style.display = "block";
+      } else {
+        alert("⚠️ IMAGE QUALITY CHECK: " + detail.message);
+      }
     } else {
       const errorMsg = typeof detail === "object" ? (detail.message || JSON.stringify(detail)) : (err.detail || "Scan failed");
       alert("Scan error: " + errorMsg);
