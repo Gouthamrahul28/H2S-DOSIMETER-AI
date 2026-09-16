@@ -569,25 +569,45 @@ function renderParityPlot(parityData) {
   });
   const conePolyPts = topPts.join(" ") + " " + botPts.join(" ");
 
-  // Category color mapping
-  const catColors = {
-    "C0": "#954978",
-    "C1": "#C1586A",
-    "C2": "#E99053",
-    "C3": "#EEB944",
-    "C4": "#F7DA34"
-  };
+  // Color mapping corresponding directly to H2S concentration (PPM safety zones)
+  function getPpmColor(ppm, category) {
+    const p = parseFloat(ppm);
+    if (!isNaN(p)) {
+      if (p <= 1.0) return "#22c55e";   // 🟢 Safe (0 - 1 ppm)
+      if (p <= 10.0) return "#facc15";  // 🟡 Caution (1 - 10 ppm)
+      if (p <= 50.0) return "#fb923c";  // 🟠 Warning (10 - 50 ppm)
+      if (p <= 100.0) return "#ef4444"; // 🔴 Danger (50 - 100 ppm)
+      return "#dc2626";                 // 🚨 Critical (> 100 ppm)
+    }
+    const catMap = {
+      "C0": "#22c55e",
+      "C1": "#facc15",
+      "C2": "#fb923c",
+      "C3": "#ef4444",
+      "C4": "#dc2626"
+    };
+    return catMap[category] || "#22c55e";
+  }
+
+  function getPpmTierMeta(ppm) {
+    const p = parseFloat(ppm);
+    if (p <= 1.0) return { name: "Safe", range: "0-1 ppm", color: "#22c55e", icon: "🟢" };
+    if (p <= 10.0) return { name: "Caution", range: "1-10 ppm", color: "#facc15", icon: "🟡" };
+    if (p <= 50.0) return { name: "Warning", range: "10-50 ppm", color: "#fb923c", icon: "⚡" };
+    if (p <= 100.0) return { name: "Danger", range: "50-100 ppm", color: "#ef4444", icon: "⛔" };
+    return { name: "Evacuate", range: ">100 ppm", color: "#dc2626", icon: "🚨" };
+  }
 
   // Only plot points within 0 to 60 PPM
   const filteredPoints = points.filter(pt => pt.true_ppm <= 60.0);
 
-  // Scatter dots
+  // Scatter dots colored according to PPM concentration
   const scatterDots = filteredPoints.map(pt => {
     const cx = x(pt.true_ppm).toFixed(1);
     const cy = y(Math.min(60, pt.estimated_ppm)).toFixed(1);
-    const color = catColors[pt.category] || "#34d399";
+    const color = pt.ppm_color || getPpmColor(pt.true_ppm, pt.category);
     return `
-      <circle cx="${cx}" cy="${cy}" r="4.5" fill="${color}" stroke="#ffffff" stroke-width="1.2" class="parity-point" data-cat="${pt.category}" data-true="${pt.true_ppm}" data-est="${pt.estimated_ppm}" data-err="${pt.error}" style="cursor:pointer;" />
+      <circle cx="${cx}" cy="${cy}" r="4.5" fill="${color}" stroke="#ffffff" stroke-width="1.2" class="parity-point" data-cat="${pt.category}" data-true="${pt.true_ppm}" data-est="${pt.estimated_ppm}" data-err="${pt.error}" data-color="${color}" style="cursor:pointer; transition:r 0.15s ease;" />
     `;
   }).join("");
 
@@ -614,6 +634,11 @@ function renderParityPlot(parityData) {
         const err = parseFloat(e.target.getAttribute("data-err"));
         const absErr = Math.abs(err).toFixed(2);
         const sign = err >= 0 ? "+" : "";
+        const pointColor = e.target.getAttribute("data-color") || getPpmColor(parseFloat(truePpm), cat);
+        const tier = getPpmTierMeta(parseFloat(truePpm));
+
+        e.target.setAttribute("r", "6.5");
+        e.target.setAttribute("stroke-width", "2");
 
         const rect = container.getBoundingClientRect();
         const ptX = e.clientX - rect.left;
@@ -622,14 +647,20 @@ function renderParityPlot(parityData) {
         tooltip.style.left = `${ptX}px`;
         tooltip.style.top = `${ptY}px`;
         tooltip.innerHTML = `
-          <strong>${cat} Validation Sample</strong><br>
+          <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+            <span style="width:10px; height:10px; border-radius:50%; background:${pointColor}; display:inline-block; box-shadow:0 0 8px ${pointColor};"></span>
+            <strong style="color:${pointColor}; font-size:12px;">${tier.icon} ${tier.name} (${tier.range})</strong>
+            <span style="color:#94a3b8; font-size:10px;">[${cat}]</span>
+          </div>
           <span>True H₂S: <strong>${truePpm} ppm</strong></span><br>
           <span>Predicted: <strong style="color:#38bdf8;">${estPpm} ppm</strong></span><br>
           <span>Error: <strong style="color:${absErr > 2.0 ? '#f59e0b' : '#34d399'};">${sign}${err.toFixed(2)} ppm</strong></span>
         `;
         tooltip.style.display = "block";
       });
-      d.addEventListener("mouseleave", () => {
+      d.addEventListener("mouseleave", (e) => {
+        e.target.setAttribute("r", "4.5");
+        e.target.setAttribute("stroke-width", "1.2");
         tooltip.style.display = "none";
       });
     });

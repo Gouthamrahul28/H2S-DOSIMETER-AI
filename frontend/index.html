@@ -326,10 +326,13 @@
                 <div class="chart-title">
                   <span>🎯 Prediction Parity: True PPM vs Estimated PPM</span>
                 </div>
-                <div class="chart-legend">
+                <div class="chart-legend" style="flex-wrap:wrap; gap:6px 10px;">
                   <div class="legend-item"><span class="legend-dot" style="background:#64748b; border: 1px dashed #cbd5e1;"></span> 1:1 Parity</div>
                   <div class="legend-item"><span class="legend-dot" style="background:rgba(56, 189, 248, 0.4);"></span> ±10% Zone</div>
-                  <div class="legend-item"><span class="legend-dot" style="background:#34d399;"></span> Test Points</div>
+                  <div class="legend-item"><span class="legend-dot" style="background:#22c55e;"></span> Safe (&le;1)</div>
+                  <div class="legend-item"><span class="legend-dot" style="background:#facc15;"></span> Caution (1-10)</div>
+                  <div class="legend-item"><span class="legend-dot" style="background:#fb923c;"></span> Warning (10-50)</div>
+                  <div class="legend-item"><span class="legend-dot" style="background:#ef4444;"></span> Danger (50-60)</div>
                 </div>
               </div>
               <div class="svg-chart-container" id="parity-chart-container">
