@@ -203,7 +203,7 @@ function renderLearningCurve(curve) {
   if (!svg || !curve || curve.length === 0) return;
 
   const w = 500, h = 220;
-  const padL = 42, padR = 40, padT = 18, padB = 25;
+  const padL = 48, padR = 20, padT = 18, padB = 32;
   const plotW = w - padL - padR;
   const plotH = h - padT - padB;
 
@@ -231,7 +231,7 @@ function renderLearningCurve(curve) {
       const xPos = x(idx);
       gridLines += `
         <line x1="${xPos}" y1="${padT}" x2="${xPos}" y2="${h - padB}" stroke="rgba(255,255,255,0.04)" />
-        <text x="${xPos}" y="${h - padB + 14}" fill="#64748b" font-size="9" text-anchor="middle">Ep ${ep}</text>
+        <text x="${xPos}" y="${h - padB + 13}" fill="#64748b" font-size="9" text-anchor="middle">Ep ${ep}</text>
       `;
     }
   });
@@ -256,6 +256,12 @@ function renderLearningCurve(curve) {
       </filter>
     </defs>
     ${gridLines}
+    <!-- Axis Baselines -->
+    <line x1="${padL}" y1="${h - padB}" x2="${w - padR}" y2="${h - padB}" stroke="rgba(255,255,255,0.15)" stroke-width="1.2" />
+    <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${h - padB}" stroke="rgba(255,255,255,0.15)" stroke-width="1.2" />
+    <!-- Axis Titles -->
+    <text x="${padL + plotW / 2}" y="${h - 4}" fill="#cbd5e1" font-size="9.5" font-weight="700" text-anchor="middle" letter-spacing="0.4">Training Epochs (1–25) →</text>
+    <text transform="rotate(-90)" x="${-(padT + plotH / 2)}" y="13" fill="#cbd5e1" font-size="9.5" font-weight="700" text-anchor="middle" letter-spacing="0.4">← Accuracy (%) / Loss</text>
     <!-- Area Under Val Acc -->
     <polygon points="${areaPts}" fill="url(#valGrad)" />
     <!-- Loss curve -->
@@ -411,7 +417,7 @@ function renderCalibrationCurve(curve) {
   if (!svg || !curve || curve.length === 0) return;
 
   const w = 500, h = 240;
-  const padL = 45, padR = 25, padT = 20, padB = 30;
+  const padL = 50, padR = 20, padT = 18, padB = 34;
   const plotW = w - padL - padR;
   const plotH = h - padT - padB;
 
@@ -426,7 +432,7 @@ function renderCalibrationCurve(curve) {
     const yPos = y(val);
     gridLines += `
       <line x1="${padL}" y1="${yPos}" x2="${w - padR}" y2="${yPos}" stroke="rgba(255,255,255,0.06)" stroke-dasharray="3,3" />
-      <text x="${padL - 8}" y="${yPos + 3}" fill="#64748b" font-size="9" text-anchor="end">${val}</text>
+      <text x="${padL - 6}" y="${yPos + 3}" fill="#64748b" font-size="9" text-anchor="end">${val}</text>
     `;
   });
 
@@ -435,7 +441,7 @@ function renderCalibrationCurve(curve) {
     const xPos = x(ppm);
     gridLines += `
       <line x1="${xPos}" y1="${padT}" x2="${xPos}" y2="${h - padB}" stroke="rgba(255,255,255,0.04)" />
-      <text x="${xPos}" y="${h - padB + 16}" fill="#64748b" font-size="9" text-anchor="middle">${ppm} ppm</text>
+      <text x="${xPos}" y="${h - padB + 13}" fill="#64748b" font-size="9" text-anchor="middle">${ppm}</text>
     `;
   });
 
@@ -452,6 +458,12 @@ function renderCalibrationCurve(curve) {
       </filter>
     </defs>
     ${gridLines}
+    <!-- Axis Baselines -->
+    <line x1="${padL}" y1="${h - padB}" x2="${w - padR}" y2="${h - padB}" stroke="rgba(255,255,255,0.15)" stroke-width="1.2" />
+    <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${h - padB}" stroke="rgba(255,255,255,0.15)" stroke-width="1.2" />
+    <!-- Axis Titles -->
+    <text x="${padL + plotW / 2}" y="${h - 4}" fill="#cbd5e1" font-size="9.5" font-weight="700" text-anchor="middle" letter-spacing="0.4">H₂S Concentration (PPM) →</text>
+    <text transform="rotate(-90)" x="${-(padT + plotH / 2)}" y="13" fill="#cbd5e1" font-size="9.5" font-weight="700" text-anchor="middle" letter-spacing="0.4">← Optical RGB Intensity (0–255)</text>
     <!-- Red channel polyline -->
     <polyline points="${rPts}" fill="none" stroke="#ef4444" stroke-width="2.2" opacity="0.9" />
     <!-- Blue channel polyline -->
@@ -527,7 +539,7 @@ function renderParityPlot(parityData) {
   }
 
   const w = 500, h = 240;
-  const padL = 45, padR = 25, padT = 20, padB = 30;
+  const padL = 50, padR = 20, padT = 18, padB = 34;
   const plotW = w - padL - padR;
   const plotH = h - padT - padB;
 
@@ -544,12 +556,12 @@ function renderParityPlot(parityData) {
     // Horizontal
     gridLines += `
       <line x1="${padL}" y1="${yPos}" x2="${w - padR}" y2="${yPos}" stroke="rgba(255,255,255,0.06)" stroke-dasharray="3,3" />
-      <text x="${padL - 8}" y="${yPos + 3}" fill="#64748b" font-size="9" text-anchor="end">${val}</text>
+      <text x="${padL - 6}" y="${yPos + 3}" fill="#64748b" font-size="9" text-anchor="end">${val}</text>
     `;
     // Vertical
     gridLines += `
       <line x1="${xPos}" y1="${padT}" x2="${xPos}" y2="${h - padB}" stroke="rgba(255,255,255,0.04)" />
-      <text x="${xPos}" y="${h - padB + 16}" fill="#64748b" font-size="9" text-anchor="middle">${val}</text>
+      <text x="${xPos}" y="${h - padB + 13}" fill="#64748b" font-size="9" text-anchor="middle">${val}</text>
     `;
   });
 
@@ -613,6 +625,14 @@ function renderParityPlot(parityData) {
 
   svg.innerHTML = `
     ${gridLines}
+    <!-- Axis Baselines -->
+    <line x1="${padL}" y1="${h - padB}" x2="${w - padR}" y2="${h - padB}" stroke="rgba(255,255,255,0.15)" stroke-width="1.2" />
+    <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${h - padB}" stroke="rgba(255,255,255,0.15)" stroke-width="1.2" />
+
+    <!-- Axis Titles / Names -->
+    <text x="${padL + plotW / 2}" y="${h - 4}" fill="#cbd5e1" font-size="9.5" font-weight="700" text-anchor="middle" letter-spacing="0.4">True H₂S Concentration (PPM) →</text>
+    <text transform="rotate(-90)" x="${-(padT + plotH / 2)}" y="13" fill="#cbd5e1" font-size="9.5" font-weight="700" text-anchor="middle" letter-spacing="0.4">← Estimated PPM (AI Model)</text>
+
     <!-- Tolerance Cone -->
     <polygon points="${conePolyPts}" fill="rgba(56, 189, 248, 0.08)" stroke="rgba(56, 189, 248, 0.25)" stroke-dasharray="2,2" />
     <!-- 1:1 Parity Line -->

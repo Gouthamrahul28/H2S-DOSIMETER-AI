@@ -298,8 +298,9 @@
             <!-- Graph 4: Cu-PAN Calibration Response: RGB Intensity vs H2S Concentration -->
             <div class="chart-card">
               <div class="chart-card-header">
-                <div class="chart-title">
+                <div class="chart-title" style="display:flex; flex-direction:column; gap:2px;">
                   <span>🧪 Cu-PAN Calibration: RGB Intensity vs H₂S (PPM)</span>
+                  <span style="font-size:10.5px; color:var(--text-muted); font-weight:500;">X-Axis: H₂S (ppm) • Y-Axis: RGB Intensity (0–255)</span>
                 </div>
                 <div class="chart-legend">
                   <div class="legend-item"><span class="legend-dot" style="background:#ef4444;"></span> Red (R)</div>
@@ -323,8 +324,9 @@
             <!-- Graph 5: Parity / Regression Plot: True PPM vs Estimated PPM -->
             <div class="chart-card">
               <div class="chart-card-header">
-                <div class="chart-title">
+                <div class="chart-title" style="display:flex; flex-direction:column; gap:2px;">
                   <span>🎯 Prediction Parity: True PPM vs Estimated PPM</span>
+                  <span style="font-size:10.5px; color:var(--text-muted); font-weight:500;">X-Axis: True PPM (Reference) • Y-Axis: Estimated PPM (AI Prediction)</span>
                 </div>
                 <div class="chart-legend" style="flex-wrap:wrap; gap:6px 10px;">
                   <div class="legend-item"><span class="legend-dot" style="background:#64748b; border: 1px dashed #cbd5e1;"></span> 1:1 Parity</div>
