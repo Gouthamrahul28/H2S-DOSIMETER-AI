@@ -140,17 +140,19 @@ const cameraControls = document.getElementById("camera-mode-controls");
 const simControls = document.getElementById("sim-mode-controls");
 const videoEl = document.getElementById("webcam-video");
 const photoPreviewEl = document.getElementById("photo-preview-img");
-const fileInputEl = document.getElementById("file-strip-input");
+const fileCameraInput = document.getElementById("file-camera-input");
+const fileGalleryInput = document.getElementById("file-gallery-input");
+const btnUploadImage = document.getElementById("btn-upload-image");
+const btnNativeCamera = document.getElementById("btn-native-camera");
 const btnToggleWebcam = document.getElementById("btn-toggle-webcam");
+const btnLoadSample = document.getElementById("btn-load-sample");
 const cameraStatusText = document.getElementById("camera-status-text");
+const cameraViewfinder = document.getElementById("camera-viewfinder");
 
 let scanMode = "camera"; // "camera" or "sim"
 let webcamStream = null;
 let uploadedPhotoBase64 = null;
 let overrideImageBase64 = null;
-
-const btnNativeCamera = document.getElementById("btn-native-camera");
-const btnLoadSample = document.getElementById("btn-load-sample");
 
 // Mode Switching
 function setScanMode(mode) {
@@ -210,10 +212,75 @@ function setScanMode(mode) {
 modeBtnCamera?.addEventListener("click", () => setScanMode("camera"));
 modeBtnSim?.addEventListener("click", () => setScanMode("sim"));
 
-// Direct Native Camera Shutter (Mobile & Desktop)
-btnNativeCamera?.addEventListener("click", () => {
-  fileInputEl.click();
+// Dedicated Upload Image Button (Browse gallery / files)
+btnUploadImage?.addEventListener("click", () => {
+  fileGalleryInput?.click();
 });
+
+// Direct Native Camera Shutter (Mobile & Desktop camera)
+btnNativeCamera?.addEventListener("click", () => {
+  fileCameraInput?.click();
+});
+
+// Unified Image File Processor (Used by upload button, camera shutter, and drag-and-drop)
+function handleImageFile(file) {
+  if (!file || !file.type.startsWith("image/")) {
+    alert("Please select a valid image file (PNG, JPEG, WEBP).");
+    return;
+  }
+
+  // Stop webcam if running
+  if (webcamStream) {
+    webcamStream.getTracks().forEach(t => t.stop());
+    webcamStream = null;
+    videoEl.style.display = "none";
+    btnToggleWebcam.textContent = "📹 Live Webcam";
+    btnToggleWebcam.style.background = "";
+  }
+
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    uploadedPhotoBase64 = evt.target.result;
+    photoPreviewEl.src = uploadedPhotoBase64;
+    photoPreviewEl.style.display = "block";
+
+    roiPreview.style.display = "flex";
+    roiPreview.style.background = "rgba(34, 197, 94, 0.06)";
+    roiPreview.style.color = "#22c55e";
+    roiPreview.innerHTML = "Position<br>Strip Here";
+
+    cameraStatusText.innerHTML = `✓ <strong style='color:#34d399;'>Image Loaded:</strong> <span style='color:#fff;'>${file.name}</span> (${Math.round(file.size/1024)} KB). Click <strong>⚡ SCAN NOW</strong>!`;
+  };
+  reader.readAsDataURL(file);
+}
+
+fileGalleryInput?.addEventListener("change", (e) => {
+  if (e.target.files && e.target.files[0]) handleImageFile(e.target.files[0]);
+});
+
+fileCameraInput?.addEventListener("change", (e) => {
+  if (e.target.files && e.target.files[0]) handleImageFile(e.target.files[0]);
+});
+
+// Drag & Drop on Viewfinder Box
+if (cameraViewfinder) {
+  cameraViewfinder.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    cameraViewfinder.style.boxShadow = "0 0 25px rgba(56, 189, 248, 0.5)";
+    cameraViewfinder.style.borderColor = "#38bdf8";
+  });
+  cameraViewfinder.addEventListener("dragleave", (e) => {
+    e.preventDefault();
+    cameraViewfinder.style.boxShadow = "";
+  });
+  cameraViewfinder.addEventListener("drop", (e) => {
+    e.preventDefault();
+    cameraViewfinder.style.boxShadow = "";
+    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleImageFile(e.dataTransfer.files[0]);
+    }
+  });
+}
 
 // Real Hardware Webcam Toggle with Progressive Fallback
 btnToggleWebcam?.addEventListener("click", async () => {
@@ -225,7 +292,7 @@ btnToggleWebcam?.addEventListener("click", async () => {
     videoEl.srcObject = null;
     btnToggleWebcam.textContent = "📹 Live Webcam";
     btnToggleWebcam.style.background = "";
-    cameraStatusText.textContent = "Webcam stopped. Tap 'Snap Photo' or 'Live Webcam'.";
+    cameraStatusText.textContent = "Webcam stopped. Tap 'Upload Image' or 'Snap Photo'.";
     if (!uploadedPhotoBase64) {
       roiPreview.style.background = "#111827";
       roiPreview.style.color = "#38bdf8";
@@ -236,8 +303,8 @@ btnToggleWebcam?.addEventListener("click", async () => {
 
   // Check if getUserMedia is supported in this context
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    cameraStatusText.innerHTML = "⚠️ Live webcam requires HTTPS/localhost.<br><span style='color:#34d399;'>Opening native camera photo mode...</span>";
-    fileInputEl.click();
+    cameraStatusText.innerHTML = "⚠️ Live webcam requires HTTPS/localhost.<br><span style='color:#34d399;'>Opening file/image upload mode...</span>";
+    fileGalleryInput?.click();
     return;
   }
 
@@ -298,9 +365,8 @@ btnToggleWebcam?.addEventListener("click", async () => {
       advice = "Webcam is already in use by another program.";
     }
 
-    cameraStatusText.innerHTML = `⚠️ <strong>${advice}</strong><br><span style='color:#38bdf8;'>Opening device camera shutter / photo picker...</span>`;
-    // Seamless fallback to native mobile/desktop camera picker
-    setTimeout(() => fileInputEl.click(), 500);
+    cameraStatusText.innerHTML = `⚠️ <strong>${advice}</strong><br><span style='color:#38bdf8;'>Opening image file picker...</span>`;
+    setTimeout(() => fileGalleryInput?.click(), 500);
   }
 });
 
@@ -326,38 +392,9 @@ btnLoadSample?.addEventListener("click", () => {
   roiPreview.style.color = "#22c55e";
   roiPreview.innerHTML = "Position<br>Strip Here";
 
-  cameraStatusText.innerHTML = "✓ <strong style='color:#34d399;'>Sample Cu-PAN Strip Loaded</strong> (Orange / ~22 ppm). Click <strong>SCAN NOW</strong> to run AI model!";
+  cameraStatusText.innerHTML = "✓ <strong style='color:#34d399;'>Sample Cu-PAN Strip Loaded</strong> (Orange / ~22 ppm). Click <strong>⚡ SCAN NOW</strong> to run AI model!";
 });
 
-// Real Photo File Input Handler
-fileInputEl?.addEventListener("change", (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  // Stop webcam if running
-  if (webcamStream) {
-    webcamStream.getTracks().forEach(t => t.stop());
-    webcamStream = null;
-    videoEl.style.display = "none";
-    btnToggleWebcam.textContent = "📹 Live Webcam";
-    btnToggleWebcam.style.background = "";
-  }
-
-  const reader = new FileReader();
-  reader.onload = function(evt) {
-    uploadedPhotoBase64 = evt.target.result;
-    photoPreviewEl.src = uploadedPhotoBase64;
-    photoPreviewEl.style.display = "block";
-
-    roiPreview.style.display = "flex";
-    roiPreview.style.background = "rgba(34, 197, 94, 0.06)";
-    roiPreview.style.color = "#22c55e";
-    roiPreview.innerHTML = "Position<br>Strip Here";
-
-    cameraStatusText.innerHTML = `✓ Loaded photo: <strong style='color:#fff;'>${file.name}</strong> (${Math.round(file.size/1024)} KB). Click <strong>SCAN NOW</strong>!`;
-  };
-  reader.readAsDataURL(file);
-});
 
 // 4. Capture & Scan Submission
 document.getElementById("btn-capture-scan").addEventListener("click", async () => {
@@ -385,8 +422,8 @@ document.getElementById("btn-capture-scan").addEventListener("click", async () =
         // Use real uploaded photo or loaded sample
         payload.image_base64 = uploadedPhotoBase64;
       } else {
-        cameraStatusText.innerHTML = "⚠️ <span style='color:#f87171;'>No photo ready.</span> Tap <strong>Snap Photo</strong> or <strong>Load Sample</strong> first!";
-        fileInputEl.click();
+        cameraStatusText.innerHTML = "⚠️ <span style='color:#f87171;'>No photo ready.</span> Click <strong>Upload Image</strong>, <strong>Snap Photo</strong>, or <strong>Load Sample</strong> first!";
+        fileGalleryInput?.click();
         btn.textContent = "⚡ SCAN NOW (AI Analysis)";
         btn.disabled = false;
         return;
