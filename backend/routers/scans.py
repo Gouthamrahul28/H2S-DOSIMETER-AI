@@ -97,11 +97,29 @@ def submit_scan(payload: ScanSubmissionRequest, db: Session = Depends(get_db)):
                     "message": "Image quality failed. " + " ".join(quality["issues"])
                 }
             )
+        h_raw, w_raw, _ = raw_img.shape
+        x1, x2 = int(w_raw * 0.2), int(w_raw * 0.8)
+        y1, y2 = int(h_raw * 0.2), int(h_raw * 0.8)
+        roi_coords = {
+            "x1": x1, "y1": y1, "x2": x2, "y2": y2,
+            "width": x2 - x1, "height": y2 - y1,
+            "img_width": w_raw, "img_height": h_raw,
+            "percent": {"x": 20.0, "y": 20.0, "width": 60.0, "height": 60.0}
+        }
         processed_img = CVPipeline.extract_roi_and_normalize(raw_img)
     else:
         # Generate simulated strip image
         target_ppm = payload.simulated_ppm if payload.simulated_ppm is not None else 18.5
         processed_img = generate_synthetic_strip_image(target_ppm)
+        raw_img = processed_img.copy()
+        h_raw, w_raw, _ = raw_img.shape
+        roi_coords = {
+            "x1": int(w_raw * 0.25), "y1": int(h_raw * 0.25),
+            "x2": int(w_raw * 0.75), "y2": int(h_raw * 0.75),
+            "width": int(w_raw * 0.5), "height": int(h_raw * 0.5),
+            "img_width": w_raw, "img_height": h_raw,
+            "percent": {"x": 25.0, "y": 25.0, "width": 50.0, "height": 50.0}
+        }
         quality = {
             "passed": True,
             "quality_score": 0.98,
@@ -114,15 +132,18 @@ def submit_scan(payload: ScanSubmissionRequest, db: Session = Depends(get_db)):
             "issues": []
         }
 
-    # 3. Generate Scan ID & Save Image
+    # 3. Generate Scan ID & Save Both Raw and ROI Images
     scan_id = f"SCAN_{datetime.utcnow().strftime('%Y%m%d')}_{uuid.uuid4().hex[:6].upper()}"
-    filename = f"{scan_id}.jpg"
-    filepath = config.UPLOAD_DIR / filename
+    raw_filename = f"{scan_id}_raw.jpg"
+    roi_filename = f"{scan_id}_roi.jpg"
     try:
-        pil_save = Image.fromarray(processed_img)
-        pil_save.save(filepath, format="JPEG", quality=90)
+        Image.fromarray(raw_img).save(config.UPLOAD_DIR / raw_filename, format="JPEG", quality=92)
+        Image.fromarray(processed_img).save(config.UPLOAD_DIR / roi_filename, format="JPEG", quality=92)
     except Exception:
         pass
+
+    # Extract colorimetric features for visual verification
+    extracted_feat = CVPipeline.extract_color_features(processed_img)
 
     # 4. AI Inference & Cu-PAN Spectral Gating
     prediction = InferenceService.predict(processed_img, model_version=config.DEFAULT_MODEL_VERSION)
@@ -172,7 +193,7 @@ def submit_scan(payload: ScanSubmissionRequest, db: Session = Depends(get_db)):
         strip_batch=strip.batch_id,
         timestamp=datetime.utcnow(),
         phone_model=payload.phone_model,
-        image_file=filename,
+        image_file=raw_filename,
         image_quality_score=quality["quality_score"],
         model_version=prediction["model_version"],
         model_confidence=prediction["model_confidence"],
@@ -205,7 +226,16 @@ def submit_scan(payload: ScanSubmissionRequest, db: Session = Depends(get_db)):
         alert_triggered=alert_trig,
         color_hex=prediction["color_hex"],
         badge_class=prediction["badge_class"],
-        image_quality=quality
+        image_quality=quality,
+        image_url=f"/data/uploads/{raw_filename}",
+        raw_image_url=f"/data/uploads/{raw_filename}",
+        roi_coordinates=roi_coords,
+        extracted_features={
+            "mean_rgb": [round(c, 1) for c in extracted_feat["mean_rgb"]],
+            "hue_angle": extracted_feat["hue_angle"],
+            "chroma": extracted_feat["chroma"],
+            "mean_lab": [round(l, 1) for l in extracted_feat["mean_lab"]]
+        }
     )
 
 @router.get("")
@@ -244,6 +274,8 @@ def list_scans(
             "safety_threshold_exceeded": s.safety_threshold_exceeded,
             "alert_triggered": s.alert_triggered,
             "supervisor_reviewed": s.supervisor_reviewed,
+            "image_file": s.image_file,
+            "image_url": f"/data/uploads/{s.image_file}" if s.image_file else None,
             "color_hex": cat_info.get("color_hex", "#ffffff"),
             "badge_class": cat_info.get("badge_class", "badge-green"),
             "exposure_level": cat_info.get("exposure_level", "Unknown"),

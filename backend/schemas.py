@@ -58,6 +58,10 @@ class ScanResponse(BaseModel):
     color_hex: str
     badge_class: str
     image_quality: Dict[str, Any]
+    image_url: Optional[str] = None
+    raw_image_url: Optional[str] = None
+    roi_coordinates: Optional[Dict[str, Any]] = None
+    extracted_features: Optional[Dict[str, Any]] = None
 
 # --- Safety Configuration Schemas ---
 class SafetyConfigUpdateRequest(BaseModel):

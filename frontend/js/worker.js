@@ -464,6 +464,87 @@ document.getElementById("btn-capture-scan").addEventListener("click", async () =
     const guidanceBox = document.getElementById("res-guidance-box");
     guidanceBox.style.borderLeft = `4px solid ${res.color_hex}`;
 
+    // Populate Scanned Image and Targeted Area of Analysis
+    const resScannedImg = document.getElementById("res-scanned-img");
+    const resRoiOverlay = document.getElementById("res-roi-overlay");
+    const resRoiBadge = document.getElementById("res-roi-badge");
+    const resRoiTag = document.getElementById("res-roi-tag");
+    const resSwatchBox = document.getElementById("res-swatch-box");
+    const resSwatchHex = document.getElementById("res-swatch-hex");
+    const resRgbVal = document.getElementById("res-rgb-val");
+    const resHueVal = document.getElementById("res-hue-val");
+    const resChromaVal = document.getElementById("res-chroma-val");
+    const btnToggleRoiZoom = document.getElementById("btn-toggle-roi-zoom");
+
+    // Scanned Image Source (Prefer payload.image_base64 for instant display, fallback to server image_url)
+    let displayImgSrc = payload.image_base64 || res.raw_image_url || res.image_url;
+    if (!displayImgSrc && scanMode === "sim") {
+      const cupan = getCupanColor(res.predicted_ppm);
+      displayImgSrc = `data:image/png;base64,${generateTestStripBase64(cupan.rgb)}`;
+    }
+    if (resScannedImg && displayImgSrc) {
+      resScannedImg.src = displayImgSrc;
+      resScannedImg.style.transform = "scale(1)";
+    }
+
+    // Set ROI Overlay Coordinates
+    let isZoomed = false;
+    const roiCoords = res.roi_coordinates || { percent: { x: 20, y: 20, width: 60, height: 60 } };
+    const p = roiCoords.percent || { x: 20, y: 20, width: 60, height: 60 };
+
+    if (resRoiOverlay) {
+      resRoiOverlay.style.top = `${p.y}%`;
+      resRoiOverlay.style.left = `${p.x}%`;
+      resRoiOverlay.style.width = `${p.width}%`;
+      resRoiOverlay.style.height = `${p.height}%`;
+      resRoiOverlay.style.display = "flex";
+      resRoiOverlay.style.boxShadow = "0 0 15px rgba(34,197,94,0.6), inset 0 0 10px rgba(34,197,94,0.2)";
+      if (resRoiTag) resRoiTag.textContent = "Analyzed Zone";
+    }
+
+    if (resRoiBadge) {
+      resRoiBadge.textContent = `Target ROI: ${Math.round(p.width)}% × ${Math.round(p.height)}%`;
+    }
+
+    // Extracted Dye Colorimetric features
+    const feat = res.extracted_features || {};
+    const rgb = feat.mean_rgb || [233, 144, 83];
+    const hex = res.color_hex || `rgb(${Math.round(rgb[0])}, ${Math.round(rgb[1])}, ${Math.round(rgb[2])})`;
+    if (resSwatchBox) resSwatchBox.style.background = hex;
+    if (resSwatchHex) resSwatchHex.textContent = hex.toUpperCase();
+    if (resRgbVal) resRgbVal.textContent = `[${Math.round(rgb[0])}, ${Math.round(rgb[1])}, ${Math.round(rgb[2])}]`;
+    if (resHueVal) resHueVal.textContent = `${feat.hue_angle ?? '24.4'}°`;
+    if (resChromaVal) resChromaVal.textContent = `${feat.chroma ?? '54.2'}`;
+
+    // Zoom Toggle Button Handler
+    if (btnToggleRoiZoom) {
+      btnToggleRoiZoom.textContent = "🔍 Zoom ROI";
+      btnToggleRoiZoom.onclick = () => {
+        isZoomed = !isZoomed;
+        if (isZoomed) {
+          btnToggleRoiZoom.textContent = "🔍 Full View";
+          if (resScannedImg) {
+            resScannedImg.style.transform = "scale(1.8)";
+            resScannedImg.style.transformOrigin = `${p.x + p.width / 2}% ${p.y + p.height / 2}%`;
+            resScannedImg.style.transition = "transform 0.3s ease";
+          }
+          if (resRoiOverlay) {
+            resRoiOverlay.style.boxShadow = "0 0 25px rgba(34,197,94,0.9), inset 0 0 15px rgba(34,197,94,0.4)";
+            if (resRoiTag) resRoiTag.textContent = "Chemical Core (Zoomed)";
+          }
+        } else {
+          btnToggleRoiZoom.textContent = "🔍 Zoom ROI";
+          if (resScannedImg) {
+            resScannedImg.style.transform = "scale(1)";
+          }
+          if (resRoiOverlay) {
+            resRoiOverlay.style.boxShadow = "0 0 15px rgba(34,197,94,0.6), inset 0 0 10px rgba(34,197,94,0.2)";
+            if (resRoiTag) resRoiTag.textContent = "Analyzed Zone";
+          }
+        }
+      };
+    }
+
     showScreen(screenResult);
   } catch (err) {
     const detail = err.detail || {};
