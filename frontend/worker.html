@@ -292,12 +292,21 @@
 
     <!-- 4. RESULT DISPLAY SCREEN -->
     <div id="screen-result" class="worker-screen">
-      <div style="text-align:center; margin-top:10px; margin-bottom:20px;">
-        <div id="res-badge" class="badge-cat badge-orange" style="font-size:14px; padding:6px 14px; margin-bottom:10px;">
-          CAUTION (C2)
+      <div style="text-align:center; margin-top:10px; margin-bottom:18px;">
+        <div style="display:flex; justify-content:center; gap:6px; margin-bottom:8px; flex-wrap:wrap;">
+          <div id="res-badge" class="badge-cat badge-orange" style="font-size:13px; padding:5px 12px;">
+            CAUTION (C2)
+          </div>
+          <div id="res-ppm-status-tag" class="badge-cat badge-orange" style="font-size:11px; padding:5px 10px; font-weight:700;">
+            ⚡ MODERATE HAZARD
+          </div>
         </div>
-        <div style="font-size:38px; font-weight:800; color:#fff; line-height:1.1;" id="res-ppm">18.5 ppm</div>
-        <div style="font-size:13px; color:var(--text-muted);" id="res-ppm-range">Range: 15-22 ppm</div>
+        <div class="ppm-reading ppm-warning" style="font-size:42px; font-weight:800; line-height:1.1; margin-bottom:4px;" id="res-ppm">18.5 ppm</div>
+        <div style="font-size:12px; color:var(--text-muted); display:flex; align-items:center; justify-content:center; gap:6px;">
+          <span id="res-ppm-range">Range: 15-22 ppm</span>
+          <span style="opacity:0.4;">•</span>
+          <span id="res-safe-status-label" style="color:#fb923c; font-weight:700;">Exceeds Safe Limit</span>
+        </div>
       </div>
 
       <!-- SCANNED IMAGE & TARGETED AREA OF ANALYSIS CARD -->
@@ -376,12 +385,70 @@
         </div>
       </div>
 
+      <!-- H2S Safety Exposure Levels Reference Card -->
+      <div style="background:rgba(15, 23, 42, 0.85); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:12px; margin-bottom:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" id="toggle-safety-legend">
+          <div style="font-size:11px; font-weight:700; color:#cbd5e1; text-transform:uppercase; letter-spacing:0.5px; display:flex; align-items:center; gap:6px;">
+            <span>🛡️</span> H₂S Safe Ranges & Color Codes
+          </div>
+          <span style="font-size:10px; color:#38bdf8; font-weight:700;" id="legend-toggle-icon">▼ View Guide</span>
+        </div>
+        
+        <div id="safety-legend-table" style="display:none; margin-top:10px; border-top:1px solid rgba(255,255,255,0.08); padding-top:8px;">
+          <div style="display:flex; flex-direction:column; gap:6px; font-size:11px;">
+            <!-- Safe Green -->
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:5px 8px; border-radius:6px; background:rgba(34,197,94,0.1); border-left:3px solid #22c55e;">
+              <div>
+                <strong style="color:#4ade80;">🟢 Safe (C0): 0 - 1.0 ppm</strong>
+                <div style="font-size:9.5px; color:#94a3b8;">Normal 8-hr Shift Work</div>
+              </div>
+              <span class="badge-cat badge-green" style="font-size:9px; padding:2px 6px;">SAFE</span>
+            </div>
+            <!-- Caution Yellow -->
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:5px 8px; border-radius:6px; background:rgba(234,179,8,0.1); border-left:3px solid #facc15;">
+              <div>
+                <strong style="color:#facc15;">🟡 Caution (C1): 1.0 - 10.0 ppm</strong>
+                <div style="font-size:9.5px; color:#94a3b8;">ACGIH TLV (1-5ppm) • Monitor Closely</div>
+              </div>
+              <span class="badge-cat badge-yellow" style="font-size:9px; padding:2px 6px;">CAUTION</span>
+            </div>
+            <!-- Warning Orange -->
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:5px 8px; border-radius:6px; background:rgba(249,115,22,0.1); border-left:3px solid #fb923c;">
+              <div>
+                <strong style="color:#fb923c;">🟠 Moderate (C2): 10.0 - 50.0 ppm</strong>
+                <div style="font-size:9.5px; color:#94a3b8;">OSHA PEL Exceeded • Ventilate</div>
+              </div>
+              <span class="badge-cat badge-orange" style="font-size:9px; padding:2px 6px;">MODERATE</span>
+            </div>
+            <!-- Danger Red -->
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:5px 8px; border-radius:6px; background:rgba(239,68,68,0.1); border-left:3px solid #ef4444;">
+              <div>
+                <strong style="color:#f87171;">🔴 High Hazard (C3): 50 - 100 ppm</strong>
+                <div style="font-size:9.5px; color:#94a3b8;">Near IDLH • Leave Area Immediately</div>
+              </div>
+              <span class="badge-cat badge-red" style="font-size:9px; padding:2px 6px;">DANGER</span>
+            </div>
+            <!-- Critical Evac -->
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:5px 8px; border-radius:6px; background:rgba(185,28,28,0.25); border-left:3px solid #dc2626;">
+              <div>
+                <strong style="color:#fca5a5;">🚨 Critical (C4): &gt; 100 ppm</strong>
+                <div style="font-size:9.5px; color:#fca5a5;">NIOSH IDLH • EVACUATE NOW</div>
+              </div>
+              <span class="badge-cat badge-alarm" style="font-size:9px; padding:2px 6px;">EVACUATE</span>
+            </div>
+          </div>
+          <div style="font-size:9px; color:#64748b; margin-top:8px; line-height:1.3;">
+            * Regulatory standards: ACGIH TLV (1 ppm), OSHA PEL TWA (10-20 ppm), NIOSH IDLH (100 ppm).
+          </div>
+        </div>
+      </div>
+
       <button class="btn btn-primary" id="btn-finish-scan" style="margin-top:auto; width:100%; justify-content:center; padding:14px;">
         Complete Scan & Return
       </button>
     </div>
   </div>
 
-  <script type="module" src="/static/js/worker.js?v=2.5"></script>
+  <script type="module" src="/static/js/worker.js?v=2.6"></script>
 </body>
 </html>

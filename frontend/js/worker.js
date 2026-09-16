@@ -128,6 +128,68 @@ function getCupanColor(ppm) {
   return { rgb: last.rgb, stage: last.id, name: last.name };
 }
 
+// H2S Safety Tier & Color Resolver (OSHA, NIOSH, ACGIH & Cu-PAN Scale)
+export function getPpmSafetyInfo(ppm, alertLevel = null, badgeClass = null) {
+  const numPpm = (ppm !== null && ppm !== undefined) ? parseFloat(ppm) : null;
+  
+  if (badgeClass === "badge-green" || alertLevel === "Green" || (numPpm !== null && numPpm < 1.0)) {
+    return {
+      level: "safe",
+      cssClass: "ppm-safe",
+      color: "#22c55e",
+      textShadow: "0 0 24px rgba(34, 197, 94, 0.5)",
+      label: "🟢 SAFE LEVEL",
+      safeStatus: "Safe (0-1 ppm)",
+      isSafe: true,
+      badgeClass: "badge-green"
+    };
+  } else if (badgeClass === "badge-yellow" || alertLevel === "Yellow" || (numPpm !== null && numPpm >= 1.0 && numPpm < 10.0)) {
+    return {
+      level: "caution",
+      cssClass: "ppm-caution",
+      color: "#facc15",
+      textShadow: "0 0 24px rgba(250, 204, 21, 0.55)",
+      label: "🟡 CAUTION LEVEL",
+      safeStatus: "Caution (1-10 ppm)",
+      isSafe: false,
+      badgeClass: "badge-yellow"
+    };
+  } else if (badgeClass === "badge-orange" || alertLevel === "Orange" || (numPpm !== null && numPpm >= 10.0 && numPpm < 50.0)) {
+    return {
+      level: "warning",
+      cssClass: "ppm-warning",
+      color: "#fb923c",
+      textShadow: "0 0 24px rgba(251, 146, 60, 0.55)",
+      label: "⚡ MODERATE HAZARD",
+      safeStatus: "Exceeds Safe Limit",
+      isSafe: false,
+      badgeClass: "badge-orange"
+    };
+  } else if (badgeClass === "badge-red" || alertLevel === "Red" || (numPpm !== null && numPpm >= 50.0 && numPpm < 100.0)) {
+    return {
+      level: "danger",
+      cssClass: "ppm-danger",
+      color: "#ef4444",
+      textShadow: "0 0 28px rgba(239, 68, 68, 0.65)",
+      label: "⛔ HIGH DANGER",
+      safeStatus: "Near IDLH (50-100 ppm)",
+      isSafe: false,
+      badgeClass: "badge-red"
+    };
+  } else {
+    return {
+      level: "alarm",
+      cssClass: "ppm-alarm",
+      color: "#f87171",
+      textShadow: "0 0 32px rgba(248, 113, 113, 0.9)",
+      label: "🚨 CRITICAL EVACUATION",
+      safeStatus: "EVACUATE IMMEDIATELY (>100 ppm)",
+      isSafe: false,
+      badgeClass: "badge-alarm"
+    };
+  }
+}
+
 // 3. Camera Viewfinder & Reactive Cu-PAN Simulation
 const simPpmSlider = document.getElementById("worker-sim-ppm");
 const simPpmLabel = document.getElementById("worker-sim-ppm-val");
@@ -153,6 +215,54 @@ let scanMode = "camera"; // "camera" or "sim"
 let webcamStream = null;
 let uploadedPhotoBase64 = null;
 let overrideImageBase64 = null;
+
+// Helper to synthesize a realistic 224x224 test strip in canvas
+function generateTestStripBase64(rgb) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 224;
+  canvas.height = 224;
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#f5f5f5";
+  ctx.fillRect(0, 0, 224, 224);
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(10, 10, 20, 20);
+  ctx.fillStyle = "#141414";
+  ctx.fillRect(10, 194, 20, 20);
+  ctx.fillStyle = `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+  ctx.fillRect(40, 40, 144, 144);
+  const imgData = ctx.getImageData(0, 0, 224, 224);
+  for (let i = 0; i < imgData.data.length; i += 4) {
+    const noise = (Math.random() - 0.5) * 6;
+    imgData.data[i] = Math.min(255, Math.max(0, imgData.data[i] + noise));
+    imgData.data[i+1] = Math.min(255, Math.max(0, imgData.data[i+1] + noise));
+    imgData.data[i+2] = Math.min(255, Math.max(0, imgData.data[i+2] + noise));
+  }
+  ctx.putImageData(imgData, 0, 0);
+  return canvas.toDataURL("image/png").split(",")[1];
+}
+
+// Reactive Cu-PAN Simulation Color & Safety Indicator Updater
+function updateReactionColor(ppm) {
+  overrideImageBase64 = null;
+  if (rejectionCard) rejectionCard.style.display = "none";
+  const match = getCupanColor(ppm);
+  const safety = getPpmSafetyInfo(ppm);
+
+  if (simPpmLabel) {
+    simPpmLabel.innerHTML = `<span style="color:${safety.color}; font-weight:800;">${ppm.toFixed(1)} ppm</span> <span style="font-size:10.5px; color:${safety.color}; font-weight:700;">(${match.stage} • ${safety.label})</span>`;
+    simPpmLabel.style.transition = "color 0.2s ease";
+  }
+
+  const r = match.rgb[0], g = match.rgb[1], b = match.rgb[2];
+  const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+  const textColor = lum > 140 ? "#0f172a" : "#ffffff";
+
+  if (roiPreview && scanMode === "sim") {
+    roiPreview.style.background = `rgb(${r}, ${g}, ${b})`;
+    roiPreview.style.color = textColor;
+    roiPreview.innerHTML = `Cu-PAN Reaction<br><b style="font-size:13px;">${match.stage} (${ppm.toFixed(1)} ppm)</b><br><span style="font-size:9px; padding:2px 7px; border-radius:4px; background:rgba(0,0,0,0.65); color:${safety.color}; font-weight:700; margin-top:4px; display:inline-block; border:1px solid ${safety.color};">${safety.label}</span>`;
+  }
+}
 
 // Mode Switching
 function setScanMode(mode) {
@@ -211,6 +321,44 @@ function setScanMode(mode) {
 
 modeBtnCamera?.addEventListener("click", () => setScanMode("camera"));
 modeBtnSim?.addEventListener("click", () => setScanMode("sim"));
+
+// Simulation PPM Slider Event Listener
+simPpmSlider?.addEventListener("input", (e) => {
+  updateReactionColor(parseFloat(e.target.value));
+});
+
+// Quick Stage Test Buttons
+document.getElementById("btn-test-green")?.addEventListener("click", () => {
+  overrideImageBase64 = generateTestStripBase64([0, 210, 0]);
+  roiPreview.style.background = "rgb(0, 210, 0)";
+  roiPreview.style.color = "#000";
+  roiPreview.innerHTML = `⚠️ ALIEN COLOR<br><b>Pure Green</b><br><span style="font-size:9px;">Excluded from Cu-PAN</span>`;
+  if (simPpmLabel) {
+    simPpmLabel.innerHTML = "<span style='color:#4ade80; font-weight:700;'>Alien (Green)</span>";
+  }
+  if (rejectionCard) rejectionCard.style.display = "none";
+});
+
+document.getElementById("btn-test-blue")?.addEventListener("click", () => {
+  overrideImageBase64 = generateTestStripBase64([0, 0, 220]);
+  roiPreview.style.background = "rgb(0, 0, 220)";
+  roiPreview.style.color = "#fff";
+  roiPreview.innerHTML = `⚠️ ALIEN COLOR<br><b>Pure Blue</b><br><span style="font-size:9px;">Excluded from Cu-PAN</span>`;
+  if (simPpmLabel) {
+    simPpmLabel.innerHTML = "<span style='color:#60a5fa; font-weight:700;'>Alien (Blue)</span>";
+  }
+  if (rejectionCard) rejectionCard.style.display = "none";
+});
+
+document.getElementById("btn-test-s0")?.addEventListener("click", () => {
+  if (simPpmSlider) simPpmSlider.value = 0;
+  updateReactionColor(0);
+});
+
+document.getElementById("btn-test-s10")?.addEventListener("click", () => {
+  if (simPpmSlider) simPpmSlider.value = 110;
+  updateReactionColor(110);
+});
 
 // Unified Image File Processor (Used by upload button, camera shutter, and drag-and-drop)
 function handleImageFile(file) {
@@ -448,9 +596,29 @@ document.getElementById("btn-capture-scan").addEventListener("click", async () =
 
 
 
-    // Populate Result Screen (Section 3.1 & Page 8)
-    document.getElementById("res-ppm").textContent = `${res.predicted_ppm} ppm`;
-    document.getElementById("res-ppm-range").textContent = `Estimated Range: ${res.predicted_ppm_range}`;
+    // Populate Result Screen with dynamic PPM safety coloring
+    const ppmVal = res.predicted_ppm;
+    const safety = getPpmSafetyInfo(ppmVal, res.alert_level, res.badge_class);
+
+    const resPpmEl = document.getElementById("res-ppm");
+    resPpmEl.textContent = `${ppmVal} ppm`;
+    resPpmEl.className = `ppm-reading ${safety.cssClass}`;
+    resPpmEl.style.color = safety.color;
+    resPpmEl.style.textShadow = safety.textShadow;
+
+    const resStatusTag = document.getElementById("res-ppm-status-tag");
+    if (resStatusTag) {
+      resStatusTag.className = `badge-cat ${safety.badgeClass}`;
+      resStatusTag.textContent = safety.label;
+    }
+
+    const safeStatusLabel = document.getElementById("res-safe-status-label");
+    if (safeStatusLabel) {
+      safeStatusLabel.textContent = safety.safeStatus;
+      safeStatusLabel.style.color = safety.color;
+    }
+
+    document.getElementById("res-ppm-range").textContent = `Range: ${res.predicted_ppm_range}`;
     document.getElementById("res-worker-action").textContent = res.worker_action;
     document.getElementById("res-exposure-level").textContent = `Exposure Status: ${res.exposure_level} (${res.alert_level} Alert)`;
     document.getElementById("res-confidence").textContent = `${Math.round(res.model_confidence * 1000) / 10}%`;
@@ -582,4 +750,18 @@ document.getElementById("btn-capture-scan").addEventListener("click", async () =
 document.getElementById("btn-finish-scan").addEventListener("click", () => {
   showScreen(screenStrip);
 });
+
+// Toggle In-App Safety Reference Guide
+const toggleSafetyLegend = document.getElementById("toggle-safety-legend");
+const safetyLegendTable = document.getElementById("safety-legend-table");
+const legendToggleIcon = document.getElementById("legend-toggle-icon");
+if (toggleSafetyLegend && safetyLegendTable) {
+  toggleSafetyLegend.addEventListener("click", () => {
+    const isHidden = safetyLegendTable.style.display === "none";
+    safetyLegendTable.style.display = isHidden ? "block" : "none";
+    if (legendToggleIcon) {
+      legendToggleIcon.textContent = isHidden ? "▲ Hide Guide" : "▼ View Guide";
+    }
+  });
+}
 

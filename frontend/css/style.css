@@ -361,6 +361,38 @@ tr:hover td {
 .badge-red { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
 .badge-alarm { background: rgba(185, 28, 28, 0.3); color: #fca5a5; border: 1px solid rgba(185, 28, 28, 0.6); }
 
+/* PPM Value Safety Color Indicators (Mobile & Web) */
+.ppm-reading {
+  transition: color 0.3s ease, text-shadow 0.3s ease;
+  display: inline-block;
+}
+.ppm-safe {
+  color: #22c55e !important;
+  text-shadow: 0 0 24px rgba(34, 197, 94, 0.5);
+}
+.ppm-caution {
+  color: #facc15 !important;
+  text-shadow: 0 0 24px rgba(250, 204, 21, 0.55);
+}
+.ppm-warning {
+  color: #fb923c !important;
+  text-shadow: 0 0 24px rgba(251, 146, 60, 0.55);
+}
+.ppm-danger {
+  color: #ef4444 !important;
+  text-shadow: 0 0 28px rgba(239, 68, 68, 0.65);
+}
+.ppm-alarm {
+  color: #f87171 !important;
+  text-shadow: 0 0 32px rgba(248, 113, 113, 0.9);
+  animation: ppmAlarmPulse 1.2s infinite ease-in-out;
+}
+
+@keyframes ppmAlarmPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.05); opacity: 0.9; text-shadow: 0 0 45px rgba(239, 68, 68, 1); }
+}
+
 /* Buttons */
 .btn {
   display: inline-flex;
