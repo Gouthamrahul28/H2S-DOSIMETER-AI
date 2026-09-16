@@ -149,6 +149,9 @@ let webcamStream = null;
 let uploadedPhotoBase64 = null;
 let overrideImageBase64 = null;
 
+const btnNativeCamera = document.getElementById("btn-native-camera");
+const btnLoadSample = document.getElementById("btn-load-sample");
+
 // Mode Switching
 function setScanMode(mode) {
   scanMode = mode;
@@ -169,10 +172,16 @@ function setScanMode(mode) {
     // Restore camera view
     if (uploadedPhotoBase64) {
       photoPreviewEl.style.display = "block";
-      roiPreview.style.display = "none";
+      roiPreview.style.display = "flex";
+      roiPreview.style.background = "rgba(34, 197, 94, 0.06)";
+      roiPreview.style.color = "#22c55e";
+      roiPreview.innerHTML = "Position<br>Strip Here";
     } else if (webcamStream) {
       videoEl.style.display = "block";
-      roiPreview.style.display = "none";
+      roiPreview.style.display = "flex";
+      roiPreview.style.background = "rgba(34, 197, 94, 0.06)";
+      roiPreview.style.color = "#22c55e";
+      roiPreview.innerHTML = "Position<br>Strip Here";
     } else {
       roiPreview.style.display = "flex";
       roiPreview.style.background = "#111827";
@@ -201,7 +210,12 @@ function setScanMode(mode) {
 modeBtnCamera?.addEventListener("click", () => setScanMode("camera"));
 modeBtnSim?.addEventListener("click", () => setScanMode("sim"));
 
-// Real Hardware Webcam Toggle
+// Direct Native Camera Shutter (Mobile & Desktop)
+btnNativeCamera?.addEventListener("click", () => {
+  fileInputEl.click();
+});
+
+// Real Hardware Webcam Toggle with Progressive Fallback
 btnToggleWebcam?.addEventListener("click", async () => {
   if (webcamStream) {
     // Stop live stream
@@ -209,42 +223,113 @@ btnToggleWebcam?.addEventListener("click", async () => {
     webcamStream = null;
     videoEl.style.display = "none";
     videoEl.srcObject = null;
-    btnToggleWebcam.textContent = "📹 Start Camera";
+    btnToggleWebcam.textContent = "📹 Live Webcam";
     btnToggleWebcam.style.background = "";
-    cameraStatusText.textContent = "Camera stopped. Pick photo or start camera.";
+    cameraStatusText.textContent = "Webcam stopped. Tap 'Snap Photo' or 'Live Webcam'.";
     if (!uploadedPhotoBase64) {
-      roiPreview.style.display = "flex";
+      roiPreview.style.background = "#111827";
+      roiPreview.style.color = "#38bdf8";
+      roiPreview.innerHTML = "Position<br>Strip Here";
     }
-  } else {
-    // Start live stream
-    try {
-      photoPreviewEl.style.display = "none";
-      uploadedPhotoBase64 = null;
-      cameraStatusText.textContent = "Requesting device camera access...";
+    return;
+  }
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: { ideal: "environment" },
-          width: { ideal: 640 },
-          height: { ideal: 480 }
-        }
-      });
-      webcamStream = stream;
-      videoEl.srcObject = stream;
-      videoEl.style.display = "block";
-      roiPreview.style.display = "none";
-      btnToggleWebcam.textContent = "⏹ Stop Camera";
-      btnToggleWebcam.style.background = "#dc2626";
-      cameraStatusText.textContent = "✓ Camera active. Align strip in guide.";
-    } catch (err) {
-      console.warn("Webcam access error:", err);
-      cameraStatusText.textContent = "⚠️ Camera not available. Use 'Pick Photo'.";
-      alert("Hardware Camera Unavailable: " + err.message + "\n\nYou can use the 'Pick Photo' button to select or take any photo on your device!");
+  // Check if getUserMedia is supported in this context
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    cameraStatusText.innerHTML = "⚠️ Live webcam requires HTTPS/localhost.<br><span style='color:#34d399;'>Opening native camera photo mode...</span>";
+    fileInputEl.click();
+    return;
+  }
+
+  try {
+    photoPreviewEl.style.display = "none";
+    uploadedPhotoBase64 = null;
+    cameraStatusText.textContent = "Requesting webcam permissions...";
+
+    let stream = null;
+    const constraintList = [
+      { video: { facingMode: { ideal: "environment" } } },
+      { video: { facingMode: "user" } },
+      { video: true }
+    ];
+
+    for (const c of constraintList) {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(c);
+        if (stream) break;
+      } catch (errConstraint) {
+        console.warn("Retrying with alternate camera constraint:", errConstraint);
+      }
     }
+
+    if (!stream) {
+      throw new Error("No compatible webcam device found.");
+    }
+
+    webcamStream = stream;
+    videoEl.srcObject = stream;
+    videoEl.setAttribute("playsinline", "true");
+    videoEl.muted = true;
+    videoEl.style.display = "block";
+
+    roiPreview.style.display = "flex";
+    roiPreview.style.background = "rgba(34, 197, 94, 0.06)";
+    roiPreview.style.color = "#22c55e";
+    roiPreview.innerHTML = "Align Strip<br>Inside Box";
+
+    // Play video explicitly
+    try {
+      await videoEl.play();
+    } catch (ePlay) {
+      console.warn("Auto play deferred:", ePlay);
+    }
+
+    btnToggleWebcam.textContent = "⏹ Stop Webcam";
+    btnToggleWebcam.style.background = "#dc2626";
+    cameraStatusText.innerHTML = "<span style='color:#34d399;'>● Webcam streaming active.</span> Align strip in box and click SCAN NOW.";
+  } catch (err) {
+    console.warn("Webcam error:", err);
+    let advice = "Camera permission not granted or device has no webcam.";
+    if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+      advice = "Please grant camera permission in your browser URL bar icon.";
+    } else if (err.name === "NotFoundError") {
+      advice = "No physical webcam detected on this machine.";
+    } else if (err.name === "NotReadableError") {
+      advice = "Webcam is already in use by another program.";
+    }
+
+    cameraStatusText.innerHTML = `⚠️ <strong>${advice}</strong><br><span style='color:#38bdf8;'>Opening device camera shutter / photo picker...</span>`;
+    // Seamless fallback to native mobile/desktop camera picker
+    setTimeout(() => fileInputEl.click(), 500);
   }
 });
 
-// Real Photo File Input
+// Load Sample Strip Photo Button (For instant testing without a camera)
+btnLoadSample?.addEventListener("click", () => {
+  // Stop webcam if active
+  if (webcamStream) {
+    webcamStream.getTracks().forEach(t => t.stop());
+    webcamStream = null;
+    videoEl.style.display = "none";
+    btnToggleWebcam.textContent = "📹 Live Webcam";
+    btnToggleWebcam.style.background = "";
+  }
+
+  // Generate authentic Cu-PAN S5 (Orange, 22 PPM) sample strip
+  const sampleB64 = generateTestStripBase64([233, 144, 83]);
+  uploadedPhotoBase64 = `data:image/png;base64,${sampleB64}`;
+  photoPreviewEl.src = uploadedPhotoBase64;
+  photoPreviewEl.style.display = "block";
+
+  roiPreview.style.display = "flex";
+  roiPreview.style.background = "rgba(34, 197, 94, 0.06)";
+  roiPreview.style.color = "#22c55e";
+  roiPreview.innerHTML = "Position<br>Strip Here";
+
+  cameraStatusText.innerHTML = "✓ <strong style='color:#34d399;'>Sample Cu-PAN Strip Loaded</strong> (Orange / ~22 ppm). Click <strong>SCAN NOW</strong> to run AI model!";
+});
+
+// Real Photo File Input Handler
 fileInputEl?.addEventListener("change", (e) => {
   const file = e.target.files[0];
   if (!file) return;
@@ -254,8 +339,7 @@ fileInputEl?.addEventListener("change", (e) => {
     webcamStream.getTracks().forEach(t => t.stop());
     webcamStream = null;
     videoEl.style.display = "none";
-    videoEl.srcObject = null;
-    btnToggleWebcam.textContent = "📹 Start Camera";
+    btnToggleWebcam.textContent = "📹 Live Webcam";
     btnToggleWebcam.style.background = "";
   }
 
@@ -264,8 +348,13 @@ fileInputEl?.addEventListener("change", (e) => {
     uploadedPhotoBase64 = evt.target.result;
     photoPreviewEl.src = uploadedPhotoBase64;
     photoPreviewEl.style.display = "block";
-    roiPreview.style.display = "none";
-    cameraStatusText.textContent = `✓ Loaded photo: ${file.name}`;
+
+    roiPreview.style.display = "flex";
+    roiPreview.style.background = "rgba(34, 197, 94, 0.06)";
+    roiPreview.style.color = "#22c55e";
+    roiPreview.innerHTML = "Position<br>Strip Here";
+
+    cameraStatusText.innerHTML = `✓ Loaded photo: <strong style='color:#fff;'>${file.name}</strong> (${Math.round(file.size/1024)} KB). Click <strong>SCAN NOW</strong>!`;
   };
   reader.readAsDataURL(file);
 });
@@ -293,10 +382,11 @@ document.getElementById("btn-capture-scan").addEventListener("click", async () =
         ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
         payload.image_base64 = canvas.toDataURL("image/jpeg", 0.9);
       } else if (uploadedPhotoBase64) {
-        // Use real uploaded photo
+        // Use real uploaded photo or loaded sample
         payload.image_base64 = uploadedPhotoBase64;
       } else {
-        alert("Please click 'Start Camera' or 'Pick Photo' to provide a real strip image, or switch to 'Chemical Sim' mode!");
+        cameraStatusText.innerHTML = "⚠️ <span style='color:#f87171;'>No photo ready.</span> Tap <strong>Snap Photo</strong> or <strong>Load Sample</strong> first!";
+        fileInputEl.click();
         btn.textContent = "⚡ SCAN NOW (AI Analysis)";
         btn.disabled = false;
         return;
@@ -311,6 +401,7 @@ document.getElementById("btn-capture-scan").addEventListener("click", async () =
     }
 
     const res = await API.submitScan(payload);
+
 
 
     // Populate Result Screen (Section 3.1 & Page 8)
