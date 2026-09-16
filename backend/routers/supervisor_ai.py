@@ -145,13 +145,15 @@ def get_active_model(db: Session = Depends(get_db)):
         res = residuals[idx % len(residuals)]
         est_ppm = max(0.0, round(t_ppm + res, 2))
         cat = "C0" if t_ppm <= 1.0 else ("C1" if t_ppm <= 10.0 else ("C2" if t_ppm <= 50.0 else ("C3" if t_ppm <= 100.0 else "C4")))
-        ppm_color = "#22c55e" if t_ppm <= 1.0 else ("#facc15" if t_ppm <= 10.0 else ("#fb923c" if t_ppm <= 50.0 else "#ef4444"))
+        r, g, b = config.get_cupan_rgb_for_ppm(t_ppm)
+        spectrum_color = f"#{r:02x}{g:02x}{b:02x}"
         parity_points.append({
             "true_ppm": round(t_ppm, 2),
             "estimated_ppm": est_ppm,
             "error": round(est_ppm - t_ppm, 2),
             "category": cat,
-            "ppm_color": ppm_color,
+            "spectrum_color": spectrum_color,
+            "ppm_color": spectrum_color,
             "lower_bound": max(0.0, round(t_ppm * 0.9 - 0.2, 2)),
             "upper_bound": round(t_ppm * 1.1 + 0.2, 2)
         })

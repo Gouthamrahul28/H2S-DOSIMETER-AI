@@ -581,43 +581,61 @@ function renderParityPlot(parityData) {
   });
   const conePolyPts = topPts.join(" ") + " " + botPts.join(" ");
 
-  // Color mapping corresponding directly to H2S concentration (PPM safety zones)
-  function getPpmColor(ppm, category) {
-    const p = parseFloat(ppm);
-    if (!isNaN(p)) {
-      if (p <= 1.0) return "#22c55e";   // 🟢 Safe (0 - 1 ppm)
-      if (p <= 10.0) return "#facc15";  // 🟡 Caution (1 - 10 ppm)
-      if (p <= 50.0) return "#fb923c";  // 🟠 Warning (10 - 50 ppm)
-      if (p <= 100.0) return "#ef4444"; // 🔴 Danger (50 - 100 ppm)
-      return "#dc2626";                 // 🚨 Critical (> 100 ppm)
+  // Continuous Cu-PAN displacement chemical spectrum ladder (Purple -> Violet -> Rose -> Coral -> Orange -> Amber)
+  const CUPAN_SPECTRUM_LADDER = [
+    { ppm: 0.0, rgb: [149, 73, 120], hex: "#954978", name: "Intact Cu-PAN (Purple-Magenta)" },
+    { ppm: 0.8, rgb: [171, 78, 114], hex: "#AB4E72", name: "Magenta-Violet" },
+    { ppm: 2.5, rgb: [193, 88, 106], hex: "#C1586A", name: "Rose-Red" },
+    { ppm: 6.0, rgb: [209, 102, 98], hex: "#D16662", name: "Coral" },
+    { ppm: 12.0, rgb: [223, 122, 91], hex: "#DF7A5B", name: "Salmon-Orange" },
+    { ppm: 22.0, rgb: [233, 144, 83], hex: "#E99053", name: "Orange" },
+    { ppm: 38.0, rgb: [236, 165, 74], hex: "#ECA54A", name: "Amber-Orange" },
+    { ppm: 55.0, rgb: [238, 185, 68], hex: "#EEB944", name: "Amber" },
+    { ppm: 72.0, rgb: [239, 201, 62], hex: "#EFC93E", name: "Golden Yellow" },
+    { ppm: 90.0, rgb: [243, 211, 59], hex: "#F3D33B", name: "Yellow" },
+    { ppm: 110.0, rgb: [247, 218, 52], hex: "#F7DA34", name: "Free PAN Yellow" }
+  ];
+
+  function getCupanSpectrumColor(ppm) {
+    const p = Math.max(0.0, parseFloat(ppm) || 0.0);
+    if (p <= CUPAN_SPECTRUM_LADDER[0].ppm) return CUPAN_SPECTRUM_LADDER[0].hex;
+    const last = CUPAN_SPECTRUM_LADDER[CUPAN_SPECTRUM_LADDER.length - 1];
+    if (p >= last.ppm) return last.hex;
+    for (let i = 0; i < CUPAN_SPECTRUM_LADDER.length - 1; i++) {
+      const a1 = CUPAN_SPECTRUM_LADDER[i];
+      const a2 = CUPAN_SPECTRUM_LADDER[i + 1];
+      if (p >= a1.ppm && p <= a2.ppm) {
+        const frac = (p - a1.ppm) / (a2.ppm - a1.ppm);
+        const r = Math.round(a1.rgb[0] + frac * (a2.rgb[0] - a1.rgb[0]));
+        const g = Math.round(a1.rgb[1] + frac * (a2.rgb[1] - a1.rgb[1]));
+        const b = Math.round(a1.rgb[2] + frac * (a2.rgb[2] - a1.rgb[2]));
+        return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+      }
     }
-    const catMap = {
-      "C0": "#22c55e",
-      "C1": "#facc15",
-      "C2": "#fb923c",
-      "C3": "#ef4444",
-      "C4": "#dc2626"
-    };
-    return catMap[category] || "#22c55e";
+    return last.hex;
   }
 
-  function getPpmTierMeta(ppm) {
-    const p = parseFloat(ppm);
-    if (p <= 1.0) return { name: "Safe", range: "0-1 ppm", color: "#22c55e", icon: "🟢" };
-    if (p <= 10.0) return { name: "Caution", range: "1-10 ppm", color: "#facc15", icon: "🟡" };
-    if (p <= 50.0) return { name: "Warning", range: "10-50 ppm", color: "#fb923c", icon: "⚡" };
-    if (p <= 100.0) return { name: "Danger", range: "50-100 ppm", color: "#ef4444", icon: "⛔" };
-    return { name: "Evacuate", range: ">100 ppm", color: "#dc2626", icon: "🚨" };
+  function getSpectrumStageName(ppm) {
+    const p = Math.max(0.0, parseFloat(ppm) || 0.0);
+    if (p <= 0.4) return "Intact Cu-PAN (Purple)";
+    if (p <= 1.5) return "Magenta-Violet";
+    if (p <= 4.0) return "Rose-Red";
+    if (p <= 8.0) return "Coral";
+    if (p <= 16.0) return "Salmon-Orange";
+    if (p <= 28.0) return "Orange";
+    if (p <= 45.0) return "Amber-Orange";
+    if (p <= 60.0) return "Amber";
+    return "Yellow";
   }
 
   // Only plot points within 0 to 60 PPM
   const filteredPoints = points.filter(pt => pt.true_ppm <= 60.0);
 
-  // Scatter dots colored according to PPM concentration
+  // Scatter dots colored according to Cu-PAN chemical optical spectrum
   const scatterDots = filteredPoints.map(pt => {
     const cx = x(pt.true_ppm).toFixed(1);
     const cy = y(Math.min(60, pt.estimated_ppm)).toFixed(1);
-    const color = pt.ppm_color || getPpmColor(pt.true_ppm, pt.category);
+    const color = pt.spectrum_color || getCupanSpectrumColor(pt.true_ppm);
     return `
       <circle cx="${cx}" cy="${cy}" r="4.5" fill="${color}" stroke="#ffffff" stroke-width="1.2" class="parity-point" data-cat="${pt.category}" data-true="${pt.true_ppm}" data-est="${pt.estimated_ppm}" data-err="${pt.error}" data-color="${color}" style="cursor:pointer; transition:r 0.15s ease;" />
     `;
@@ -654,8 +672,8 @@ function renderParityPlot(parityData) {
         const err = parseFloat(e.target.getAttribute("data-err"));
         const absErr = Math.abs(err).toFixed(2);
         const sign = err >= 0 ? "+" : "";
-        const pointColor = e.target.getAttribute("data-color") || getPpmColor(parseFloat(truePpm), cat);
-        const tier = getPpmTierMeta(parseFloat(truePpm));
+        const pointColor = e.target.getAttribute("data-color") || getCupanSpectrumColor(parseFloat(truePpm));
+        const stageName = getSpectrumStageName(parseFloat(truePpm));
 
         e.target.setAttribute("r", "6.5");
         e.target.setAttribute("stroke-width", "2");
@@ -667,11 +685,12 @@ function renderParityPlot(parityData) {
         tooltip.style.left = `${ptX}px`;
         tooltip.style.top = `${ptY}px`;
         tooltip.innerHTML = `
-          <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
-            <span style="width:10px; height:10px; border-radius:50%; background:${pointColor}; display:inline-block; box-shadow:0 0 8px ${pointColor};"></span>
-            <strong style="color:${pointColor}; font-size:12px;">${tier.icon} ${tier.name} (${tier.range})</strong>
-            <span style="color:#94a3b8; font-size:10px;">[${cat}]</span>
+          <div style="display:flex; align-items:center; gap:7px; margin-bottom:4px;">
+            <span style="width:12px; height:12px; border-radius:3px; background:${pointColor}; border:1px solid #fff; display:inline-block; box-shadow:0 0 8px ${pointColor}99;"></span>
+            <strong style="color:#ffffff; font-size:12px;">${stageName}</strong>
+            <span style="color:#94a3b8; font-size:10px;">(${cat})</span>
           </div>
+          <div style="font-family:'JetBrains Mono'; font-size:10px; color:#cbd5e1; margin-bottom:4px;">Spectrum Color: <span style="color:${pointColor}; font-weight:700;">${pointColor.toUpperCase()}</span></div>
           <span>True H₂S: <strong>${truePpm} ppm</strong></span><br>
           <span>Predicted: <strong style="color:#38bdf8;">${estPpm} ppm</strong></span><br>
           <span>Error: <strong style="color:${absErr > 2.0 ? '#f59e0b' : '#34d399'};">${sign}${err.toFixed(2)} ppm</strong></span>
