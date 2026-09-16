@@ -531,13 +531,14 @@ function renderParityPlot(parityData) {
   const plotW = w - padL - padR;
   const plotH = h - padT - padB;
 
-  const maxVal = 120;
+  // Maximum PPM on axis: strictly 0 to 60 PPM
+  const maxVal = 60;
   const x = val => padL + (val / maxVal) * plotW;
   const y = val => padT + ((maxVal - val) / maxVal) * plotH;
 
-  // Build grid lines
+  // Build grid lines for 0 to 60 PPM (step of 10 PPM)
   let gridLines = "";
-  [0, 20, 40, 60, 80, 100, 120].forEach(val => {
+  [0, 10, 20, 30, 40, 50, 60].forEach(val => {
     const yPos = y(val);
     const xPos = x(val);
     // Horizontal
@@ -552,18 +553,18 @@ function renderParityPlot(parityData) {
     `;
   });
 
-  // Ideal 1:1 Parity Line: (0, 0) to (120, 120)
+  // Ideal 1:1 Parity Line: (0, 0) to (60, 60)
   const x0 = x(0), y0 = y(0);
-  const x120 = x(120), y120 = y(120);
-  const parityLine = `<line x1="${x0}" y1="${y0}" x2="${x120}" y2="${y120}" stroke="#64748b" stroke-width="1.8" stroke-dasharray="4,4" />`;
+  const x60 = x(60), y60 = y(60);
+  const parityLine = `<line x1="${x0}" y1="${y0}" x2="${x60}" y2="${y60}" stroke="#64748b" stroke-width="1.8" stroke-dasharray="4,4" />`;
 
-  // +/- 10% Tolerance Cone polygon
-  const topPts = [0, 20, 40, 60, 80, 100, 120].map(p => {
-    const up = Math.min(120, p * 1.1 + 1.0);
+  // +/- 10% Tolerance Cone polygon across 0 to 60 PPM
+  const topPts = [0, 10, 20, 30, 40, 50, 60].map(p => {
+    const up = Math.min(60, p * 1.1 + 0.6);
     return `${x(p).toFixed(1)},${y(up).toFixed(1)}`;
   });
-  const botPts = [120, 100, 80, 60, 40, 20, 0].map(p => {
-    const low = Math.max(0, p * 0.9 - 1.0);
+  const botPts = [60, 50, 40, 30, 20, 10, 0].map(p => {
+    const low = Math.max(0, p * 0.9 - 0.6);
     return `${x(p).toFixed(1)},${y(low).toFixed(1)}`;
   });
   const conePolyPts = topPts.join(" ") + " " + botPts.join(" ");
@@ -577,10 +578,13 @@ function renderParityPlot(parityData) {
     "C4": "#F7DA34"
   };
 
+  // Only plot points within 0 to 60 PPM
+  const filteredPoints = points.filter(pt => pt.true_ppm <= 60.0);
+
   // Scatter dots
-  const scatterDots = points.map(pt => {
+  const scatterDots = filteredPoints.map(pt => {
     const cx = x(pt.true_ppm).toFixed(1);
-    const cy = y(pt.estimated_ppm).toFixed(1);
+    const cy = y(Math.min(60, pt.estimated_ppm)).toFixed(1);
     const color = catColors[pt.category] || "#34d399";
     return `
       <circle cx="${cx}" cy="${cy}" r="4.5" fill="${color}" stroke="#ffffff" stroke-width="1.2" class="parity-point" data-cat="${pt.category}" data-true="${pt.true_ppm}" data-est="${pt.estimated_ppm}" data-err="${pt.error}" style="cursor:pointer;" />
