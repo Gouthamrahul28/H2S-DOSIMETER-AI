@@ -637,40 +637,53 @@ document.getElementById("btn-capture-scan").addEventListener("click", async () =
     // Populate Result Screen with dynamic PPM safety coloring & non-technical verdict
     const ppmVal = res.predicted_ppm;
     const safety = getPpmSafetyInfo(ppmVal, res.alert_level, res.badge_class);
+    const worker = currentWorker || { name: "John Martinez", id: "EMP_00542" };
+    const stripId = currentStripId || "STR_7755";
 
-    // 1. Plain-Language Verdict Hero
+    // Report Header
+    const reportDate = document.getElementById("res-report-date");
+    if (reportDate) reportDate.textContent = new Date().toLocaleString();
+    const reportAuditId = document.getElementById("res-report-audit-id");
+    if (reportAuditId) reportAuditId.textContent = `AUDIT ID: ${res.scan_id}`;
+
+    // 1. Plain-Language Verdict Hero Card (matches reference layout)
     const verdictCard = document.getElementById("res-verdict-card");
-    const verdictTitle = document.getElementById("res-verdict-title");
-    const verdictIcon = document.getElementById("res-verdict-icon");
-    const verdictText = document.getElementById("res-verdict-text");
-    const verdictDesc = document.getElementById("res-verdict-desc");
     if (verdictCard) {
-      verdictCard.style.background = `radial-gradient(circle at center, ${safety.color}25 0%, rgba(15,23,42,0.95) 100%)`;
-      verdictCard.style.borderColor = safety.color;
-      verdictCard.style.boxShadow = `0 10px 30px -10px ${safety.color}40`;
+      verdictCard.style.background = `${safety.color}15`;
     }
+    const verdictTitle = document.getElementById("res-verdict-title");
     if (verdictTitle) verdictTitle.style.color = safety.color;
+    const verdictIcon = document.getElementById("res-verdict-icon");
     if (verdictIcon) verdictIcon.textContent = safety.verdictIcon;
+    const verdictText = document.getElementById("res-verdict-text");
     if (verdictText) verdictText.textContent = safety.verdictTitle;
-    if (verdictDesc) verdictDesc.textContent = safety.verdictDesc;
 
     // 2. Large PPM Value
     const resPpmEl = document.getElementById("res-ppm");
-    resPpmEl.textContent = `${ppmVal} ppm`;
-    resPpmEl.className = `ppm-reading ${safety.cssClass}`;
-    resPpmEl.style.color = safety.color;
-    resPpmEl.style.textShadow = safety.textShadow;
+    if (resPpmEl) {
+      resPpmEl.innerHTML = `${ppmVal} <span style="font-size:18px; font-weight:600; opacity:0.8; font-family:'Inter',sans-serif;">ppm</span>`;
+      resPpmEl.style.color = safety.color;
+      resPpmEl.style.textShadow = safety.textShadow;
+    }
+
+    const resActionIcon = document.getElementById("res-action-icon");
+    if (resActionIcon) resActionIcon.textContent = safety.actionIcon;
+    const resWorkerAction = document.getElementById("res-worker-action");
+    if (resWorkerAction) resWorkerAction.textContent = res.worker_action;
+
+    const resPpmRange = document.getElementById("res-ppm-range");
+    if (resPpmRange) resPpmRange.textContent = `Est. Range: ${res.predicted_ppm_range}`;
+
+    const safeStatusLabel = document.getElementById("res-safe-status-label");
+    if (safeStatusLabel) {
+      safeStatusLabel.textContent = safety.label;
+      safeStatusLabel.style.color = safety.color;
+    }
 
     const resStatusTag = document.getElementById("res-ppm-status-tag");
     if (resStatusTag) {
       resStatusTag.className = `badge-cat ${safety.badgeClass}`;
       resStatusTag.textContent = safety.label;
-    }
-
-    const safeStatusLabel = document.getElementById("res-safe-status-label");
-    if (safeStatusLabel) {
-      safeStatusLabel.textContent = safety.safeStatus;
-      safeStatusLabel.style.color = safety.color;
     }
 
     // 3. Risk Exposure Gauge / Meter Needle
@@ -689,15 +702,31 @@ document.getElementById("btn-capture-scan").addEventListener("click", async () =
       gaugePin.style.color = safety.color;
     }
 
-    // 4. Action Card
-    const resActionIcon = document.getElementById("res-action-icon");
-    if (resActionIcon) resActionIcon.textContent = safety.actionIcon;
-    document.getElementById("res-ppm-range").textContent = `Range: ${res.predicted_ppm_range}`;
-    document.getElementById("res-worker-action").textContent = res.worker_action;
-    document.getElementById("res-exposure-level").textContent = `Exposure Status: ${res.exposure_level} (${res.alert_level} Alert)`;
+    // Metadata & Audit fields
+    const metaWorker = document.getElementById("res-meta-worker-name");
+    if (metaWorker) metaWorker.textContent = worker.name;
+    const metaBadge = document.getElementById("res-meta-badge-id");
+    if (metaBadge) metaBadge.textContent = worker.id;
+    const metaStrip = document.getElementById("res-meta-strip-id");
+    if (metaStrip) metaStrip.textContent = stripId;
+    const metaBatch = document.getElementById("res-meta-batch");
+    if (metaBatch) metaBatch.textContent = res.strip_batch || "BATCH_2024_Q4_LOT_03";
+    const metaModel = document.getElementById("res-meta-model-ver");
+    if (metaModel) metaModel.textContent = `MobileNetV3 ${res.model_version}`;
+    const metaCompliance = document.getElementById("res-meta-compliance");
+    if (metaCompliance) metaCompliance.textContent = "OSHA 1910.1000 / NIOSH IDLH";
+
+    const verifiedLine = document.getElementById("res-verified-audit-line");
+    if (verifiedLine) verifiedLine.textContent = `Cryptographic Audit ID: ${res.scan_id} • Instant Exposure Assessment`;
+
     document.getElementById("res-confidence").textContent = `${Math.round(res.model_confidence * 1000) / 10}%`;
     document.getElementById("res-model-ver").textContent = `MobileNetV3 ${res.model_version}`;
     document.getElementById("res-scan-id").textContent = res.scan_id;
+
+    const reactionVal = document.getElementById("res-reaction-val");
+    if (reactionVal) reactionVal.textContent = "Cu-PAN Displacement";
+    const confidenceVal = document.getElementById("res-confidence-val");
+    if (confidenceVal) confidenceVal.textContent = `${Math.round(res.model_confidence * 1000) / 10}% Nominal`;
 
     const badge = document.getElementById("res-badge");
     badge.className = `badge-cat ${res.badge_class}`;

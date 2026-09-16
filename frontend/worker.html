@@ -17,16 +17,30 @@
       padding: 20px;
     }
     .phone-frame {
-      width: 380px;
-      height: 740px;
-      background: #0b0f19;
-      border: 3px solid #334155;
-      border-radius: 40px;
-      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 30px rgba(59, 130, 246, 0.2);
+      width: 100%;
+      max-width: 540px;
+      height: 94vh;
+      max-height: 940px;
+      min-height: 660px;
+      background: #080e1a;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 32px;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 40px rgba(56, 189, 248, 0.15);
       display: flex;
       flex-direction: column;
       overflow: hidden;
       position: relative;
+    }
+    @media (max-width: 540px) {
+      body { padding: 0; }
+      .phone-frame {
+        width: 100vw;
+        max-width: 100vw;
+        height: 100vh;
+        max-height: 100vh;
+        border-radius: 0;
+        border: none;
+      }
     }
     .camera-notch {
       position: absolute;
@@ -41,7 +55,7 @@
     }
     .worker-screen {
       flex: 1;
-      padding: 40px 24px 24px;
+      padding: 38px 20px 20px;
       display: none;
       flex-direction: column;
       overflow-y: auto;
@@ -290,164 +304,200 @@
       </button>
     </div>
 
-    <!-- 4. RESULT DISPLAY SCREEN -->
-    <div id="screen-result" class="worker-screen">
-      <!-- 1. Sleek Unified Verdict & PPM Card (Instant Clarity, No Packed Copy) -->
-      <div id="res-verdict-card" class="result-hero-card">
-        <!-- Status Pill Tag -->
-        <div class="result-status-pill" id="res-verdict-title">
-          <span id="res-verdict-icon">⚡</span>
-          <span id="res-verdict-text">MODERATE HAZARD</span>
+    <!-- 4. RESULT DISPLAY SCREEN (Matches Official Inspection Report Layout) -->
+    <div id="screen-result" class="worker-screen" style="padding: 22px 16px 18px;">
+      <!-- REPORT HEADER -->
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.08);">
+        <div>
+          <div style="color:#38bdf8; font-weight:800; font-size:15px; letter-spacing:0.3px; line-height:1.2;">H₂S INDUSTRIAL OPTICAL DOSIMETER</div>
+          <div style="color:#94a3b8; font-size:11px; font-weight:500;">OFFICIAL AIR QUALITY INSPECTION REPORT</div>
         </div>
-
-        <!-- Huge Bold PPM Readout -->
-        <div class="result-ppm-value" id="res-ppm">
-          18.5 <span class="result-ppm-unit">ppm</span>
+        <div style="text-align:right;">
+          <div style="color:#cbd5e1; font-family:'JetBrains Mono',monospace; font-size:10.5px;" id="res-report-date">9/16/2026, 3:09:23 PM</div>
+          <div style="color:#cbd5e1; font-family:'JetBrains Mono',monospace; font-size:10.5px;" id="res-report-audit-id">AUDIT ID: SCAN_001</div>
         </div>
+      </div>
 
-        <!-- Clean 1-Line Range & Category -->
-        <div class="result-ppm-sub">
-          <span id="res-ppm-range">Range: 15.0 - 22.0 ppm</span>
-          <span style="opacity:0.35;">•</span>
-          <span id="res-safe-status-label" style="font-weight:700;">Exceeds Safe Limit</span>
-        </div>
-
-        <!-- Direct Action Banner (1-line, bold, instant action) -->
-        <div class="result-action-banner" id="res-guidance-box">
-          <span id="res-action-icon" class="result-action-icon">💨</span>
-          <div class="result-action-text-wrap">
-            <span class="result-action-sub">Required Action:</span>
-            <span id="res-worker-action" class="result-action-title">Enhance Ventilation</span>
+      <!-- 1. VERDICT & PPM HERO CARD -->
+      <div id="res-verdict-card" style="background:rgba(250,204,21,0.08); border-radius:14px; padding:12px 14px; margin-bottom:12px; transition:all 0.3s ease;">
+        <!-- Top Row: Verdict Title Left, PPM Value Right -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:8px;">
+          <div id="res-verdict-title" style="font-size:17px; font-weight:800; color:#facc15; display:flex; align-items:center; gap:6px; letter-spacing:-0.2px;">
+            <span id="res-verdict-icon">🟡</span>
+            <span id="res-verdict-text">CAUTION — TRACE GAS DETECTED</span>
+          </div>
+          <div id="res-ppm" style="font-size:38px; font-weight:800; font-family:'JetBrains Mono',monospace; color:#facc15; line-height:1;">
+            8.8 <span style="font-size:18px; font-weight:600; opacity:0.8; font-family:'Inter',sans-serif;">ppm</span>
           </div>
         </div>
 
-        <!-- Hidden hooks to maintain compatibility with existing JS updates -->
+        <!-- Bottom Row: Action Left, Range Right -->
+        <div style="display:flex; justify-content:space-between; align-items:center; font-size:11.5px; flex-wrap:wrap; gap:6px;">
+          <div style="display:flex; align-items:center; gap:5px; color:#ffffff;">
+            <span style="color:var(--text-muted); font-weight:600;">Required Action:</span>
+            <span id="res-action-icon">🔍</span>
+            <strong id="res-worker-action">Monitor closely</strong>
+          </div>
+          <div style="color:#94a3b8; font-size:11px; display:flex; align-items:center; gap:6px;">
+            <span id="res-ppm-range">Est. Range: 7.3-10.0 ppm</span>
+            <span>•</span>
+            <span id="res-safe-status-label" style="font-weight:700; color:#facc15;">🟡 CAUTION LEVEL</span>
+          </div>
+        </div>
+
+        <!-- Compatibility hooks -->
         <div style="display:none;">
           <span id="res-badge"></span>
           <span id="res-ppm-status-tag"></span>
           <span id="res-verdict-desc"></span>
           <span id="res-exposure-level"></span>
+          <div id="res-guidance-box"></div>
         </div>
       </div>
 
-      <!-- 2. Compact Industrial Gas Exposure Meter -->
-      <div class="risk-gauge-box">
-        <div class="risk-gauge-header">
-          <div class="risk-gauge-title">
-            <span>📊</span> Exposure Meter
+      <!-- 2. SCANNED DOSIMETER & TARGET ANALYSIS AREA (ROI) CARD -->
+      <div style="background:rgba(15, 23, 42, 0.85); border-radius:14px; padding:12px; margin-bottom:12px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <div style="color:#38bdf8; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; display:flex; align-items:center; gap:5px;">
+            <span>📷</span> SCANNED DOSIMETER &amp; TARGET ANALYSIS AREA (ROI)
           </div>
-          <span id="res-gauge-status" style="font-size:11px; color:#fb923c; font-weight:700;">Zone: Moderate (C2)</span>
+          <span id="res-roi-badge" style="color:#4ade80; font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:700; background:rgba(34,197,94,0.12); padding:2px 6px; border-radius:4px;">
+            TARGET ROI: 60% × 60%
+          </span>
         </div>
-        <div class="risk-gauge-track-wrap">
+
+        <!-- Two-Column Grid: Photo Left, Colorimetry Right -->
+        <div class="result-proof-grid" style="display:grid; grid-template-columns: 1.15fr 0.85fr; gap:12px; align-items:stretch;">
+          <!-- Left: Photo Viewport -->
+          <div style="position:relative; background:#020617; border-radius:10px; min-height:180px; overflow:hidden; display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,0.06);">
+            <img id="res-scanned-img" src="" alt="Scanned Strip" style="width:100%; height:100%; object-fit:contain; display:block;">
+            
+            <!-- ROI Target Overlay -->
+            <div id="res-roi-overlay" style="position:absolute; top:20%; left:20%; width:60%; height:60%; border:2.5px solid #22c55e; background:rgba(34,197,94,0.18); display:flex; align-items:center; justify-content:center; pointer-events:none; transition:all 0.3s ease;">
+              <div style="position:absolute; top:-3px; left:-3px; width:10px; height:10px; border-top:3px solid #38bdf8; border-left:3px solid #38bdf8;"></div>
+              <div style="position:absolute; top:-3px; right:-3px; width:10px; height:10px; border-top:3px solid #38bdf8; border-right:3px solid #38bdf8;"></div>
+              <div style="position:absolute; bottom:-3px; left:-3px; width:10px; height:10px; border-bottom:3px solid #38bdf8; border-left:3px solid #38bdf8;"></div>
+              <div style="position:absolute; bottom:-3px; right:-3px; width:10px; height:10px; border-bottom:3px solid #38bdf8; border-right:3px solid #38bdf8;"></div>
+              <div id="res-roi-tag" style="background:rgba(0,0,0,0.8); border:1px solid #22c55e; border-radius:4px; padding:2px 6px; font-size:9px; font-weight:700; color:#4ade80; text-transform:uppercase; letter-spacing:0.5px;">
+                ANALYZED ZONE
+              </div>
+            </div>
+
+            <button type="button" id="btn-toggle-roi-zoom" style="position:absolute; bottom:6px; right:6px; background:rgba(0,0,0,0.6); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; font-size:9.5px; padding:2px 6px; border-radius:4px; cursor:pointer; font-weight:700;">
+              🔍 Zoom
+            </button>
+          </div>
+
+          <!-- Right: Colorimetric Analysis Panel -->
+          <div style="display:flex; flex-direction:column; justify-content:space-between; gap:6px; font-size:11px;">
+            <!-- Swatch & Hex -->
+            <div style="display:flex; align-items:center; gap:8px;">
+              <div id="res-swatch-box" style="width:42px; height:42px; border-radius:8px; background:#D16662; box-shadow:0 0 10px rgba(0,0,0,0.5); flex-shrink:0;"></div>
+              <div>
+                <div id="res-swatch-hex" style="font-size:15px; font-weight:800; font-family:'JetBrains Mono',monospace; color:#ffffff;">#D16662</div>
+                <div style="font-size:10px; color:#94a3b8;">Sampled Dye Color</div>
+              </div>
+            </div>
+
+            <!-- RGB Channels -->
+            <div>
+              <div style="font-size:9px; color:#64748b; text-transform:uppercase; font-weight:700;">RGB CHANNELS:</div>
+              <div id="res-rgb-val" style="font-size:12.5px; font-weight:700; font-family:'JetBrains Mono',monospace; color:#ffffff;">[160, 124, 113]</div>
+            </div>
+
+            <!-- Hue & Chroma -->
+            <div>
+              <div style="font-size:9px; color:#64748b; text-transform:uppercase; font-weight:700;">HUE &amp; CHROMA:</div>
+              <div style="font-size:12px; font-weight:700; font-family:'JetBrains Mono',monospace; color:#38bdf8;">
+                Hue: <span id="res-hue-val">42.8°</span> | Chroma: <span id="res-chroma-val">17</span>
+              </div>
+            </div>
+
+            <!-- Chemical Reaction -->
+            <div>
+              <div style="font-size:9px; color:#64748b; text-transform:uppercase; font-weight:700;">CHEMICAL REACTION:</div>
+              <div id="res-reaction-val" style="font-size:12px; font-weight:700; color:#f59e0b;">Cu-PAN Displacement</div>
+            </div>
+
+            <!-- AI Vision Confidence -->
+            <div>
+              <div style="font-size:9px; color:#64748b; text-transform:uppercase; font-weight:700;">AI VISION CONFIDENCE:</div>
+              <div id="res-confidence-val" style="font-size:12px; font-weight:700; color:#22c55e;">70% Nominal</div>
+              <span id="res-confidence" style="display:none;"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. GAS EXPOSURE METER SPECTRUM (0 TO >100 PPM) -->
+      <div style="background:rgba(15, 23, 42, 0.85); border-radius:14px; padding:12px 14px; margin-bottom:12px;">
+        <div style="color:#94a3b8; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">
+          GAS EXPOSURE METER SPECTRUM (0 TO &gt;100 PPM):
+        </div>
+        <div class="risk-gauge-track-wrap" style="padding:8px 0 14px;">
           <div class="risk-gauge-track"></div>
-          <div class="risk-gauge-needle" id="res-gauge-needle" style="left:52%;">
-            <div class="risk-gauge-pin" id="res-gauge-pin" style="border-color:#fb923c; color:#fb923c;"></div>
+          <div class="risk-gauge-needle" id="res-gauge-needle" style="left:38%;">
+            <div class="risk-gauge-pin" id="res-gauge-pin" style="border-color:#facc15; color:#facc15;"></div>
             <div class="risk-gauge-arrow"></div>
           </div>
         </div>
         <div class="risk-gauge-labels">
-          <span style="color:#4ade80;">Safe 0-1</span>
-          <span style="color:#facc15;">Caution 1-10</span>
-          <span style="color:#fb923c;">10-50</span>
-          <span style="color:#ef4444;">50-100</span>
-          <span style="color:#fca5a5;">&gt;100 Evac</span>
+          <span style="color:#4ade80;">Safe (0-1)</span>
+          <span style="color:#facc15;">Caution (1-10)</span>
+          <span style="color:#fb923c;">Warning (10-50)</span>
+          <span style="color:#ef4444;">Danger (50-100)</span>
+          <span style="color:#fca5a5;">Evac (&gt;100)</span>
         </div>
+        <span id="res-gauge-status" style="display:none;"></span>
       </div>
 
-      <!-- 3. Scanned Strip & Target Analysis Area (Visual Confirmation) -->
-      <div class="result-proof-card">
-        <div class="result-proof-header">
-          <div class="result-proof-title">
-            <span>🎯</span> Analyzed Strip &amp; Target Zone
+      <!-- 4. INSPECTION METADATA CARD (3-Column Layout) -->
+      <div style="background:rgba(15, 23, 42, 0.85); border-radius:14px; padding:12px 14px; margin-bottom:12px;">
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px 8px; font-size:11px;">
+          <div>
+            <div style="font-size:9.5px; color:#64748b;">Worker Name:</div>
+            <div id="res-meta-worker-name" style="font-weight:700; color:#ffffff;">John Martinez</div>
           </div>
-          <span id="res-roi-badge" class="result-roi-badge">Target ROI: 60%</span>
+          <div>
+            <div style="font-size:9.5px; color:#64748b;">Employee Badge ID:</div>
+            <div id="res-meta-badge-id" style="font-weight:700; color:#ffffff;">EMP_00542</div>
+          </div>
+          <div>
+            <div style="font-size:9.5px; color:#64748b;">Dosimeter Strip ID:</div>
+            <div id="res-meta-strip-id" style="font-weight:700; color:#ffffff;">STR_7755</div>
+          </div>
+          <div>
+            <div style="font-size:9.5px; color:#64748b;">Chemical Batch:</div>
+            <div id="res-meta-batch" style="font-weight:700; color:#ffffff;">BATCH_2024_Q4_LOT_03</div>
+          </div>
+          <div>
+            <div style="font-size:9.5px; color:#64748b;">AI Model Version:</div>
+            <div id="res-meta-model-ver" style="font-weight:700; color:#ffffff;">MobileNetV3 v1.0</div>
+            <span id="res-model-ver" style="display:none;"></span>
+          </div>
+          <div>
+            <div style="font-size:9.5px; color:#64748b;">Standard Compliance:</div>
+            <div id="res-meta-compliance" style="font-weight:700; color:#ffffff;">OSHA 1910.1000 / NIOSH IDLH</div>
+          </div>
         </div>
-
-        <!-- Viewport Container with Overlay -->
-        <div class="result-img-viewport">
-          <img id="res-scanned-img" src="" alt="Scanned Strip" style="width:100%; height:100%; object-fit:contain; display:block;">
-          <div id="res-roi-overlay" class="result-roi-overlay">
-            <div class="corner-reticle corner-tl"></div>
-            <div class="corner-reticle corner-tr"></div>
-            <div class="corner-reticle corner-bl"></div>
-            <div class="corner-reticle corner-br"></div>
-            <div id="res-roi-tag" class="result-roi-tag">Analyzed Zone</div>
-          </div>
-        </div>
-
-        <!-- Sampled Dye Color Bar -->
-        <div class="result-swatch-bar">
-          <div class="result-swatch-left">
-            <div id="res-swatch-box" class="result-swatch-chip"></div>
-            <div>
-              <div style="font-size:9px; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Dye Color</div>
-              <div id="res-swatch-hex" style="font-size:11px; font-weight:800; font-family:'JetBrains Mono',monospace;">#E99053</div>
-            </div>
-          </div>
-          <div class="result-metrics-compact">
-            RGB: <span id="res-rgb-val">[233, 144, 83]</span> | Hue: <span id="res-hue-val">24.4°</span>
-            <span id="res-chroma-val" style="display:none;"></span>
-          </div>
-          <button type="button" class="btn-zoom-compact" id="btn-toggle-roi-zoom">🔍 Zoom</button>
-        </div>
+        <span id="res-scan-id" style="display:none;"></span>
       </div>
 
-      <!-- 4. Collapsible Tech & Audit Data (Clean Accordion) -->
-      <div class="accordion-card">
-        <div class="accordion-header" id="toggle-tech-data">
-          <span>🔬 AI Model &amp; Audit Data</span>
-          <span id="tech-toggle-icon" class="accordion-toggle-btn">▼ View</span>
+      <!-- 5. DIGITALLY VERIFIED INDUSTRIAL AI SAFETY CERTIFICATE -->
+      <div style="background:rgba(2, 132, 199, 0.08); border-radius:12px; padding:10px 14px; margin-bottom:14px; border:1px solid rgba(56,189,248,0.15);">
+        <div style="color:#38bdf8; font-weight:800; font-size:11.5px; margin-bottom:3px; display:flex; align-items:center; gap:5px;">
+          <span>✓</span> DIGITALLY VERIFIED INDUSTRIAL AI SAFETY CERTIFICATE
         </div>
-        <div id="tech-data-body" class="accordion-body" style="display:none;">
-          <div class="tech-row">
-            <span style="color:var(--text-muted);">AI Model:</span>
-            <strong id="res-model-ver" style="color:#60a5fa;">MobileNetV3 v1.0</strong>
-          </div>
-          <div class="tech-row">
-            <span style="color:var(--text-muted);">Inference Confidence:</span>
-            <strong id="res-confidence" style="color:#22c55e;">95.6%</strong>
-          </div>
-          <div class="tech-row">
-            <span style="color:var(--text-muted);">Audit ID:</span>
-            <code id="res-scan-id" style="color:var(--text-secondary); font-size:10px;">SCAN_001</code>
-          </div>
+        <div id="res-verified-audit-line" style="color:#94a3b8; font-size:10px; margin-bottom:2px;">
+          Cryptographic Audit ID: SCAN_20260916_361C16 • Instant Exposure Assessment
         </div>
-      </div>
-
-      <!-- 5. Collapsible H2S Safety Reference Guide -->
-      <div class="accordion-card">
-        <div class="accordion-header" id="toggle-safety-legend">
-          <span>🛡️ H₂S Exposure Standard Guide</span>
-          <span id="legend-toggle-icon" class="accordion-toggle-btn">▼ View</span>
-        </div>
-        <div id="safety-legend-table" class="accordion-body" style="display:none;">
-          <div class="guide-rows">
-            <div class="guide-row guide-safe">
-              <div><strong>🟢 Safe (0 - 1.0 ppm)</strong><small>Normal 8-hr Shift Work</small></div>
-              <span class="badge-cat badge-green">SAFE</span>
-            </div>
-            <div class="guide-row guide-caution">
-              <div><strong>🟡 Caution (1.0 - 10.0 ppm)</strong><small>ACGIH TLV • Monitor Closely</small></div>
-              <span class="badge-cat badge-yellow">CAUTION</span>
-            </div>
-            <div class="guide-row guide-moderate">
-              <div><strong>🟠 Moderate (10.0 - 50.0 ppm)</strong><small>OSHA Limit • Ventilate</small></div>
-              <span class="badge-cat badge-orange">MODERATE</span>
-            </div>
-            <div class="guide-row guide-danger">
-              <div><strong>🔴 Danger (50 - 100 ppm)</strong><small>High Hazard • Leave Area</small></div>
-              <span class="badge-cat badge-red">DANGER</span>
-            </div>
-            <div class="guide-row guide-evac">
-              <div><strong>🚨 Critical (&gt; 100 ppm)</strong><small>NIOSH IDLH • EVACUATE NOW</small></div>
-              <span class="badge-cat badge-alarm">EVACUATE</span>
-            </div>
-          </div>
+        <div style="color:#64748b; font-size:9.5px;">
+          Standard: OSHA PEL (10-20 ppm), ACGIH TLV (1 ppm), NIOSH IDLH (100 ppm)
         </div>
       </div>
 
       <!-- 6. DOWNLOAD & SHARE (MOVED TO THE END OF SCREEN) -->
-      <div class="download-section-card">
+      <div class="download-section-card" style="margin-top:0; margin-bottom:12px;">
         <button type="button" class="btn-download-hero" id="btn-download-result">
           <span>📥</span> Download Safety Result (PNG)
         </button>

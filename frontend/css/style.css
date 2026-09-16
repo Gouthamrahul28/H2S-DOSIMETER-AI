@@ -891,6 +891,12 @@ tr:hover td {
   font-weight: 700;
 }
 
+@media (max-width: 480px) {
+  .result-proof-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
 /* Buttons */
 .btn {
   display: inline-flex;
