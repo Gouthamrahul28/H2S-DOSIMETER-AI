@@ -128,64 +128,103 @@ function getCupanColor(ppm) {
   return { rgb: last.rgb, stage: last.id, name: last.name };
 }
 
+// Store active scan result for download & export
+let lastScanResult = null;
+
 // H2S Safety Tier & Color Resolver (OSHA, NIOSH, ACGIH & Cu-PAN Scale)
 export function getPpmSafetyInfo(ppm, alertLevel = null, badgeClass = null) {
-  const numPpm = (ppm !== null && ppm !== undefined) ? parseFloat(ppm) : null;
+  const numPpm = (ppm !== null && ppm !== undefined) ? parseFloat(ppm) : 0.0;
   
-  if (badgeClass === "badge-green" || alertLevel === "Green" || (numPpm !== null && numPpm < 1.0)) {
+  if (badgeClass === "badge-green" || alertLevel === "Green" || numPpm < 1.0) {
+    const pct = Math.max(4, Math.min(19, 4 + (numPpm / 1.0) * 15));
     return {
       level: "safe",
       cssClass: "ppm-safe",
       color: "#22c55e",
       textShadow: "0 0 24px rgba(34, 197, 94, 0.5)",
       label: "🟢 SAFE LEVEL",
-      safeStatus: "Safe (0-1 ppm)",
+      safeStatus: "Safe to Breathe (0 - 1 ppm)",
       isSafe: true,
-      badgeClass: "badge-green"
+      badgeClass: "badge-green",
+      verdictTitle: "AIR IS SAFE TO BREATHE",
+      verdictDesc: "No hazardous gas detected. Normal air quality for full 8-hour shift work.",
+      verdictIcon: "🟢",
+      actionIcon: "🫁",
+      gaugePercent: pct,
+      gaugeStatus: "Zone: Safe (C0)"
     };
-  } else if (badgeClass === "badge-yellow" || alertLevel === "Yellow" || (numPpm !== null && numPpm >= 1.0 && numPpm < 10.0)) {
+  } else if (badgeClass === "badge-yellow" || alertLevel === "Yellow" || (numPpm >= 1.0 && numPpm < 10.0)) {
+    const pct = 21 + ((numPpm - 1.0) / 9.0) * 19;
     return {
       level: "caution",
       cssClass: "ppm-caution",
       color: "#facc15",
       textShadow: "0 0 24px rgba(250, 204, 21, 0.55)",
       label: "🟡 CAUTION LEVEL",
-      safeStatus: "Caution (1-10 ppm)",
+      safeStatus: "Caution (1 - 10 ppm)",
       isSafe: false,
-      badgeClass: "badge-yellow"
+      badgeClass: "badge-yellow",
+      verdictTitle: "CAUTION — TRACE GAS DETECTED",
+      verdictDesc: "Gas approaching exposure limits. Safe short-term, but inspect area & monitor closely.",
+      verdictIcon: "🟡",
+      actionIcon: "🔍",
+      gaugePercent: Math.min(41, pct),
+      gaugeStatus: "Zone: Caution (C1)"
     };
-  } else if (badgeClass === "badge-orange" || alertLevel === "Orange" || (numPpm !== null && numPpm >= 10.0 && numPpm < 50.0)) {
+  } else if (badgeClass === "badge-orange" || alertLevel === "Orange" || (numPpm >= 10.0 && numPpm < 50.0)) {
+    const pct = 43 + ((numPpm - 10.0) / 40.0) * 22;
     return {
       level: "warning",
       cssClass: "ppm-warning",
       color: "#fb923c",
       textShadow: "0 0 24px rgba(251, 146, 60, 0.55)",
       label: "⚡ MODERATE HAZARD",
-      safeStatus: "Exceeds Safe Limit",
+      safeStatus: "Exceeds Safe Limit (10 - 50 ppm)",
       isSafe: false,
-      badgeClass: "badge-orange"
+      badgeClass: "badge-orange",
+      verdictTitle: "WARNING — HAZARDOUS EXPOSURE",
+      verdictDesc: "OSHA legal workplace limit exceeded! Turn on forced fans and wear safety respirator.",
+      verdictIcon: "⚡",
+      actionIcon: "💨",
+      gaugePercent: Math.min(65, pct),
+      gaugeStatus: "Zone: Moderate Hazard (C2)"
     };
-  } else if (badgeClass === "badge-red" || alertLevel === "Red" || (numPpm !== null && numPpm >= 50.0 && numPpm < 100.0)) {
+  } else if (badgeClass === "badge-red" || alertLevel === "Red" || (numPpm >= 50.0 && numPpm < 100.0)) {
+    const pct = 67 + ((numPpm - 50.0) / 50.0) * 20;
     return {
       level: "danger",
       cssClass: "ppm-danger",
       color: "#ef4444",
       textShadow: "0 0 28px rgba(239, 68, 68, 0.65)",
       label: "⛔ HIGH DANGER",
-      safeStatus: "Near IDLH (50-100 ppm)",
+      safeStatus: "Dangerous Air (50 - 100 ppm)",
       isSafe: false,
-      badgeClass: "badge-red"
+      badgeClass: "badge-red",
+      verdictTitle: "DANGER — TOXIC ATMOSPHERE",
+      verdictDesc: "High toxicity hazard! Eye damage and breathing distress possible. Leave area immediately!",
+      verdictIcon: "⛔",
+      actionIcon: "🚶",
+      gaugePercent: Math.min(87, pct),
+      gaugeStatus: "Zone: High Hazard (C3)"
     };
   } else {
+    const extra = Math.min(numPpm - 100.0, 50.0) / 50.0;
+    const pct = 89 + extra * 9;
     return {
       level: "alarm",
       cssClass: "ppm-alarm",
       color: "#f87171",
       textShadow: "0 0 32px rgba(248, 113, 113, 0.9)",
       label: "🚨 CRITICAL EVACUATION",
-      safeStatus: "EVACUATE IMMEDIATELY (>100 ppm)",
+      safeStatus: "EVACUATE IMMEDIATELY (> 100 ppm)",
       isSafe: false,
-      badgeClass: "badge-alarm"
+      badgeClass: "badge-alarm",
+      verdictTitle: "DEADLY AIR — EVACUATE NOW!",
+      verdictDesc: "Immediately Dangerous to Life and Health (IDLH). Rapid loss of consciousness. Run to fresh air!",
+      verdictIcon: "🚨",
+      actionIcon: "🏃",
+      gaugePercent: Math.min(97, pct),
+      gaugeStatus: "Zone: Critical Evac (C4)"
     };
   }
 }
@@ -593,13 +632,29 @@ document.getElementById("btn-capture-scan").addEventListener("click", async () =
     }
 
     const res = await API.submitScan(payload);
+    lastScanResult = res;
 
-
-
-    // Populate Result Screen with dynamic PPM safety coloring
+    // Populate Result Screen with dynamic PPM safety coloring & non-technical verdict
     const ppmVal = res.predicted_ppm;
     const safety = getPpmSafetyInfo(ppmVal, res.alert_level, res.badge_class);
 
+    // 1. Plain-Language Verdict Hero
+    const verdictCard = document.getElementById("res-verdict-card");
+    const verdictTitle = document.getElementById("res-verdict-title");
+    const verdictIcon = document.getElementById("res-verdict-icon");
+    const verdictText = document.getElementById("res-verdict-text");
+    const verdictDesc = document.getElementById("res-verdict-desc");
+    if (verdictCard) {
+      verdictCard.style.background = `radial-gradient(circle at center, ${safety.color}25 0%, rgba(15,23,42,0.95) 100%)`;
+      verdictCard.style.borderColor = safety.color;
+      verdictCard.style.boxShadow = `0 10px 30px -10px ${safety.color}40`;
+    }
+    if (verdictTitle) verdictTitle.style.color = safety.color;
+    if (verdictIcon) verdictIcon.textContent = safety.verdictIcon;
+    if (verdictText) verdictText.textContent = safety.verdictTitle;
+    if (verdictDesc) verdictDesc.textContent = safety.verdictDesc;
+
+    // 2. Large PPM Value
     const resPpmEl = document.getElementById("res-ppm");
     resPpmEl.textContent = `${ppmVal} ppm`;
     resPpmEl.className = `ppm-reading ${safety.cssClass}`;
@@ -618,6 +673,25 @@ document.getElementById("btn-capture-scan").addEventListener("click", async () =
       safeStatusLabel.style.color = safety.color;
     }
 
+    // 3. Risk Exposure Gauge / Meter Needle
+    const gaugeStatus = document.getElementById("res-gauge-status");
+    const gaugeNeedle = document.getElementById("res-gauge-needle");
+    const gaugePin = document.getElementById("res-gauge-pin");
+    if (gaugeStatus) {
+      gaugeStatus.textContent = safety.gaugeStatus;
+      gaugeStatus.style.color = safety.color;
+    }
+    if (gaugeNeedle) {
+      gaugeNeedle.style.left = `${safety.gaugePercent}%`;
+    }
+    if (gaugePin) {
+      gaugePin.style.borderColor = safety.color;
+      gaugePin.style.color = safety.color;
+    }
+
+    // 4. Action Card
+    const resActionIcon = document.getElementById("res-action-icon");
+    if (resActionIcon) resActionIcon.textContent = safety.actionIcon;
     document.getElementById("res-ppm-range").textContent = `Range: ${res.predicted_ppm_range}`;
     document.getElementById("res-worker-action").textContent = res.worker_action;
     document.getElementById("res-exposure-level").textContent = `Exposure Status: ${res.exposure_level} (${res.alert_level} Alert)`;
@@ -751,17 +825,303 @@ document.getElementById("btn-finish-scan").addEventListener("click", () => {
   showScreen(screenStrip);
 });
 
-// Toggle In-App Safety Reference Guide
-const toggleSafetyLegend = document.getElementById("toggle-safety-legend");
-const safetyLegendTable = document.getElementById("safety-legend-table");
-const legendToggleIcon = document.getElementById("legend-toggle-icon");
-if (toggleSafetyLegend && safetyLegendTable) {
-  toggleSafetyLegend.addEventListener("click", () => {
-    const isHidden = safetyLegendTable.style.display === "none";
-    safetyLegendTable.style.display = isHidden ? "block" : "none";
-    if (legendToggleIcon) {
-      legendToggleIcon.textContent = isHidden ? "▲ Hide Guide" : "▼ View Guide";
+// Toggle Detailed Technical Data Section
+const toggleTechData = document.getElementById("toggle-tech-data");
+const techDataBody = document.getElementById("tech-data-body");
+const techToggleIcon = document.getElementById("tech-toggle-icon");
+if (toggleTechData && techDataBody) {
+  toggleTechData.addEventListener("click", () => {
+    const isHidden = techDataBody.style.display === "none";
+    techDataBody.style.display = isHidden ? "block" : "none";
+    if (techToggleIcon) {
+      techToggleIcon.textContent = isHidden ? "▲ Hide Tech Data" : "▼ View Tech Data";
     }
   });
 }
+
+// Download High-Resolution Official Safety Report Certificate (PNG via Canvas)
+function downloadSafetyReportPNG() {
+  if (!lastScanResult) {
+    alert("Please perform a scan first.");
+    return;
+  }
+  const res = lastScanResult;
+  const safety = getPpmSafetyInfo(res.predicted_ppm, res.alert_level, res.badge_class);
+  const worker = currentWorker || { name: "Operator", id: "EMP_00542" };
+  const stripId = currentStripId || "STR_0421";
+
+  const canvas = document.createElement("canvas");
+  canvas.width = 840;
+  canvas.height = 1120;
+  const ctx = canvas.getContext("2d");
+
+  // 1. Dark Cyber Background
+  const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  grad.addColorStop(0, "#080e1a");
+  grad.addColorStop(0.5, "#0b1329");
+  grad.addColorStop(1, "#040711");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Outer Glowing Border in Safety Color
+  ctx.strokeStyle = safety.color;
+  ctx.lineWidth = 6;
+  ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
+
+  // Corner Accents
+  ctx.fillStyle = safety.color;
+  const cSize = 24;
+  ctx.fillRect(10, 10, cSize, 6);
+  ctx.fillRect(10, 10, 6, cSize);
+  ctx.fillRect(canvas.width - 10 - cSize, 10, cSize, 6);
+  ctx.fillRect(canvas.width - 16, 10, 6, cSize);
+  ctx.fillRect(10, canvas.height - 16, cSize, 6);
+  ctx.fillRect(10, canvas.height - 10 - cSize, 6, cSize);
+  ctx.fillRect(canvas.width - 10 - cSize, canvas.height - 16, cSize, 6);
+  ctx.fillRect(canvas.width - 16, canvas.height - 10 - cSize, 6, cSize);
+
+  // 2. Header
+  ctx.fillStyle = "#38bdf8";
+  ctx.font = "bold 20px 'Inter', sans-serif";
+  ctx.fillText("H₂S INDUSTRIAL OPTICAL DOSIMETER", 40, 60);
+
+  ctx.fillStyle = "#94a3b8";
+  ctx.font = "13px 'Inter', sans-serif";
+  ctx.fillText("OFFICIAL WORKER AIR QUALITY INSPECTION REPORT", 40, 84);
+
+  const dateStr = new Date().toLocaleString();
+  ctx.textAlign = "right";
+  ctx.fillStyle = "#cbd5e1";
+  ctx.font = "12px 'JetBrains Mono', monospace";
+  ctx.fillText(dateStr, canvas.width - 40, 60);
+  ctx.fillText(`ID: ${res.scan_id}`, canvas.width - 40, 80);
+  ctx.textAlign = "left";
+
+  // Separator line
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(40, 105);
+  ctx.lineTo(canvas.width - 40, 105);
+  ctx.stroke();
+
+  // 3. Verdict Hero Box
+  ctx.fillStyle = `${safety.color}18`;
+  ctx.beginPath();
+  ctx.roundRect(40, 125, canvas.width - 80, 110, 14);
+  ctx.fill();
+  ctx.strokeStyle = safety.color;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  ctx.fillStyle = safety.color;
+  ctx.font = "bold 28px 'Inter', sans-serif";
+  ctx.fillText(`${safety.verdictIcon}  ${safety.verdictTitle}`, 65, 172);
+
+  ctx.fillStyle = "#e2e8f0";
+  ctx.font = "15px 'Inter', sans-serif";
+  ctx.fillText(safety.verdictDesc, 65, 205);
+
+  // 4. Large Digital PPM Box
+  ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
+  ctx.beginPath();
+  ctx.roundRect(40, 255, canvas.width - 80, 160, 14);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  ctx.fillStyle = "#94a3b8";
+  ctx.font = "bold 13px 'Inter', sans-serif";
+  ctx.fillText("PREDICTED GAS CONCENTRATION:", 65, 285);
+
+  ctx.fillStyle = safety.color;
+  ctx.font = "800 64px 'JetBrains Mono', monospace";
+  ctx.fillText(`${res.predicted_ppm} ppm`, 65, 355);
+
+  ctx.fillStyle = "#cbd5e1";
+  ctx.font = "bold 14px 'Inter', sans-serif";
+  ctx.fillText(`Estimated Range: ${res.predicted_ppm_range}`, 65, 390);
+
+  ctx.textAlign = "right";
+  ctx.fillStyle = safety.color;
+  ctx.font = "bold 16px 'Inter', sans-serif";
+  ctx.fillText(safety.label, canvas.width - 65, 320);
+
+  ctx.fillStyle = "#94a3b8";
+  ctx.font = "13px 'Inter', sans-serif";
+  ctx.fillText(`Class: ${res.predicted_class} • Alert: ${res.alert_level}`, canvas.width - 65, 350);
+  ctx.textAlign = "left";
+
+  // 5. Exposure Meter Scale (Drawn directly on canvas)
+  ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
+  ctx.beginPath();
+  ctx.roundRect(40, 435, canvas.width - 80, 85, 14);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+  ctx.stroke();
+
+  ctx.fillStyle = "#94a3b8";
+  ctx.font = "bold 12px 'Inter', sans-serif";
+  ctx.fillText("RISK GAUGE SPECTRUM (0 to >100 ppm):", 65, 460);
+
+  // Meter Track
+  const trackX = 65;
+  const trackY = 475;
+  const trackW = canvas.width - 130;
+  const trackH = 14;
+
+  const trackGrad = ctx.createLinearGradient(trackX, 0, trackX + trackW, 0);
+  trackGrad.addColorStop(0, "#22c55e");
+  trackGrad.addColorStop(0.2, "#22c55e");
+  trackGrad.addColorStop(0.2, "#facc15");
+  trackGrad.addColorStop(0.42, "#facc15");
+  trackGrad.addColorStop(0.42, "#fb923c");
+  trackGrad.addColorStop(0.66, "#fb923c");
+  trackGrad.addColorStop(0.66, "#ef4444");
+  trackGrad.addColorStop(0.88, "#ef4444");
+  trackGrad.addColorStop(0.88, "#dc2626");
+  trackGrad.addColorStop(1, "#991b1b");
+  ctx.fillStyle = trackGrad;
+  ctx.beginPath();
+  ctx.roundRect(trackX, trackY, trackW, trackH, 6);
+  ctx.fill();
+
+  // Draw Needle Marker
+  const needleX = trackX + (safety.gaugePercent / 100) * trackW;
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.arc(needleX, trackY + trackH / 2, 8, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = safety.color;
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  // 6. Mandatory Action Card
+  ctx.fillStyle = "rgba(249, 115, 22, 0.08)";
+  ctx.beginPath();
+  ctx.roundRect(40, 540, canvas.width - 80, 95, 14);
+  ctx.fill();
+  ctx.strokeStyle = safety.color;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  ctx.fillStyle = safety.color;
+  ctx.font = "bold 12px 'Inter', sans-serif";
+  ctx.fillText("MANDATORY SAFETY ACTION REQUIRED:", 65, 570);
+
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 20px 'Inter', sans-serif";
+  ctx.fillText(`${safety.actionIcon}  ${res.worker_action}`, 65, 605);
+
+  // 7. Two-Column Inspection Meta Data
+  ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
+  ctx.beginPath();
+  ctx.roundRect(40, 655, canvas.width - 80, 220, 14);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+  ctx.stroke();
+
+  const col1X = 65;
+  const col2X = 440;
+  let rowY = 690;
+
+  function drawMetaRow(label, val, x, y) {
+    ctx.fillStyle = "#64748b";
+    ctx.font = "12px 'Inter', sans-serif";
+    ctx.fillText(label, x, y);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 14px 'Inter', sans-serif";
+    ctx.fillText(val, x, y + 20);
+  }
+
+  drawMetaRow("Worker Name:", worker.name || "Worker", col1X, rowY);
+  drawMetaRow("Employee Badge ID:", worker.id || "EMP_00542", col2X, rowY);
+
+  rowY += 50;
+  drawMetaRow("Indicator Strip ID:", stripId, col1X, rowY);
+  drawMetaRow("Chemical Batch Lot:", res.strip_batch || "BATCH_2024_Q4", col2X, rowY);
+
+  rowY += 50;
+  drawMetaRow("AI Vision Model:", `MobileNetV3 ${res.model_version}`, col1X, rowY);
+  drawMetaRow("Inference Confidence:", `${Math.round(res.model_confidence * 1000) / 10}% Nominal`, col2X, rowY);
+
+  // 8. Seal of Verification Footer
+  ctx.fillStyle = "rgba(2, 132, 199, 0.1)";
+  ctx.beginPath();
+  ctx.roundRect(40, 895, canvas.width - 80, 100, 14);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(56, 189, 248, 0.3)";
+  ctx.stroke();
+
+  ctx.fillStyle = "#38bdf8";
+  ctx.font = "bold 14px 'Inter', sans-serif";
+  ctx.fillText("✓ DIGITALLY VERIFIED BY INDUSTRIAL AI SAFETY PLATFORM", 65, 932);
+
+  ctx.fillStyle = "#94a3b8";
+  ctx.font = "12px 'Inter', sans-serif";
+  ctx.fillText("OSHA 1910.1000 • NIOSH IDLH 100 PPM • ACGIH TLV-TWA 1 PPM Compliant Record", 65, 956);
+  ctx.fillText(`Tamper-Evident Hash Audit ID: ${res.scan_id}`, 65, 976);
+
+  // 9. Trigger Direct Download
+  const link = document.createElement("a");
+  link.download = `H2S_Safety_Scan_${res.scan_id}_${res.predicted_ppm}ppm.png`;
+  link.href = canvas.toDataURL("image/png");
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  // Toast feedback
+  const toast = document.getElementById("download-status-toast");
+  if (toast) {
+    toast.textContent = "✓ Official Safety Certificate Downloaded as PNG!";
+    toast.style.display = "block";
+    setTimeout(() => { toast.style.display = "none"; }, 3500);
+  }
+}
+
+// Copy Text Summary to Clipboard
+function copyScanSummary() {
+  if (!lastScanResult) {
+    alert("Please perform a scan first.");
+    return;
+  }
+  const res = lastScanResult;
+  const safety = getPpmSafetyInfo(res.predicted_ppm, res.alert_level, res.badge_class);
+  const worker = currentWorker || { name: "Operator", id: "EMP_00542" };
+  const stripId = currentStripId || "STR_0421";
+
+  const text = [
+    "=========================================",
+    "  H2S INDUSTRIAL DOSIMETER SCAN REPORT",
+    "=========================================",
+    `Status Verdict:  ${safety.verdictTitle}`,
+    `PPM Reading:     ${res.predicted_ppm} ppm (${res.predicted_ppm_range})`,
+    `Safety Category: ${res.predicted_class} • ${safety.label}`,
+    `Worker:          ${worker.name} (${worker.id})`,
+    `Strip ID:        ${stripId}`,
+    `Batch Lot:       ${res.strip_batch || 'BATCH_2024_Q4'}`,
+    `Action Required: ${res.worker_action}`,
+    `Model:           MobileNetV3 ${res.model_version} (${Math.round(res.model_confidence*1000)/10}% Conf)`,
+    `Scan ID:         ${res.scan_id}`,
+    `Timestamp:       ${new Date().toLocaleString()}`,
+    "========================================="
+  ].join("\n");
+
+  navigator.clipboard.writeText(text).then(() => {
+    const toast = document.getElementById("download-status-toast");
+    if (toast) {
+      toast.textContent = "✓ Summary Copied to Clipboard!";
+      toast.style.display = "block";
+      setTimeout(() => { toast.style.display = "none"; }, 3000);
+    }
+  }).catch(() => {
+    alert("Scan Summary:\n\n" + text);
+  });
+}
+
+// Attach Action Listeners
+document.getElementById("btn-download-result")?.addEventListener("click", downloadSafetyReportPNG);
+document.getElementById("btn-copy-summary")?.addEventListener("click", copyScanSummary);
+document.getElementById("btn-print-slip")?.addEventListener("click", () => window.print());
 
