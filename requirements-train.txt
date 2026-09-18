@@ -1,0 +1,4 @@
+# Offline AI Model Training Dependencies
+-r requirements.txt
+torch>=2.2.0
+torchvision>=0.17.0

@@ -42,14 +42,34 @@ def main():
     print("=" * 65)
     print("Starting server... Press Ctrl+C to stop.\n")
 
-    # 3. Start Uvicorn Server
-    uvicorn.run(
-        "backend.main:app",
-        host=config.HOST,
-        port=config.PORT,
-        reload=True,
-        log_level="info"
+    # 4. Determine execution mode (Development vs Cloud Production)
+    import os
+    is_production = (
+        os.getenv("ENVIRONMENT", "").lower() == "production"
+        or bool(os.getenv("RENDER"))
+        or bool(os.getenv("RAILWAY_ENVIRONMENT"))
     )
+    should_reload = os.getenv("RELOAD", "false" if is_production else "true").lower() in ("true", "1", "yes")
+
+    # 5. Start Uvicorn Server
+    if should_reload:
+        uvicorn.run(
+            "backend.main:app",
+            host=config.HOST,
+            port=config.PORT,
+            reload=True,
+            reload_dirs=["backend", "frontend"],
+            log_level="info"
+        )
+    else:
+        uvicorn.run(
+            "backend.main:app",
+            host=config.HOST,
+            port=config.PORT,
+            reload=False,
+            log_level="info"
+        )
 
 if __name__ == "__main__":
     main()
+
