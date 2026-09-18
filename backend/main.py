@@ -67,6 +67,22 @@ def serve_worker_app():
         return FileResponse(str(worker_path))
     return {"message": "Worker App interface not found."}
 
+@app.get("/sw.js")
+def serve_service_worker():
+    """Serves the Service Worker for PWA / offline support."""
+    sw_path = config.FRONTEND_DIR / "sw.js"
+    if sw_path.exists():
+        return FileResponse(str(sw_path), media_type="application/javascript")
+    return {"error": "sw.js not found"}
+
+@app.get("/manifest.json")
+def serve_manifest():
+    """Serves the PWA web app manifest."""
+    manifest_path = config.FRONTEND_DIR / "manifest.json"
+    if manifest_path.exists():
+        return FileResponse(str(manifest_path), media_type="application/json")
+    return {"error": "manifest.json not found"}
+
 @app.get("/api/health")
 def health_check():
     return {
@@ -75,3 +91,4 @@ def health_check():
         "version": "2.0.0",
         "active_model": config.DEFAULT_MODEL_VERSION
     }
+

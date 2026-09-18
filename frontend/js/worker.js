@@ -31,7 +31,8 @@ document.getElementById("btn-login").addEventListener("click", async () => {
     errDiv.style.display = "none";
     showScreen(screenStrip);
   } catch (err) {
-    errDiv.textContent = err.detail || "Authentication failed. Check worker ID and PIN.";
+    const msg = err?.detail || (typeof err === "string" ? err : (err?.message || "Authentication failed. Check worker ID and PIN."));
+    errDiv.textContent = msg;
     errDiv.style.display = "block";
   }
 });

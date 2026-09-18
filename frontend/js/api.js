@@ -12,8 +12,9 @@ export const API = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ worker_id: workerId, pin: pin })
     });
-    if (!res.ok) throw await res.json();
-    return await res.json();
+    const data = await res.json().catch(() => ({ detail: `Server responded with status ${res.status}` }));
+    if (!res.ok) throw data;
+    return data;
   },
 
   // Strip Management & Validation
