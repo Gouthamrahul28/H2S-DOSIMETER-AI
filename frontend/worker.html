@@ -171,12 +171,22 @@
       <div style="display:flex; flex-direction:column; gap:16px; flex:1;">
         <div>
           <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:6px;">Worker ID / Badge:</label>
-          <input type="text" id="login-worker-id" value="EMP_00542" style="width:100%; padding:12px; background:#0f172a; color:#fff; border:1px solid var(--border-color); border-radius:10px; font-size:15px; font-family:'JetBrains Mono';">
+          <input type="text" id="login-worker-id" value="EMP_00542" placeholder="e.g. EMP_00542 or W101" style="width:100%; padding:12px; background:#0f172a; color:#fff; border:1px solid var(--border-color); border-radius:10px; font-size:15px; font-family:'JetBrains Mono';">
         </div>
 
         <div>
           <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:6px;">4-Digit Security PIN:</label>
           <input type="password" id="login-pin" value="1234" maxlength="6" style="width:100%; padding:12px; background:#0f172a; color:#fff; border:1px solid var(--border-color); border-radius:10px; font-size:18px; text-align:center; letter-spacing:4px;">
+        </div>
+
+        <!-- Quick Demo Profiles (Tap to Fill) -->
+        <div style="background:rgba(255,255,255,0.03); border:1px solid #334155; border-radius:10px; padding:10px;">
+          <div style="font-size:10px; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; font-weight:700;">Quick Demo Profiles (Tap to Fill):</div>
+          <div style="display:flex; flex-wrap:wrap; gap:6px;">
+            <button type="button" class="btn btn-secondary" style="padding:4px 8px; font-size:11px;" onclick="document.getElementById('login-worker-id').value='EMP_00542'; document.getElementById('login-pin').value='1234';">EMP_00542 (PIN: 1234)</button>
+            <button type="button" class="btn btn-secondary" style="padding:4px 8px; font-size:11px;" onclick="document.getElementById('login-worker-id').value='W101'; document.getElementById('login-pin').value='1234';">W101 (PIN: 1234)</button>
+            <button type="button" class="btn btn-secondary" style="padding:4px 8px; font-size:11px;" onclick="document.getElementById('login-worker-id').value='BDG-542'; document.getElementById('login-pin').value='1234';">BDG-542 (PIN: 1234)</button>
+          </div>
         </div>
 
         <div id="login-error" style="display:none; color:#f87171; font-size:13px; background:rgba(239,68,68,0.1); padding:10px; border-radius:8px; border:1px solid rgba(239,68,68,0.3);"></div>

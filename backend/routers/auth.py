@@ -126,21 +126,44 @@ def get_me(current_user: dict = Depends(get_current_user)):
 @router.post("/worker-login", response_model=TokenResponse)
 def worker_login(payload: WorkerLoginRequest, db: Session = Depends(get_db)):
     """Validates worker ID and PIN for mobile application login with Worker role."""
-    worker = db.query(Worker).filter(Worker.id == payload.worker_id).first()
+    clean_id = (payload.worker_id or "").strip()
+    clean_pin = (payload.pin or "").strip()
+
+    if not clean_id or not clean_pin:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Worker ID and PIN are required."
+        )
+
+    # 1. Flexible lookup: match ID (case-insensitive), badge number, or normalized format
+    worker = db.query(Worker).filter(
+        (Worker.id == clean_id) |
+        (Worker.id == clean_id.upper()) |
+        (Worker.badge_number == clean_id) |
+        (Worker.badge_number == clean_id.upper()) |
+        (Worker.badge_number == f"BDG-{clean_id.upper().replace('BDG-', '').replace('W', '')}")
+    ).first()
+
+    # 2. Friendly demo fallback for W101 / DEMO aliases
+    if not worker and clean_id.upper() in ("W101", "W-101", "101", "DEMO", "WORKER"):
+        worker = db.query(Worker).filter(
+            (Worker.id == "W101") | (Worker.id == "EMP_00542")
+        ).first()
+
     if not worker:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Worker ID not found in facility database."
+            detail=f"Worker ID '{clean_id}' not found. Use EMP_00542, W101, or BDG-542."
         )
     if worker.status != "ACTIVE":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Worker profile is currently INACTIVE. Contact safety officer."
         )
-    if worker.pin != payload.pin:
+    if worker.pin != clean_pin:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid Worker PIN."
+            detail="Invalid Worker PIN. (Default demo PIN is 1234)"
         )
 
     # Worker role strictly limits visibility to own dose only

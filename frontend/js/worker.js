@@ -36,6 +36,14 @@ document.getElementById("btn-login").addEventListener("click", async () => {
   }
 });
 
+// Support Enter / Go key on mobile keyboards
+document.getElementById("login-pin").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") document.getElementById("btn-login").click();
+});
+document.getElementById("login-worker-id").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") document.getElementById("login-pin").focus();
+});
+
 // 2. Strip Validation (Section 2.2)
 document.getElementById("btn-verify-strip").addEventListener("click", async () => {
   const stripId = document.getElementById("strip-input-id").value.trim();
