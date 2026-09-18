@@ -1422,87 +1422,110 @@ const DB_NAME = "H2SPlantDeadZoneVault";
 const STORE_NAME = "offline_scans";
 
 function openOfflineDB() {
+  if (typeof window === "undefined" || !window.indexedDB) {
+    return Promise.reject(new Error("IndexedDB not supported or disabled."));
+  }
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 1);
-    req.onupgradeneeded = (e) => {
-      const db = e.target.result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, { keyPath: "vault_id", autoIncrement: true });
-      }
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
+    try {
+      const req = window.indexedDB.open(DB_NAME, 1);
+      req.onupgradeneeded = (e) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+          db.createObjectStore(STORE_NAME, { keyPath: "vault_id", autoIncrement: true });
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    } catch (err) {
+      reject(err);
+    }
   });
 }
 
 async function vaultScanOffline(payload) {
-  const db = await openOfflineDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, "readwrite");
-    const store = tx.objectStore(STORE_NAME);
-    const item = { ...payload, vaulted_at: new Date().toISOString() };
-    const req = store.add(item);
-    req.onsuccess = () => {
-      updateOfflineVaultUI();
-      resolve(req.result);
-    };
-    req.onerror = () => reject(req.error);
-  });
+  try {
+    const db = await openOfflineDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, "readwrite");
+      const store = tx.objectStore(STORE_NAME);
+      const item = { ...payload, vaulted_at: new Date().toISOString() };
+      const req = store.add(item);
+      req.onsuccess = () => {
+        updateOfflineVaultUI();
+        resolve(req.result);
+      };
+      req.onerror = () => reject(req.error);
+    });
+  } catch (err) {
+    console.warn("Offline vaulting not available:", err);
+  }
 }
 
 async function getVaultedScans() {
-  const db = await openOfflineDB();
-  return new Promise((resolve) => {
-    const tx = db.transaction(STORE_NAME, "readonly");
-    const store = tx.objectStore(STORE_NAME);
-    const req = store.getAll();
-    req.onsuccess = () => resolve(req.result || []);
-    req.onerror = () => resolve([]);
-  });
+  try {
+    const db = await openOfflineDB();
+    return new Promise((resolve) => {
+      const tx = db.transaction(STORE_NAME, "readonly");
+      const store = tx.objectStore(STORE_NAME);
+      const req = store.getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => resolve([]);
+    });
+  } catch (err) {
+    return [];
+  }
 }
 
 async function clearVaultedScan(vaultId) {
-  const db = await openOfflineDB();
-  return new Promise((resolve) => {
-    const tx = db.transaction(STORE_NAME, "readwrite");
-    const store = tx.objectStore(STORE_NAME);
-    store.delete(vaultId);
-    tx.oncomplete = () => {
-      updateOfflineVaultUI();
-      resolve();
-    };
-  });
+  try {
+    const db = await openOfflineDB();
+    return new Promise((resolve) => {
+      const tx = db.transaction(STORE_NAME, "readwrite");
+      const store = tx.objectStore(STORE_NAME);
+      store.delete(vaultId);
+      tx.oncomplete = () => {
+        updateOfflineVaultUI();
+        resolve();
+      };
+    });
+  } catch (err) {
+    // ignore
+  }
 }
 
 async function updateOfflineVaultUI() {
-  const statusDot = document.getElementById("pwa-status-dot");
-  const statusText = document.getElementById("pwa-status-text");
-  const syncPill = document.getElementById("pwa-sync-pill");
-  const isOnline = navigator.onLine;
+  try {
+    const statusDot = document.getElementById("pwa-status-dot");
+    const statusText = document.getElementById("pwa-status-text");
+    const syncPill = document.getElementById("pwa-sync-pill");
+    const isOnline = (typeof navigator !== "undefined" && "onLine" in navigator) ? navigator.onLine : true;
 
-  const vaulted = await getVaultedScans();
+    const vaulted = await getVaultedScans().catch(() => []);
 
-  if (isOnline) {
-    if (statusDot) {
-      statusDot.style.background = "#22c55e";
-      statusDot.style.boxShadow = "0 0 8px #22c55e";
-    }
-    if (statusText) statusText.textContent = "Plant Network Online";
-  } else {
-    if (statusDot) {
-      statusDot.style.background = "#f59e0b";
-      statusDot.style.boxShadow = "0 0 8px #f59e0b";
-    }
-    if (statusText) statusText.textContent = "Plant Dead Zone (Offline Vault Active)";
-  }
-
-  if (syncPill) {
-    if (vaulted.length > 0) {
-      syncPill.style.display = "inline-block";
-      syncPill.textContent = `${vaulted.length} Vaulted`;
+    if (isOnline) {
+      if (statusDot) {
+        statusDot.style.background = "#22c55e";
+        statusDot.style.boxShadow = "0 0 8px #22c55e";
+      }
+      if (statusText) statusText.textContent = "Plant Network Online";
     } else {
-      syncPill.style.display = "none";
+      if (statusDot) {
+        statusDot.style.background = "#f59e0b";
+        statusDot.style.boxShadow = "0 0 8px #f59e0b";
+      }
+      if (statusText) statusText.textContent = "Plant Dead Zone (Offline Vault Active)";
     }
+
+    if (syncPill) {
+      if (vaulted && vaulted.length > 0) {
+        syncPill.style.display = "inline-block";
+        syncPill.textContent = `${vaulted.length} Vaulted`;
+      } else {
+        syncPill.style.display = "none";
+      }
+    }
+  } catch (e) {
+    console.warn("Vault UI update notice:", e);
   }
 }
 
@@ -1558,145 +1581,86 @@ document.getElementById("btn-finish-scan")?.addEventListener("click", () => {
   showScreen(screenStrip);
 });
 
-// ============================================================================
-// Section 7: Wristband QR Auto-Binding in Worker Scanner
-// ============================================================================
-const modalWristbandQr = document.getElementById("modal-wristband-qr");
-const btnOpenQrModal = document.getElementById("btn-open-qr-modal");
-const btnCloseQrModal = document.getElementById("btn-close-qr-modal");
-const btnSimulateQrScan = document.getElementById("btn-simulate-qr-scan");
-const manualQrPayload = document.getElementById("manual-qr-payload");
-const btnApplyManualQr = document.getElementById("btn-apply-manual-qr");
-const wristbandLockedCard = document.getElementById("wristband-locked-card");
-const wbLockInfo = document.getElementById("wb-lock-info");
+// Expose functions globally for interactive button taps
+window.setScanMode = setScanMode;
 
-let boundWristbandData = null;
-
-btnOpenQrModal?.addEventListener("click", () => {
-  if (modalWristbandQr) modalWristbandQr.style.display = "flex";
-});
-btnCloseQrModal?.addEventListener("click", () => {
-  if (modalWristbandQr) modalWristbandQr.style.display = "none";
-});
-
-function applyWristbandData(data) {
-  boundWristbandData = data;
-  if (data.strip_id) {
-    document.getElementById("strip-input-id").value = data.strip_id;
-  }
-  if (wristbandLockedCard && wbLockInfo) {
-    wbLockInfo.innerHTML = `
-      Worker: <strong style="color:#fff;">${data.worker_id || currentWorker?.id || 'EMP_00542'}</strong> • 
-      Batch: <strong style="color:#38bdf8;">${data.batch_id || 'BATCH_2026_Q1_01'}</strong> • 
-      Method: <strong style="color:#facc15;">${data.method_key || 'cupan_optical'}</strong>
-    `;
-    wristbandLockedCard.style.display = "block";
-  }
-  if (modalWristbandQr) modalWristbandQr.style.display = "none";
-}
-
-btnSimulateQrScan?.addEventListener("click", async () => {
-  const workerId = currentWorker ? currentWorker.id : "EMP_00542";
-  const batchId = "BATCH_2026_Q1_01";
-  const stripId = `STR_WB_${Math.floor(1000 + Math.random() * 9000)}`;
-  const methodKey = "cupan_optical";
-  const expiry = "2026-06-15";
-  
-  try {
-    await API.createStrip(stripId, batchId, workerId, 90);
-  } catch (e) {
-    console.warn("Auto-issue strip notice:", e);
-  }
-  
-  applyWristbandData({
-    worker_id: workerId,
-    batch_id: batchId,
-    strip_id: stripId,
-    method_key: methodKey,
-    expiry_date: expiry
-  });
-});
-
-btnApplyManualQr?.addEventListener("click", () => {
-  const raw = (manualQrPayload?.value || "").trim();
-  if (!raw) return;
-  
-  let data = {};
-  if (window.QRGenerator && window.QRGenerator.parseWristbandPayload) {
-    data = window.QRGenerator.parseWristbandPayload(raw) || {};
-  } else {
-    try {
-      const qs = raw.includes("?") ? raw.split("?")[1] : raw;
-      const params = new URLSearchParams(qs);
-      data = {
-        worker_id: params.get("w"),
-        batch_id: params.get("b"),
-        strip_id: params.get("s"),
-        method_key: params.get("m"),
-        expiry_date: params.get("exp")
-      };
-    } catch (e) {
-      console.warn("Manual QR parse error:", e);
+window.loadSampleStripPhoto = function() {
+  if (webcamStream) {
+    webcamStream.getTracks().forEach(t => t.stop());
+    webcamStream = null;
+    if (videoEl) videoEl.style.display = "none";
+    if (btnToggleWebcam) {
+      btnToggleWebcam.textContent = "📹 Live Webcam";
+      btnToggleWebcam.style.background = "";
     }
   }
-  
-  if (data.strip_id || data.batch_id) {
-    applyWristbandData(data);
-  } else {
-    alert("Invalid QR payload format. Expected: H2S://V2?w=...&b=...&s=...&m=...");
+
+  const sampleB64 = generateTestStripBase64([233, 144, 83]);
+  uploadedPhotoBase64 = `data:image/png;base64,${sampleB64}`;
+  if (photoPreviewEl) {
+    photoPreviewEl.src = uploadedPhotoBase64;
+    photoPreviewEl.style.display = "block";
   }
-});
 
-// ============================================================================
-// Section 8: Cryptographic Trust Certificate Inspection in Worker Screen
-// ============================================================================
-const modalTrustCert = document.getElementById("modal-trust-cert");
-const trustModalBody = document.getElementById("trust-modal-body");
+  if (roiPreview) {
+    roiPreview.style.display = "flex";
+    roiPreview.style.background = "rgba(34, 197, 94, 0.06)";
+    roiPreview.style.color = "#22c55e";
+    roiPreview.innerHTML = "Position<br>Strip Here";
+  }
 
-async function openTrustCertForWorker() {
-  if (!modalTrustCert || !trustModalBody) return;
-  modalTrustCert.style.display = "flex";
-  
+  if (cameraStatusText) {
+    cameraStatusText.innerHTML = "✓ <strong style='color:#34d399;'>Sample Cu-PAN Strip Loaded</strong> (Orange / ~22 ppm). Click <strong>⚡ SCAN NOW</strong> to run AI model!";
+  }
+};
+
+window.toggleWebcam = function() {
+  btnToggleWebcam?.click();
+};
+
+window.handleCaptureScan = function() {
+  document.getElementById("btn-capture-scan")?.click();
+};
+
+window.setSimPreset = function(preset) {
+  if (preset === 'green') {
+    overrideImageBase64 = generateTestStripBase64([0, 210, 0]);
+    if (roiPreview) {
+      roiPreview.style.background = "rgb(0, 210, 0)";
+      roiPreview.style.color = "#000";
+      roiPreview.innerHTML = `⚠️ ALIEN COLOR<br><b>Pure Green</b><br><span style="font-size:9px;">Excluded from Cu-PAN</span>`;
+    }
+    if (simPpmLabel) simPpmLabel.innerHTML = "<span style='color:#4ade80; font-weight:700;'>Alien (Green)</span>";
+    if (rejectionCard) rejectionCard.style.display = "none";
+  } else if (preset === 'blue') {
+    overrideImageBase64 = generateTestStripBase64([0, 0, 220]);
+    if (roiPreview) {
+      roiPreview.style.background = "rgb(0, 0, 220)";
+      roiPreview.style.color = "#fff";
+      roiPreview.innerHTML = `⚠️ ALIEN COLOR<br><b>Pure Blue</b><br><span style="font-size:9px;">Excluded from Cu-PAN</span>`;
+    }
+    if (simPpmLabel) simPpmLabel.innerHTML = "<span style='color:#60a5fa; font-weight:700;'>Alien (Blue)</span>";
+    if (rejectionCard) rejectionCard.style.display = "none";
+  } else if (preset === 's0') {
+    if (simPpmSlider) simPpmSlider.value = 0;
+    updateReactionColor(0);
+  } else if (preset === 's10') {
+    if (simPpmSlider) simPpmSlider.value = 110;
+    updateReactionColor(110);
+  }
+};
+
+window.goBackToStrip = function() {
+  showScreen(screenStrip);
+};
+
+// Cryptographic Trust Certificate Click Handlers
+document.getElementById("btn-inspect-trust-cert")?.addEventListener("click", () => {
   const scanId = lastScanResult?.scan_id || document.getElementById("res-scan-id")?.textContent || "SCAN_20260916_361C16";
-  trustModalBody.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">Verifying cryptographic audit trail...</div>`;
-  
-  try {
-    const cert = await API.getAuditCertificate(scanId);
-    trustModalBody.innerHTML = `
-      <div class="trust-cert-seal">
-        <div style="color:#38bdf8; font-weight:800; font-size:10px; letter-spacing:1px; margin-bottom:4px;">CRYPTOGRAPHIC DIGITAL SEAL</div>
-        <div style="font-family:'JetBrains Mono'; font-size:11px; color:#ffffff; font-weight:700;">${cert.cryptographic_seal}</div>
-        <div style="font-size:9.5px; color:#94a3b8; margin-top:4px;">Hash Algorithm: ${cert.hash_algorithm}</div>
-      </div>
-
-      <div style="background:#0f172a; border:1px solid #334155; border-radius:10px; padding:10px; margin-bottom:12px; font-size:11px; display:flex; flex-direction:column; gap:5px;">
-        <div><span style="color:#94a3b8;">Worker / Operator:</span> <strong style="color:#fff;">${cert.worker_name} (${cert.worker_id})</strong></div>
-        <div><span style="color:#94a3b8;">Exposure Reading:</span> <strong style="color:#38bdf8;">${cert.predicted_ppm} ppm (${cert.exposure_level})</strong></div>
-        <div><span style="color:#94a3b8;">Raw Optical Image Hash (SHA-256):</span><br><code class="trust-hash-badge">${cert.raw_image_hash}</code></div>
-        <div><span style="color:#94a3b8;">Vision Pipeline:</span> <strong style="color:#fff;">${cert.pipeline_version}</strong></div>
-        <div><span style="color:#94a3b8;">Calibration Version:</span> <strong style="color:#fff;">${cert.calibration_version}</strong></div>
-        <div><span style="color:#94a3b8;">Batch Lot:</span> <strong style="color:#fff;">${cert.strip_batch}</strong></div>
-        <div><span style="color:#94a3b8;">Timestamp:</span> <strong style="color:#fff;">${cert.timestamp}</strong></div>
-      </div>
-
-      <div style="background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.25); border-radius:10px; padding:10px; margin-bottom:12px;">
-        <div style="color:#f59e0b; font-weight:800; font-size:10px; margin-bottom:4px;">HOW DO WE TRUST THIS NUMBER?</div>
-        <pre style="white-space:pre-wrap; font-size:10px; color:#cbd5e1; font-family:inherit; margin:0; line-height:1.4;">${cert.trust_explanation}</pre>
-      </div>
-
-      <button type="button" class="btn btn-secondary" id="btn-close-trust-inner" style="width:100%; justify-content:center; padding:8px; font-size:11px;">Close Certificate</button>
-    `;
-    document.getElementById("btn-close-trust-inner")?.addEventListener("click", () => {
-      modalTrustCert.style.display = "none";
-    });
-  } catch (err) {
-    trustModalBody.innerHTML = `<div style="color:#f87171; padding:20px; text-align:center;">Failed to load certificate: ${err.detail || 'Audit record unavailable'}</div>`;
-  }
-}
-
-document.getElementById("btn-inspect-trust-cert")?.addEventListener("click", openTrustCertForWorker);
-document.getElementById("res-verified-audit-line")?.addEventListener("click", openTrustCertForWorker);
-document.getElementById("btn-close-trust-modal")?.addEventListener("click", () => {
-  if (modalTrustCert) modalTrustCert.style.display = "none";
+  openTrustCertificateModal(scanId);
+});
+document.getElementById("res-verified-audit-line")?.addEventListener("click", () => {
+  const scanId = lastScanResult?.scan_id || document.getElementById("res-scan-id")?.textContent || "SCAN_20260916_361C16";
+  openTrustCertificateModal(scanId);
 });
 
