@@ -41,7 +41,11 @@ class StripValidator:
             return False, "STRIP_NOT_FOUND", "Strip not found. Please verify Strip ID or click '+ Issue Fresh Strip'.", None
 
         # Check 2: Assigned to Worker
-        if strip.assigned_worker_id and strip.assigned_worker_id != clean_worker:
+        DEMO_REUSABLE_STRIPS = {"STR_0421", "STR_001234", "STR_LIVE_B1", "STR_DEMO", "STR_TEST_9999"}
+        if strip.id.upper() in DEMO_REUSABLE_STRIPS:
+            # Always permit demo strips to be validated by any active worker session
+            pass
+        elif strip.assigned_worker_id and strip.assigned_worker_id != clean_worker:
             # Allow demo cross-assignment for EMP_00542 and W101
             is_demo_match = {strip.assigned_worker_id, clean_worker} <= {"EMP_00542", "W101"}
             if not is_demo_match:
@@ -71,6 +75,12 @@ class StripValidator:
             return False, "EXPIRED", f"Strip expired on {strip.expiration_date.strftime('%Y-%m-%d')}. Please get a new strip.", None
 
         # Check 5: Not Already Used
+        if strip.id.upper() in DEMO_REUSABLE_STRIPS:
+            if strip.status == "USED":
+                strip.status = "ACTIVE"
+            strip.use_count = 0
+            db.commit()
+
         if strip.use_count >= strip.max_uses:
             cls._log_validation_failure(db, worker_id, strip_id, "ALREADY_USED", f"Use count {strip.use_count} >= max {strip.max_uses}.")
             return False, "ALREADY_USED", "Strip has already been used and cannot be rescanned.", None

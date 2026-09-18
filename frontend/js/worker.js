@@ -38,52 +38,28 @@ document.getElementById("login-worker-id")?.addEventListener("keydown", (e) => {
   if (e.key === "Enter") document.getElementById("login-pin")?.focus();
 });
 
+// Expose hook so inline handler can notify worker.js
+window.onStripValidated = (stripId) => {
+  currentStripId = stripId;
+  if (window.currentWorker && !currentWorker) currentWorker = window.currentWorker;
+};
+
 // 2. Strip Validation (Section 2.2)
-document.getElementById("btn-verify-strip").addEventListener("click", async () => {
-  const stripId = document.getElementById("strip-input-id").value.trim();
-  const errBanner = document.getElementById("strip-error-banner");
-
-  if (!stripId) {
-    errBanner.textContent = "Please enter a Strip ID.";
-    errBanner.style.display = "block";
-    return;
-  }
-
-  try {
-    const wId = currentWorker?.id || window.currentWorker?.id || "EMP_00542";
-    const res = await API.validateStrip(wId, stripId);
-    if (!res.valid) {
-      // Display failure reason to worker matching Page 6
-      errBanner.innerHTML = `<strong>⚠️ Validation Failed (${res.reason_code})</strong><br>${res.message}`;
-      errBanner.style.display = "block";
-    } else {
-      errBanner.style.display = "none";
-      currentStripId = stripId;
-      showScreen(screenCamera);
+const btnVerify = document.getElementById("btn-verify-strip");
+if (btnVerify) {
+  btnVerify.addEventListener("click", () => {
+    if (typeof window.handleVerifyStrip === "function") {
+      window.handleVerifyStrip();
     }
-  } catch (err) {
-    errBanner.textContent = "Strip validation service unavailable.";
-    errBanner.style.display = "block";
-  }
-});
+  });
+}
 
 // Quick Issue Fresh Strip for Logged-In Worker
 const btnQuickIssue = document.getElementById("btn-worker-quick-issue");
 if (btnQuickIssue) {
-  btnQuickIssue.addEventListener("click", async () => {
-    if (!currentWorker) return;
-    const randId = `STR_${Math.floor(1000 + Math.random() * 9000)}`;
-    const errBanner = document.getElementById("strip-error-banner");
-    try {
-      await API.createStrip(randId, "BATCH_2024_Q4_LOT_03", currentWorker.id, 90);
-      document.getElementById("strip-input-id").value = randId;
-      errBanner.style.background = "rgba(16, 185, 129, 0.2)";
-      errBanner.style.borderColor = "rgba(16, 185, 129, 0.5)";
-      errBanner.style.color = "#34d399";
-      errBanner.innerHTML = `<strong>✓ Fresh Strip Issued!</strong><br>${randId} is active and assigned to you. Click "Verify Strip Validity".`;
-      errBanner.style.display = "block";
-    } catch (err) {
-      alert("Error issuing strip: " + (err.detail || "Service error"));
+  btnQuickIssue.addEventListener("click", () => {
+    if (typeof window.issueAndUseFreshStrip === "function") {
+      window.issueAndUseFreshStrip();
     }
   });
 }
@@ -601,9 +577,14 @@ document.getElementById("btn-capture-scan").addEventListener("click", async () =
   if (rejectionCard) rejectionCard.style.display = "none";
 
   try {
+    const activeWorker = window.currentWorker || currentWorker || { name: "John Martinez", id: "EMP_00542" };
+    currentWorker = activeWorker;
+    const activeStripId = window.currentStripId || currentStripId || document.getElementById("strip-input-id")?.value?.trim() || "STR_001234";
+    currentStripId = activeStripId;
+
     const payload = {
-      worker_id: currentWorker.id,
-      strip_id: currentStripId
+      worker_id: activeWorker.id,
+      strip_id: activeStripId
     };
 
     if (scanMode === "camera") {

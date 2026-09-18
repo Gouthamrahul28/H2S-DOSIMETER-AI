@@ -266,6 +266,117 @@
           }
         }
       };
+
+      window.handleVerifyStrip = async function() {
+        const btn = document.getElementById("btn-verify-strip");
+        const stripInput = document.getElementById("strip-input-id");
+        const errBanner = document.getElementById("strip-error-banner");
+
+        const stripId = (stripInput ? stripInput.value : "").trim();
+        if (!stripId) {
+          if (errBanner) {
+            errBanner.textContent = "Please enter a Strip ID.";
+            errBanner.style.display = "block";
+          }
+          return;
+        }
+
+        const workerId = (window.currentWorker && window.currentWorker.id) || "EMP_00542";
+
+        if (btn) {
+          btn.disabled = true;
+          btn.textContent = "⏳ Verifying Strip...";
+          btn.style.opacity = "0.7";
+        }
+        if (errBanner) errBanner.style.display = "none";
+
+        try {
+          const res = await fetch("/api/strips/validate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ worker_id: workerId, strip_id: stripId })
+          });
+
+          const data = await res.json().catch(() => null);
+
+          if (!res.ok || !data) {
+            throw new Error((data && data.detail) || ("Server error HTTP " + res.status));
+          }
+
+          if (!data.valid) {
+            if (errBanner) {
+              errBanner.style.background = "rgba(239,68,68,0.15)";
+              errBanner.style.borderColor = "rgba(239,68,68,0.4)";
+              errBanner.style.color = "#f87171";
+              errBanner.innerHTML = `<strong>⚠️ Validation Failed (${data.reason_code || 'INVALID'})</strong><br>${data.message || 'Strip validation failed.'}
+                <div style="margin-top:8px;">
+                  <button type="button" class="btn btn-secondary" style="font-size:11px; padding:4px 8px; color:#38bdf8;" onclick="window.issueAndUseFreshStrip()">+ Tap here to auto-issue fresh strip</button>
+                </div>`;
+              errBanner.style.display = "block";
+              errBanner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+            return;
+          }
+
+          // Strip is valid!
+          window.currentStripId = stripId;
+          if (btn) btn.textContent = "✓ Valid! Opening Scanner...";
+
+          // Transition to Camera Scanner Screen
+          const allScreens = document.querySelectorAll(".worker-screen");
+          allScreens.forEach(s => s.classList.remove("active"));
+          const screenCamera = document.getElementById("screen-camera");
+          if (screenCamera) screenCamera.classList.add("active");
+
+          if (typeof window.onStripValidated === "function") {
+            window.onStripValidated(stripId);
+          }
+
+        } catch (err) {
+          if (errBanner) {
+            errBanner.style.background = "rgba(239,68,68,0.15)";
+            errBanner.style.borderColor = "rgba(239,68,68,0.4)";
+            errBanner.style.color = "#f87171";
+            errBanner.textContent = "Strip validation service unavailable: " + (err.message || "Network error");
+            errBanner.style.display = "block";
+          }
+        } finally {
+          if (btn) {
+            btn.disabled = false;
+            btn.textContent = "Verify Strip Validity ✓";
+            btn.style.opacity = "1";
+          }
+        }
+      };
+
+      window.issueAndUseFreshStrip = async function() {
+        const workerId = (window.currentWorker && window.currentWorker.id) || "EMP_00542";
+        const randId = "STR_" + Math.floor(1000 + Math.random() * 9000);
+        const errBanner = document.getElementById("strip-error-banner");
+        try {
+          const res = await fetch("/api/strips", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              strip_id: randId,
+              batch_id: "BATCH_2024_Q4_LOT_03",
+              assigned_worker_id: workerId,
+              days_valid: 90
+            })
+          });
+          const stripInput = document.getElementById("strip-input-id");
+          if (stripInput) stripInput.value = randId;
+          if (errBanner) {
+            errBanner.style.background = "rgba(16, 185, 129, 0.2)";
+            errBanner.style.borderColor = "rgba(16, 185, 129, 0.5)";
+            errBanner.style.color = "#34d399";
+            errBanner.innerHTML = `<strong>✓ Fresh Strip Issued!</strong><br>${randId} is active and ready. Click "Verify Strip Validity ✓".`;
+            errBanner.style.display = "block";
+          }
+        } catch (e) {
+          alert("Error issuing strip: " + e.message);
+        }
+      };
     </script>
 
     <!-- 2. STRIP VALIDATION SCREEN -->
@@ -294,26 +405,27 @@
 
       <div style="margin-bottom:14px;">
         <label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:4px;">Strip Identifier:</label>
-        <input type="text" id="strip-input-id" value="STR_0421" style="width:100%; padding:10px; background:#0f172a; color:#38bdf8; border:1px solid var(--border-color); border-radius:10px; font-size:15px; font-family:'JetBrains Mono'; font-weight:700;">
+        <input type="text" id="strip-input-id" value="STR_001234" onkeydown="if(event.key==='Enter')handleVerifyStrip()" style="width:100%; padding:10px; background:#0f172a; color:#38bdf8; border:1px solid var(--border-color); border-radius:10px; font-size:15px; font-family:'JetBrains Mono'; font-weight:700;">
       </div>
 
       <!-- Quick Test Strips -->
       <div style="background:rgba(255,255,255,0.03); padding:12px; border-radius:10px; margin-bottom:20px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
           <span style="font-size:11px; text-transform:uppercase; color:var(--text-muted);">Test Presets:</span>
-          <button class="btn btn-secondary" id="btn-worker-quick-issue" style="padding:4px 8px; font-size:11px; color:#38bdf8; border-color:rgba(56,189,248,0.4);">+ Issue Fresh Strip</button>
+          <button type="button" class="btn btn-secondary" id="btn-worker-quick-issue" onclick="issueAndUseFreshStrip()" style="padding:4px 8px; font-size:11px; color:#38bdf8; border-color:rgba(56,189,248,0.4);">+ Issue Fresh Strip</button>
         </div>
         <div style="display:flex; flex-wrap:wrap; gap:6px;">
-          <button class="btn btn-secondary" style="padding:4px 8px; font-size:11px;" onclick="document.getElementById('strip-input-id').value='STR_0421'">STR_0421 (Valid)</button>
-          <button class="btn btn-secondary" style="padding:4px 8px; font-size:11px;" onclick="document.getElementById('strip-input-id').value='STR_EXPIRED'">STR_EXPIRED (Fail)</button>
-          <button class="btn btn-secondary" style="padding:4px 8px; font-size:11px;" onclick="document.getElementById('strip-input-id').value='STR_USED'">STR_USED (Fail)</button>
+          <button type="button" class="btn btn-secondary" style="padding:4px 8px; font-size:11px;" onclick="document.getElementById('strip-input-id').value='STR_001234'">STR_001234 (Valid)</button>
+          <button type="button" class="btn btn-secondary" style="padding:4px 8px; font-size:11px;" onclick="document.getElementById('strip-input-id').value='STR_0421'">STR_0421 (Valid)</button>
+          <button type="button" class="btn btn-secondary" style="padding:4px 8px; font-size:11px;" onclick="document.getElementById('strip-input-id').value='STR_EXPIRED'">STR_EXPIRED (Fail)</button>
+          <button type="button" class="btn btn-secondary" style="padding:4px 8px; font-size:11px;" onclick="document.getElementById('strip-input-id').value='STR_USED'">STR_USED (Fail)</button>
         </div>
       </div>
 
       <!-- Validation Error Banner (Section 2.2) -->
       <div id="strip-error-banner" style="display:none; color:#f87171; font-size:13px; background:rgba(239,68,68,0.15); padding:12px; border-radius:10px; border:1px solid rgba(239,68,68,0.4); margin-bottom:20px;"></div>
 
-      <button class="btn btn-primary" id="btn-verify-strip" style="margin-top:auto; width:100%; justify-content:center; padding:14px;">
+      <button type="button" class="btn btn-primary" id="btn-verify-strip" onclick="handleVerifyStrip()" style="margin-top:auto; width:100%; justify-content:center; padding:14px; font-weight:700;">
         Verify Strip Validity ✓
       </button>
     </div>
@@ -692,6 +804,6 @@
     </div>
   </div>
 
-  <script type="module" src="/static/js/worker.js?v=3.0"></script>
+  <script type="module" src="/static/js/worker.js?v=3.1"></script>
 </body>
 </html>

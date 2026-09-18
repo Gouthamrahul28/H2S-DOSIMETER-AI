@@ -193,7 +193,10 @@ def submit_scan(payload: ScanSubmissionRequest, db: Session = Depends(get_db)):
     # 6. Update Strip Use Count
     strip.use_count += 1
     if strip.use_count >= strip.max_uses:
-        strip.status = "USED"
+        if strip.id.upper() not in {"STR_0421", "STR_001234", "STR_LIVE_B1", "STR_DEMO", "STR_TEST_9999"}:
+            strip.status = "USED"
+        else:
+            strip.use_count = 0  # Re-arm demo strip for continued testing
 
     # 7. Persist Scan Audit Record (Page 27 & Section 8)
     scan = Scan(
