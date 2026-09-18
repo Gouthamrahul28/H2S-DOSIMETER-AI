@@ -179,23 +179,94 @@
           <input type="password" id="login-pin" value="1234" maxlength="6" style="width:100%; padding:12px; background:#0f172a; color:#fff; border:1px solid var(--border-color); border-radius:10px; font-size:18px; text-align:center; letter-spacing:4px;">
         </div>
 
-        <!-- Quick Demo Profiles (Tap to Fill) -->
+        <!-- Quick Demo Profiles (1-Tap Login) -->
         <div style="background:rgba(255,255,255,0.03); border:1px solid #334155; border-radius:10px; padding:10px;">
-          <div style="font-size:10px; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; font-weight:700;">Quick Demo Profiles (Tap to Fill):</div>
+          <div style="font-size:10px; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; font-weight:700;">Quick Demo Profiles (1-Tap Login):</div>
           <div style="display:flex; flex-wrap:wrap; gap:6px;">
-            <button type="button" class="btn btn-secondary" style="padding:4px 8px; font-size:11px;" onclick="document.getElementById('login-worker-id').value='EMP_00542'; document.getElementById('login-pin').value='1234';">EMP_00542 (PIN: 1234)</button>
-            <button type="button" class="btn btn-secondary" style="padding:4px 8px; font-size:11px;" onclick="document.getElementById('login-worker-id').value='W101'; document.getElementById('login-pin').value='1234';">W101 (PIN: 1234)</button>
-            <button type="button" class="btn btn-secondary" style="padding:4px 8px; font-size:11px;" onclick="document.getElementById('login-worker-id').value='BDG-542'; document.getElementById('login-pin').value='1234';">BDG-542 (PIN: 1234)</button>
+            <button type="button" class="btn btn-secondary" style="padding:6px 10px; font-size:11px; cursor:pointer;" onclick="document.getElementById('login-worker-id').value='EMP_00542'; document.getElementById('login-pin').value='1234'; handleWorkerLogin();">⚡ EMP_00542 (1-Tap)</button>
+            <button type="button" class="btn btn-secondary" style="padding:6px 10px; font-size:11px; cursor:pointer;" onclick="document.getElementById('login-worker-id').value='W101'; document.getElementById('login-pin').value='1234'; handleWorkerLogin();">⚡ W101 (1-Tap)</button>
+            <button type="button" class="btn btn-secondary" style="padding:6px 10px; font-size:11px; cursor:pointer;" onclick="document.getElementById('login-worker-id').value='BDG-542'; document.getElementById('login-pin').value='1234'; handleWorkerLogin();">⚡ BDG-542 (1-Tap)</button>
           </div>
         </div>
 
         <div id="login-error" style="display:none; color:#f87171; font-size:13px; background:rgba(239,68,68,0.1); padding:10px; border-radius:8px; border:1px solid rgba(239,68,68,0.3);"></div>
 
-        <button class="btn btn-primary" id="btn-login" style="margin-top:auto; width:100%; justify-content:center; padding:14px; font-size:16px;">
+        <button type="button" class="btn btn-primary" id="btn-login" onclick="handleWorkerLogin()" style="margin-top:auto; width:100%; justify-content:center; padding:14px; font-size:16px; cursor:pointer;">
           Authenticate Worker →
         </button>
       </div>
     </div>
+
+    <script>
+      window.handleWorkerLogin = async function() {
+        const btn = document.getElementById("btn-login");
+        const workerIdInput = document.getElementById("login-worker-id");
+        const pinInput = document.getElementById("login-pin");
+        const errDiv = document.getElementById("login-error");
+
+        const workerId = (workerIdInput ? workerIdInput.value : "").trim();
+        const pin = (pinInput ? pinInput.value : "").trim();
+
+        if (!workerId || !pin) {
+          if (errDiv) {
+            errDiv.textContent = "Please enter both Worker ID and PIN.";
+            errDiv.style.display = "block";
+          }
+          return;
+        }
+
+        if (btn) {
+          btn.disabled = true;
+          btn.textContent = "⏳ Authenticating...";
+          btn.style.opacity = "0.7";
+        }
+        if (errDiv) errDiv.style.display = "none";
+
+        try {
+          const res = await fetch("/api/auth/worker-login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ worker_id: workerId, pin: pin })
+          });
+
+          const data = await res.json().catch(() => null);
+
+          if (!res.ok) {
+            const errorMsg = (data && data.detail) ? data.detail : ("Login failed (HTTP " + res.status + ")");
+            throw new Error(errorMsg);
+          }
+
+          window.currentWorker = data.user_info;
+          if (data.access_token) {
+            try { localStorage.setItem("h2s_worker_token", data.access_token); } catch(e) {}
+          }
+
+          const pill = document.getElementById("worker-profile-pill");
+          if (pill && data.user_info) {
+            pill.textContent = data.user_info.name + " (" + data.user_info.id + ")";
+          }
+
+          if (btn) btn.textContent = "✓ Success! Loading...";
+
+          const screenLogin = document.getElementById("screen-login");
+          const screenStrip = document.getElementById("screen-strip-validate");
+          if (screenLogin) screenLogin.classList.remove("active");
+          if (screenStrip) screenStrip.classList.add("active");
+
+        } catch (err) {
+          if (errDiv) {
+            errDiv.textContent = err.message || "Authentication failed. Check worker ID and PIN.";
+            errDiv.style.display = "block";
+          }
+        } finally {
+          if (btn) {
+            btn.disabled = false;
+            btn.textContent = "Authenticate Worker →";
+            btn.style.opacity = "1";
+          }
+        }
+      };
+    </script>
 
     <!-- 2. STRIP VALIDATION SCREEN -->
     <div id="screen-strip-validate" class="worker-screen">
@@ -621,6 +692,6 @@
     </div>
   </div>
 
-  <script type="module" src="/static/js/worker.js?v=2.9"></script>
+  <script type="module" src="/static/js/worker.js?v=3.0"></script>
 </body>
 </html>

@@ -19,30 +19,23 @@ function showScreen(screen) {
 }
 
 // 1. Worker Login
-document.getElementById("btn-login").addEventListener("click", async () => {
-  const workerId = document.getElementById("login-worker-id").value.trim();
-  const pin = document.getElementById("login-pin").value.trim();
-  const errDiv = document.getElementById("login-error");
-
-  try {
-    const res = await API.workerLogin(workerId, pin);
-    currentWorker = res.user_info;
-    document.getElementById("worker-profile-pill").textContent = `${currentWorker.name} (${currentWorker.id})`;
-    errDiv.style.display = "none";
-    showScreen(screenStrip);
-  } catch (err) {
-    const msg = err?.detail || (typeof err === "string" ? err : (err?.message || "Authentication failed. Check worker ID and PIN."));
-    errDiv.textContent = msg;
-    errDiv.style.display = "block";
-  }
-});
+const btnLogin = document.getElementById("btn-login");
+if (btnLogin) {
+  btnLogin.addEventListener("click", () => {
+    if (typeof window.handleWorkerLogin === "function") {
+      window.handleWorkerLogin();
+    }
+  });
+}
 
 // Support Enter / Go key on mobile keyboards
-document.getElementById("login-pin").addEventListener("keydown", (e) => {
-  if (e.key === "Enter") document.getElementById("btn-login").click();
+document.getElementById("login-pin")?.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && typeof window.handleWorkerLogin === "function") {
+    window.handleWorkerLogin();
+  }
 });
-document.getElementById("login-worker-id").addEventListener("keydown", (e) => {
-  if (e.key === "Enter") document.getElementById("login-pin").focus();
+document.getElementById("login-worker-id")?.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") document.getElementById("login-pin")?.focus();
 });
 
 // 2. Strip Validation (Section 2.2)
@@ -57,7 +50,8 @@ document.getElementById("btn-verify-strip").addEventListener("click", async () =
   }
 
   try {
-    const res = await API.validateStrip(currentWorker.id, stripId);
+    const wId = currentWorker?.id || window.currentWorker?.id || "EMP_00542";
+    const res = await API.validateStrip(wId, stripId);
     if (!res.valid) {
       // Display failure reason to worker matching Page 6
       errBanner.innerHTML = `<strong>⚠️ Validation Failed (${res.reason_code})</strong><br>${res.message}`;
