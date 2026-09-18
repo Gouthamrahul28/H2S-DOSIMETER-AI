@@ -78,6 +78,17 @@ export const API = {
     return await res.json();
   },
 
+  // Shift Monitor & Dosimetry
+  async getShiftMonitor(standard = "FACTORIES_ACT") {
+    const res = await fetch(`${API_BASE}/api/supervisor/monitoring/shift-monitor?standard=${encodeURIComponent(standard)}`);
+    return await res.json();
+  },
+
+  async getWorkerDoseCurve(workerId, standard = "FACTORIES_ACT") {
+    const res = await fetch(`${API_BASE}/api/supervisor/monitoring/worker-dose/${encodeURIComponent(workerId)}?standard=${encodeURIComponent(standard)}`);
+    return await res.json();
+  },
+
   // AI Model Center
   async getModels() {
     const res = await fetch(`${API_BASE}/api/supervisor/ai/models`);
@@ -168,6 +179,72 @@ export const API = {
 
   async getGitHistory(limit = 10) {
     const res = await fetch(`${API_BASE}/api/audit/git-history?limit=${limit}`);
+    return await res.json();
+  },
+
+  // Batch Stock / Wristband Lab (Section 1 & 7)
+  async getBatches() {
+    const res = await fetch(`${API_BASE}/api/strips/batches`);
+    return await res.json();
+  },
+
+  async createBatch(payload) {
+    const res = await fetch(`${API_BASE}/api/strips/batches`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw await res.json();
+    return await res.json();
+  },
+
+  async performBatchQCCheck(payload) {
+    const res = await fetch(`${API_BASE}/api/strips/batches/qc-check`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw await res.json();
+    return await res.json();
+  },
+
+  async assignWristbandQR(payload) {
+    const res = await fetch(`${API_BASE}/api/strips/wristbands/assign-qr`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw await res.json();
+    return await res.json();
+  },
+
+  // Audit Trail & Trust Certificate (Section 8)
+  async getAuditCertificate(scanId) {
+    const res = await fetch(`${API_BASE}/api/scans/${encodeURIComponent(scanId)}/audit-certificate`);
+    if (!res.ok) throw await res.json();
+    return await res.json();
+  },
+
+  // Role-Based Access Control (RBAC) (Section 9)
+  async getRoles() {
+    const res = await fetch(`${API_BASE}/api/auth/roles`);
+    return await res.json();
+  },
+
+  async getMe(token = null) {
+    const headers = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const res = await fetch(`${API_BASE}/api/auth/me`, { headers });
+    return await res.json();
+  },
+
+  async supervisorLogin(username, password) {
+    const res = await fetch(`${API_BASE}/api/auth/supervisor-login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password })
+    });
+    if (!res.ok) throw await res.json();
     return await res.json();
   }
 };

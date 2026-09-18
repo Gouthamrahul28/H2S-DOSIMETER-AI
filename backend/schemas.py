@@ -112,3 +112,117 @@ class OperationsKPIResponse(BaseModel):
     evac_alerts: int
     active_model_version: str
     avg_ppm_today: float
+
+# --- Shift Monitor Schemas ---
+class ShiftWorkerSummary(BaseModel):
+    worker_id: str
+    badge_number: str
+    name: str
+    department: str
+    site: str
+    role: str
+    method_key: str
+    method: Dict[str, Any]
+    cumulative_dose_ppm_h: float
+    twa_current_ppm: float
+    stel_peak_ppm: float
+    last_ppm: float
+    last_scan_time: Optional[str] = None
+    last_read_str: str
+    scan_count: int
+    tier: Dict[str, Any]
+    compliance: Dict[str, Any]
+
+class ShiftMonitorResponse(BaseModel):
+    shift_info: Dict[str, Any]
+    standard_applied: Dict[str, Any]
+    all_standards: Dict[str, Any]
+    summary_kpis: Dict[str, Any]
+    workers: List[ShiftWorkerSummary]
+
+# --- Batch Stock & Wristband Lab Schemas ---
+class BatchQCCheckRequest(BaseModel):
+    batch_id: str
+    virgin_lab_l: Optional[float] = None
+    virgin_lab_a: Optional[float] = None
+    virgin_lab_b: Optional[float] = None
+    image_base64: Optional[str] = None
+    checked_by: Optional[str] = "Senior QC Chemist"
+    notes: Optional[str] = None
+
+class BatchQCCheckResponse(BaseModel):
+    batch_id: str
+    qc_status: str  # PASSED or REJECTED
+    virgin_baseline_delta_e: float
+    spec_threshold: float = 3.0
+    measured_lab: Dict[str, float]
+    reference_lab: Dict[str, float]
+    passed: bool
+    rejection_reason: Optional[str] = None
+    qc_checked_at: str
+    qc_checked_by: str
+
+class StripBatchResponse(BaseModel):
+    batch_id: str
+    cast_date: str
+    expiration_date: str
+    storage_condition: str
+    virgin_baseline_delta_e: float
+    qc_status: str
+    qc_notes: Optional[str] = None
+    qc_checked_at: Optional[str] = None
+    qc_checked_by: Optional[str] = None
+    total_strips: int
+    available_strips: int
+    is_valid_for_assignment: bool
+
+class StripBatchCreateRequest(BaseModel):
+    batch_id: str
+    days_to_expiry: int = 90
+    storage_condition: Optional[str] = "Desiccated pouch, 4°C sealed dark container"
+    total_strips: int = 500
+    virgin_lab_l: Optional[float] = 42.0
+    virgin_lab_a: Optional[float] = 38.0
+    virgin_lab_b: Optional[float] = -12.0
+    checked_by: Optional[str] = "QC Production Chemist"
+
+# --- Wristband QR Assignment Schemas ---
+class WristbandQRAssignmentRequest(BaseModel):
+    worker_id: str
+    batch_id: str
+    strip_id: Optional[str] = None
+    method_key: Optional[str] = "cupan_optical"
+
+class WristbandQRAssignmentResponse(BaseModel):
+    worker_id: str
+    worker_name: str
+    batch_id: str
+    strip_id: str
+    method_key: str
+    expiration_date: str
+    qr_payload: str
+    verification_status: str
+
+# --- Audit Certificate Schemas ---
+class AuditCertificateResponse(BaseModel):
+    scan_id: str
+    raw_image_hash: str  # SHA-256
+    hash_algorithm: str = "SHA-256"
+    pipeline_version: str
+    calibration_version: str
+    calibration_curve_id: str
+    operator_id: str
+    worker_id: str
+    worker_name: str
+    strip_id: str
+    strip_batch: str
+    timestamp: str
+    predicted_ppm: float
+    predicted_class: str
+    exposure_level: str
+    alert_triggered: bool
+    colorimetric_verification: Dict[str, Any]
+    image_quality_metrics: Dict[str, Any]
+    cryptographic_seal: str
+    trust_explanation: str
+

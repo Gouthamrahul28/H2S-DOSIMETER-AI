@@ -1149,3 +1149,294 @@ input[type="range"] {
   white-space: nowrap;
 }
 
+/* ==========================================================================
+   Shift Monitor (Supervisor Home) - Design System Components
+   ========================================================================== */
+
+.shift-monitor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.shift-meta-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  padding: 4px 12px;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 20px;
+  color: #38bdf8;
+  font-weight: 600;
+}
+
+.std-toggle-group {
+  display: inline-flex;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 4px;
+}
+
+.std-toggle-btn {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.std-toggle-btn:hover {
+  color: #fff;
+}
+
+.std-toggle-btn.active {
+  background: linear-gradient(135deg, #3b82f6, #0284c7);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+}
+
+/* Tier Badges: Emerald, Amber, Red */
+.tier-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+}
+
+.tier-emerald {
+  background: rgba(16, 185, 129, 0.14);
+  border: 1px solid #10b981;
+  color: #34d399;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.18);
+}
+
+.tier-amber {
+  background: rgba(245, 158, 11, 0.16);
+  border: 1px solid #f59e0b;
+  color: #fbbf24;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.2);
+}
+
+.tier-red {
+  background: rgba(239, 68, 68, 0.22);
+  border: 1px solid #ef4444;
+  color: #f87171;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.35);
+  animation: pulseTierRed 2s infinite;
+}
+
+@keyframes pulseTierRed {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
+  70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+/* Method Badges */
+.method-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: help;
+  transition: transform 0.15s ease;
+}
+
+.method-badge:hover {
+  transform: translateY(-1px);
+}
+
+.method-cupan {
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: #38bdf8;
+}
+
+.method-lead {
+  background: rgba(167, 139, 250, 0.12);
+  border: 1px solid rgba(167, 139, 250, 0.35);
+  color: #c4b5fd;
+}
+
+.method-elec {
+  background: rgba(52, 211, 153, 0.12);
+  border: 1px solid rgba(52, 211, 153, 0.35);
+  color: #6ee7b7;
+}
+
+.method-nano {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #fbbf24;
+}
+
+/* Compliance Progress Meter */
+.comp-meter-container {
+  width: 140px;
+}
+
+.comp-meter-bar-wrapper {
+  position: relative;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  overflow: visible;
+  margin-bottom: 4px;
+}
+
+.comp-meter-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.comp-marker-twa {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  background: #facc15;
+  box-shadow: 0 0 4px #facc15;
+  z-index: 2;
+}
+
+.comp-marker-stel {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  background: #ef4444;
+  box-shadow: 0 0 5px #ef4444;
+  z-index: 2;
+}
+
+.dose-val-display {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+/* ==========================================================================
+   Section 1B, 7, 8, 9, 10: Industrial Additions (Wristband, Trust, RBAC, PWA)
+   ========================================================================== */
+
+/* PWA Offline Dead-Zone Network Bar */
+#pwa-network-bar {
+  transition: all 0.3s ease;
+}
+#pwa-status-dot.offline {
+  background: #f59e0b !important;
+  box-shadow: 0 0 10px #f59e0b !important;
+  animation: pulse-amber 2s infinite;
+}
+@keyframes pulse-amber {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.92); }
+}
+
+/* Wristband QR & Badge Stock Lab */
+.wristband-badge-card {
+  background: linear-gradient(135deg, #0b1329 0%, #1e293b 100%);
+  border: 1.5px solid #38bdf8;
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  color: #f8fafc;
+}
+.wristband-qr-container {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(15, 23, 42, 0.6);
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(56, 189, 248, 0.2);
+}
+.wristband-qr-box {
+  background: #ffffff;
+  padding: 8px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+.wb-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.wb-chip-batch { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
+.wb-chip-method { background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); }
+.wb-chip-worker { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+
+/* Cryptographic Trust Certificate */
+.trust-cert-seal {
+  background: linear-gradient(135deg, rgba(2, 132, 199, 0.15) 0%, rgba(56, 189, 248, 0.05) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 14px;
+  position: relative;
+  overflow: hidden;
+}
+.trust-cert-seal::after {
+  content: "VERIFIED";
+  position: absolute;
+  right: -12px;
+  bottom: -6px;
+  font-size: 40px;
+  font-weight: 900;
+  color: rgba(56, 189, 248, 0.05);
+  letter-spacing: 4px;
+  pointer-events: none;
+}
+.trust-hash-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: #38bdf8;
+  word-break: break-all;
+  background: rgba(15, 23, 42, 0.8);
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #334155;
+  display: block;
+}
+
+/* RBAC Selector Pill */
+.rbac-role-pill {
+  transition: all 0.2s ease;
+}
+.rbac-role-pill:hover {
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+}
+

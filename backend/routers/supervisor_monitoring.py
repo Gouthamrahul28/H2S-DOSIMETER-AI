@@ -13,7 +13,8 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, List
 from backend.database import get_db
 from backend.models import Worker, Scan, Alert, ModelRegistryRecord
-from backend.schemas import OperationsKPIResponse
+from backend.schemas import OperationsKPIResponse, ShiftMonitorResponse
+from backend.services.shift_dose_service import ShiftDoseService
 import config
 
 router = APIRouter(prefix="/api/supervisor/monitoring", tags=["Supervisor Monitoring"])
@@ -99,3 +100,25 @@ def get_recent_alerts(limit: int = 20, db: Session = Depends(get_db)):
             "created_at": a.created_at.isoformat()
         })
     return results
+
+@router.get("/shift-monitor", response_model=ShiftMonitorResponse)
+def get_shift_monitor(standard: str = "FACTORIES_ACT", db: Session = Depends(get_db)):
+    """
+    Supervisor Shift Monitor Home View:
+    Returns real-time worker list with cumulative ppm·h dose, tier color
+    (Emerald/Amber/Red), last read time, method badge, and TWA/STEL compliance
+    against statutory standards (Factories Act, 1948 or ACGIH).
+    """
+    return ShiftDoseService.get_shift_monitor_data(db, standard_key=standard)
+
+@router.get("/worker-dose/{worker_id}")
+def get_worker_dose_curve(worker_id: str, standard: str = "FACTORIES_ACT", db: Session = Depends(get_db)):
+    """
+    Worker 8-hour shift cumulative dose trajectory and method calibration curve
+    with TWA and STEL statutory benchmark lines for interactive SVG modal.
+    """
+    data = ShiftDoseService.get_worker_dose_trajectory(db, worker_id=worker_id, standard_key=standard)
+    if not data:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Worker not found or no shift data.")
+    return data

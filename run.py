@@ -19,11 +19,26 @@ def main():
     except Exception as e:
         print(f"Warning during database initialization: {e}")
 
-    # 2. Print Server URLs
-    print(f"\n[OK] Supervisor Web Dashboard: http://{config.HOST}:{config.PORT}/")
-    print(f"[OK] Worker Smartphone Scanner: http://{config.HOST}:{config.PORT}/worker")
-    print(f"[OK] API Interactive Docs:     http://{config.HOST}:{config.PORT}/docs")
-    print(f"[OK] Undo & Version CLI:       python undo.py --history")
+    # 2. Detect local IP for mobile devices on same Wi-Fi
+    local_ip = "127.0.0.1"
+    try:
+        import socket
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        local_ip = s.getsockname()[0]
+        s.close()
+    except Exception:
+        pass
+
+    # 3. Print Server URLs
+    print(f"\n[OK] Supervisor Web Dashboard (Local):  http://localhost:{config.PORT}/")
+    print(f"[OK] Worker Smartphone Scanner (Local): http://localhost:{config.PORT}/worker")
+    if local_ip != "127.0.0.1":
+        print(f"[OK] Mobile Phone on same Wi-Fi / Plant: http://{local_ip}:{config.PORT}/worker")
+        print(f"[OK] Dashboard on same Wi-Fi / Plant:   http://{local_ip}:{config.PORT}/")
+    print(f"[OK] API Interactive Docs:              http://localhost:{config.PORT}/docs")
+    print(f"[OK] Undo & Version CLI:                python undo.py --history")
+    print(f"[INFO] To get an instant public HTTPS link, run: npx localtunnel --port {config.PORT}")
     print("=" * 65)
     print("Starting server... Press Ctrl+C to stop.\n")
 

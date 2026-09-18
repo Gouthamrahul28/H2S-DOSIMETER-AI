@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: h2s-safety-platform
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python run.py
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: 8000

@@ -108,22 +108,56 @@ def get_active_model(db: Session = Depends(get_db)):
             "status": mod.approval_status
         })
 
-    # 1. Calibration Response: RGB vs PPM (0 to 110 ppm)
-    calibration_data = []
-    ppm_steps = [0.0, 0.5, 1.0, 2.5, 5.0, 8.0, 12.0, 16.0, 22.0, 30.0, 38.0, 46.0, 55.0, 64.0, 72.0, 81.0, 90.0, 100.0, 110.0]
-    for p in ppm_steps:
-        r_val, g_val, b_val = config.get_cupan_rgb_for_ppm(p)
-        stage_name = "S0"
-        for stg in config.CUPAN_LADDER:
-            if abs(p - stg["index"] * 11) < 6:
-                stage_name = stg["id"]
-        calibration_data.append({
-            "ppm": p,
-            "r": r_val,
-            "g": g_val,
-            "b": b_val,
-            "stage": stage_name
+    # 1. Colorimetric Calibration Response: a* coordinate in L*a*b* color space vs [H2S] (ppm)
+    # Color-accurate with Cu-PAN chemical displacement spectrum (Purple-Magenta -> Rose -> Coral)
+    # Linear dynamic range: a* = 4.65 + 4.34 · [H2S] (R² = 0.99070) for [H2S] <= 1.46 ppm
+    # Saturation plateau: a* = 11.0 for [H2S] >= 1.5 ppm up to 5.0 ppm
+    cielab_specs = [
+        {"ppm": 0.1, "a_star": 5.0, "stage": "0.1 ppm (Intact Cu-PAN Purple)", "is_linear": True},
+        {"ppm": 0.3, "a_star": 6.0, "stage": "0.3 ppm (Sub-PPM Trace Purple)", "is_linear": True},
+        {"ppm": 0.6, "a_star": 7.0, "stage": "0.6 ppm (First Displacement)", "is_linear": True},
+        {"ppm": 0.7, "a_star": 8.0, "stage": "0.7 ppm (Magenta-Violet)", "is_linear": True},
+        {"ppm": 1.0, "a_star": 9.0, "stage": "1.0 ppm (OSHA PEL Threshold)", "is_linear": True},
+        {"ppm": 1.2, "a_star": 10.0, "stage": "1.2 ppm (Violet-Rose)", "is_linear": True},
+        {"ppm": 1.5, "a_star": 11.0, "stage": "1.5 ppm (Reaction Knee Point)", "is_linear": True},
+        {"ppm": 2.0, "a_star": 11.0, "stage": "2.0 ppm (Saturation Plateau / Rose)", "is_linear": False},
+        {"ppm": 2.5, "a_star": 11.0, "stage": "2.5 ppm (Rose-Red S2)", "is_linear": False},
+        {"ppm": 4.0, "a_star": 11.0, "stage": "4.0 ppm (Plateau / Rose-Coral)", "is_linear": False},
+        {"ppm": 6.0, "a_star": 11.0, "stage": "6.0 ppm (Plateau / Coral S3)", "is_linear": False},
+        {"ppm": 8.0, "a_star": 11.0, "stage": "8.0 ppm (Plateau / Coral-Orange)", "is_linear": False},
+        {"ppm": 10.0, "a_star": 11.0, "stage": "10.0 ppm (OSHA Ceiling / Salmon)", "is_linear": False},
+        {"ppm": 12.0, "a_star": 11.0, "stage": "12.0 ppm (Salmon-Orange S4)", "is_linear": False},
+        {"ppm": 14.0, "a_star": 11.0, "stage": "14.0 ppm (Plateau / Salmon-Orange)", "is_linear": False},
+        {"ppm": 16.0, "a_star": 11.0, "stage": "16.0 ppm (Plateau / Orange Transition)", "is_linear": False},
+        {"ppm": 18.0, "a_star": 11.0, "stage": "18.0 ppm (Plateau / Orange)", "is_linear": False},
+        {"ppm": 20.0, "a_star": 11.0, "stage": "20.0 ppm (OSHA Peak / Orange)", "is_linear": False},
+    ]
+    cielab_points = []
+    for spec in cielab_specs:
+        r, g, b = config.get_cupan_rgb_for_ppm(spec["ppm"])
+        hex_code = f"#{r:02x}{g:02x}{b:02x}"
+        cielab_points.append({
+            "ppm": spec["ppm"],
+            "a_star": spec["a_star"],
+            "hex": hex_code,
+            "rgb": [r, g, b],
+            "stage": spec["stage"],
+            "is_linear": spec["is_linear"]
         })
+    calibration_data = {
+        "points": cielab_points,
+        "meta": {
+            "equation": "a* = 4.65 + 4.34 · [H₂S]",
+            "slope": 4.34,
+            "intercept": 4.65,
+            "r_squared": 0.99070,
+            "linear_limit_ppm": 1.46,
+            "saturation_a_star": 11.0,
+            "max_ppm": 20.0,
+            "unexposed_swatch": "assets/dosimeter_unexposed.png",
+            "exposed_swatch": "assets/dosimeter_exposed.png"
+        }
+    }
 
     # 2. True PPM vs Estimated PPM (Parity Plot) across 46 high-density verification samples (0 to 60 PPM)
     parity_points = []

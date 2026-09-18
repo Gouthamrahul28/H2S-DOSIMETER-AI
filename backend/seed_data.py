@@ -6,20 +6,125 @@ safety configuration history, and model registry versions matching the Master Pl
 
 import json
 from datetime import datetime, timedelta
-from backend.database import SessionLocal, engine, Base
+from backend.database import SessionLocal, engine, Base, init_db
 from backend.models import (
-    Worker, Strip, Scan, Alert, SafetyConfigHistory, ModelRegistryRecord, AuditLog
+    Worker, Strip, Scan, Alert, SafetyConfigHistory, ModelRegistryRecord, AuditLog, StripBatch
 )
+import hashlib
 import config
 
+def seed_batches_if_needed(db, now):
+    """Ensures batches and cryptographic audit hashes are seeded."""
+    if db.query(StripBatch).count() == 0:
+        print("Seeding Badge Stock / Wristband Lab batches...")
+        batches = [
+            StripBatch(
+                batch_id="BATCH_2026_Q1_01",
+                cast_date=now - timedelta(days=5),
+                expiration_date=now + timedelta(days=85),
+                storage_condition="Desiccated pouch, 4°C sealed dark container",
+                virgin_baseline_l=42.1,
+                virgin_baseline_a=37.9,
+                virgin_baseline_b=-11.8,
+                virgin_baseline_delta_e=0.28,
+                qc_status="PASSED",
+                qc_notes="Virgin baseline within spec (Delta-E <= 3.0)",
+                qc_checked_at=now - timedelta(days=5),
+                qc_checked_by="Senior QC Chemist Dr. Rao",
+                total_strips=500,
+                available_strips=488
+            ),
+            StripBatch(
+                batch_id="BATCH_2026_Q1_02",
+                cast_date=now - timedelta(days=2),
+                expiration_date=now + timedelta(days=88),
+                storage_condition="Desiccated pouch, 4°C sealed dark container",
+                virgin_baseline_l=41.5,
+                virgin_baseline_a=38.6,
+                virgin_baseline_b=-12.3,
+                virgin_baseline_delta_e=0.74,
+                qc_status="PASSED",
+                qc_notes="Virgin baseline within spec (Delta-E <= 3.0)",
+                qc_checked_at=now - timedelta(days=2),
+                qc_checked_by="Senior QC Chemist Dr. Rao",
+                total_strips=500,
+                available_strips=496
+            ),
+            StripBatch(
+                batch_id="BATCH_2024_Q4_05",
+                cast_date=now - timedelta(days=60),
+                expiration_date=now + timedelta(days=60),
+                storage_condition="Desiccated pouch, 4°C sealed dark container",
+                virgin_baseline_l=42.4,
+                virgin_baseline_a=37.5,
+                virgin_baseline_b=-11.9,
+                virgin_baseline_delta_e=0.62,
+                qc_status="PASSED",
+                qc_notes="Standard production batch",
+                qc_checked_at=now - timedelta(days=60),
+                qc_checked_by="QC Lead Specialist",
+                total_strips=500,
+                available_strips=420
+            ),
+            StripBatch(
+                batch_id="BATCH_2024_Q4_LOT_03",
+                cast_date=now - timedelta(days=45),
+                expiration_date=now + timedelta(days=45),
+                storage_condition="Desiccated pouch, 4°C sealed dark container",
+                virgin_baseline_l=42.0,
+                virgin_baseline_a=38.0,
+                virgin_baseline_b=-12.0,
+                virgin_baseline_delta_e=0.0,
+                qc_status="PASSED",
+                qc_notes="Primary reference batch",
+                qc_checked_at=now - timedelta(days=45),
+                qc_checked_by="QC Lead Specialist",
+                total_strips=500,
+                available_strips=450
+            ),
+            StripBatch(
+                batch_id="BATCH_2026_REJECTED",
+                cast_date=now - timedelta(days=1),
+                expiration_date=now + timedelta(days=89),
+                storage_condition="Ambient unsealed exposure (compromised)",
+                virgin_baseline_l=48.2,
+                virgin_baseline_a=33.1,
+                virgin_baseline_b=-6.4,
+                virgin_baseline_delta_e=4.82,
+                qc_status="REJECTED",
+                qc_notes="QC_FAILED_BASELINE_OUT_OF_SPEC: Measured virgin Delta-E (4.82) exceeds max tolerance (3.0)",
+                qc_checked_at=now - timedelta(days=1),
+                qc_checked_by="Senior QC Chemist Dr. Rao",
+                total_strips=500,
+                available_strips=0
+            )
+        ]
+        for b in batches:
+            db.add(b)
+        db.commit()
+
+    # Backfill raw_image_hash for any scans missing it
+    scans_missing_hash = db.query(Scan).filter((Scan.raw_image_hash == None) | (Scan.raw_image_hash == "")).all()
+    for s in scans_missing_hash:
+        raw_sig = f"{s.scan_id}_{s.timestamp.isoformat()}_{s.predicted_ppm}_{s.worker_id}"
+        s.raw_image_hash = hashlib.sha256(raw_sig.encode()).hexdigest()
+        s.pipeline_version = s.pipeline_version or "CV-PIPE-v2.1"
+        s.calibration_version = s.calibration_version or "v2.0-SIH26118"
+        s.operator_id = s.operator_id or s.worker_id
+    if scans_missing_hash:
+        db.commit()
+
 def seed_all():
-    Base.metadata.create_all(bind=engine)
+    init_db()
     db = SessionLocal()
 
     try:
-        # Check if already seeded
+        now = datetime.utcnow()
+        seed_batches_if_needed(db, now)
+
+        # Check if already seeded workers
         if db.query(Worker).count() > 0:
-            print("Database already contains records. Skipping seed.")
+            print("Database already contains workers. Batches & hashes verified.")
             return
 
         print("Seeding H2S Industrial Safety Platform data...")

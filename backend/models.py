@@ -72,11 +72,38 @@ class Scan(Base):
     approved_for_training = Column(Boolean, default=False)
     ground_truth_ppm = Column(Float, nullable=True)
     notes = Column(Text, nullable=True)
+    
+    # Audit Trail Cryptographic Fields (Section 8)
+    raw_image_hash = Column(String(64), nullable=True)  # SHA-256 hex digest of raw image bytes
+    pipeline_version = Column(String(30), default="CV-PIPE-v2.1")
+    calibration_version = Column(String(30), default="v2.0-SIH26118")
+    operator_id = Column(String(50), nullable=True)
 
     # Relationships
     worker = relationship("Worker", back_populates="scans")
     strip = relationship("Strip", back_populates="scans")
     alerts = relationship("Alert", back_populates="scan")
+
+
+class StripBatch(Base):
+    """Badge Stock & Wristband Inventory Model (Section 1)."""
+    __tablename__ = "strip_batches"
+
+    batch_id = Column(String(50), primary_key=True, index=True)  # e.g., BATCH_2026_Q1_01
+    cast_date = Column(DateTime, nullable=False, default=datetime.utcnow)
+    expiration_date = Column(DateTime, nullable=False)
+    storage_condition = Column(String(100), default="Desiccated pouch, 4°C sealed dark container")
+    virgin_baseline_l = Column(Float, default=42.0)
+    virgin_baseline_a = Column(Float, default=38.0)
+    virgin_baseline_b = Column(Float, default=-12.0)
+    virgin_baseline_delta_e = Column(Float, default=0.0)
+    qc_status = Column(String(20), default="PASSED")  # PASSED, REJECTED, PENDING
+    qc_notes = Column(String(255), nullable=True)
+    qc_checked_at = Column(DateTime, default=datetime.utcnow)
+    qc_checked_by = Column(String(100), default="QC Lab Specialist")
+    total_strips = Column(Integer, default=500)
+    available_strips = Column(Integer, default=500)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 
 class Alert(Base):

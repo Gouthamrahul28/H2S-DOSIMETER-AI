@@ -841,6 +841,18 @@ document.getElementById("btn-capture-scan").addEventListener("click", async () =
       } else {
         alert("⚠️ IMAGE QUALITY CHECK: " + detail.message);
       }
+    } else if (!navigator.onLine || (err.name === "TypeError" && !err.status) || (err.message && err.message.includes("Failed to fetch"))) {
+      // Plant Dead-Zone Offline Vaulting
+      const offlineId = `OFFLINE_${Date.now().toString(36).toUpperCase()}`;
+      await vaultScanOffline({
+        worker_id: currentWorker?.id || "EMP_00542",
+        strip_id: currentStripId || "STR_OFFLINE",
+        image_base64: payload.image_base64,
+        simulated_ppm: payload.simulated_ppm || 5.0,
+        phone_model: "Worker PWA (Plant Dead Zone)"
+      });
+      alert(`📡 PLANT DEAD ZONE DETECTED (Offline)\n\nNetwork unavailable in this industrial area.\nYour scan has been securely saved to the Offline Vault (ID: ${offlineId}).\nIt will automatically synchronize as soon as Wi-Fi or cellular signal returns.`);
+      showScreen(screenStrip);
     } else {
       const errorMsg = typeof detail === "object" ? (detail.message || JSON.stringify(detail)) : (err.detail || "Scan failed");
       alert("Scan error: " + errorMsg);
@@ -1300,4 +1312,407 @@ function copyScanSummary() {
 document.getElementById("btn-download-result")?.addEventListener("click", downloadSafetyReportPNG);
 document.getElementById("btn-copy-summary")?.addEventListener("click", copyScanSummary);
 document.getElementById("btn-print-slip")?.addEventListener("click", () => window.print());
+
+// ============================================================================
+// Section 7: Workers Roster & Wristband QR Auto-Binding
+// ============================================================================
+const modalQr = document.getElementById("modal-wristband-qr");
+const btnOpenQr = document.getElementById("btn-open-qr-modal");
+const btnCloseQr = document.getElementById("btn-close-qr-modal");
+const btnSimulateQr = document.getElementById("btn-simulate-qr-scan");
+const btnApplyManualQr = document.getElementById("btn-apply-manual-qr");
+const manualQrInput = document.getElementById("manual-qr-payload");
+
+btnOpenQr?.addEventListener("click", () => {
+  if (modalQr) modalQr.style.display = "flex";
+});
+btnCloseQr?.addEventListener("click", () => {
+  if (modalQr) modalQr.style.display = "none";
+});
+
+function applyParsedQRPayload(parsed) {
+  if (!parsed || !parsed.stripId) {
+    alert("Invalid QR format. Expected H2S://V2?w=...&b=...&s=...&m=...");
+    return;
+  }
+  document.getElementById("strip-input-id").value = parsed.stripId;
+  const lockCard = document.getElementById("wristband-locked-card");
+  const lockInfo = document.getElementById("wb-lock-info");
+  if (lockCard && lockInfo) {
+    lockCard.style.display = "block";
+    lockInfo.innerHTML = `
+      <strong>Worker:</strong> ${parsed.workerId || (currentWorker ? currentWorker.id : 'Auto')} • 
+      <strong>Batch:</strong> ${parsed.batchId || 'BATCH_2026_Q1_01'}<br>
+      <strong>Strip:</strong> <span class="font-mono">${parsed.stripId}</span> • 
+      <strong>Method:</strong> <span style="color:#38bdf8; font-weight:700;">${(parsed.methodKey || 'CUPAN_OPTICAL').toUpperCase()}</span> • 
+      <strong>Exp:</strong> ${parsed.expiry || 'Active'}
+    `;
+  }
+  if (modalQr) modalQr.style.display = "none";
+}
+
+btnSimulateQr?.addEventListener("click", () => {
+  const wId = currentWorker ? currentWorker.id : "EMP_00542";
+  const sId = `STR_Q1_${Math.floor(1000 + Math.random() * 9000)}`;
+  const simPayload = `H2S://V2?w=${wId}&b=BATCH_2026_Q1_01&s=${sId}&m=cupan_optical&exp=2026-06-15`;
+  const parsed = window.QRGenerator ? window.QRGenerator.parsePayload(simPayload) : {
+    workerId: wId, batchId: "BATCH_2026_Q1_01", stripId: sId, methodKey: "cupan_optical", expiry: "2026-06-15"
+  };
+  applyParsedQRPayload(parsed);
+});
+
+btnApplyManualQr?.addEventListener("click", () => {
+  const raw = manualQrInput ? manualQrInput.value.trim() : "";
+  if (!raw) return;
+  const parsed = window.QRGenerator ? window.QRGenerator.parsePayload(raw) : null;
+  if (!parsed) {
+    alert("Could not parse wristband QR payload. Check syntax.");
+    return;
+  }
+  applyParsedQRPayload(parsed);
+});
+
+// ============================================================================
+// Section 8: Trust Certificate Modal Viewer
+// ============================================================================
+const modalTrust = document.getElementById("modal-trust-cert");
+const btnCloseTrust = document.getElementById("btn-close-trust-modal");
+const trustModalBody = document.getElementById("trust-modal-body");
+
+btnCloseTrust?.addEventListener("click", () => {
+  if (modalTrust) modalTrust.style.display = "none";
+});
+
+async function openTrustCertificateModal(scanId) {
+  if (!scanId || !modalTrust || !trustModalBody) return;
+  modalTrust.style.display = "flex";
+  trustModalBody.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">Verifying cryptographic audit trail...</div>`;
+
+  try {
+    const cert = await API.getAuditCertificate(scanId);
+    trustModalBody.innerHTML = `
+      <div style="background:rgba(2,132,199,0.1); border:1px solid rgba(56,189,248,0.25); border-radius:12px; padding:12px; margin-bottom:12px;">
+        <div style="color:#38bdf8; font-weight:800; font-size:11px; margin-bottom:4px;">CRYPTOGRAPHIC SEAL</div>
+        <div style="font-family:'JetBrains Mono'; font-size:11px; color:#ffffff; word-break:break-all;">${cert.cryptographic_seal}</div>
+        <div style="font-size:10px; color:#94a3b8; margin-top:4px;">Algorithm: ${cert.hash_algorithm} • Certified Immutable</div>
+      </div>
+
+      <div style="background:#1e293b; border-radius:10px; padding:10px; margin-bottom:12px; font-size:11px; display:flex; flex-direction:column; gap:6px;">
+        <div><span style="color:#94a3b8;">Raw Optical Hash (SHA-256):</span><br><strong style="font-family:'JetBrains Mono'; color:#38bdf8; font-size:10px; word-break:break-all;">${cert.raw_image_hash}</strong></div>
+        <div><span style="color:#94a3b8;">CV Pipeline Version:</span> <strong style="color:#fff;">${cert.pipeline_version}</strong></div>
+        <div><span style="color:#94a3b8;">Calibration Ladder ID:</span> <strong style="color:#fff;">${cert.calibration_version} (${cert.calibration_curve_id})</strong></div>
+        <div><span style="color:#94a3b8;">Logged Operator:</span> <strong style="color:#fff;">${cert.operator_id} (${cert.worker_name})</strong></div>
+        <div><span style="color:#94a3b8;">Timestamp:</span> <strong style="color:#fff;">${cert.timestamp}</strong></div>
+      </div>
+
+      <div style="background:rgba(255,255,255,0.02); border:1px solid #334155; border-radius:10px; padding:10px; margin-bottom:12px;">
+        <div style="color:#f59e0b; font-weight:700; font-size:11px; margin-bottom:4px;">HOW DO WE TRUST THIS NUMBER?</div>
+        <pre style="white-space:pre-wrap; font-size:10.5px; color:#cbd5e1; font-family:inherit; margin:0; line-height:1.4;">${cert.trust_explanation}</pre>
+      </div>
+
+      <button type="button" class="btn btn-secondary" onclick="window.print()" style="width:100%; justify-content:center; padding:8px; font-size:11px;">
+        🖨️ Print Trust Certificate Slip
+      </button>
+    `;
+  } catch (err) {
+    trustModalBody.innerHTML = `<div style="color:#f87171; padding:14px; text-align:center;">Failed to load certificate: ${err.detail || 'Audit record unavailable'}</div>`;
+  }
+}
+
+// Make certificate clickable from result screen
+const certBanner = document.querySelector("#screen-result div[style*='DIGITALLY VERIFIED INDUSTRIAL AI SAFETY CERTIFICATE']")?.parentElement;
+if (certBanner) {
+  certBanner.style.cursor = "pointer";
+  certBanner.title = "Click to inspect cryptographic audit certificate";
+  certBanner.addEventListener("click", () => {
+    if (lastScanResult && lastScanResult.scan_id) {
+      openTrustCertificateModal(lastScanResult.scan_id);
+    }
+  });
+}
+
+// ============================================================================
+// Section 10: Offline PWA & Plant Dead-Zone IndexedDB Vault
+// ============================================================================
+const DB_NAME = "H2SPlantDeadZoneVault";
+const STORE_NAME = "offline_scans";
+
+function openOfflineDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { keyPath: "vault_id", autoIncrement: true });
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function vaultScanOffline(payload) {
+  const db = await openOfflineDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    const store = tx.objectStore(STORE_NAME);
+    const item = { ...payload, vaulted_at: new Date().toISOString() };
+    const req = store.add(item);
+    req.onsuccess = () => {
+      updateOfflineVaultUI();
+      resolve(req.result);
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function getVaultedScans() {
+  const db = await openOfflineDB();
+  return new Promise((resolve) => {
+    const tx = db.transaction(STORE_NAME, "readonly");
+    const store = tx.objectStore(STORE_NAME);
+    const req = store.getAll();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => resolve([]);
+  });
+}
+
+async function clearVaultedScan(vaultId) {
+  const db = await openOfflineDB();
+  return new Promise((resolve) => {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    const store = tx.objectStore(STORE_NAME);
+    store.delete(vaultId);
+    tx.oncomplete = () => {
+      updateOfflineVaultUI();
+      resolve();
+    };
+  });
+}
+
+async function updateOfflineVaultUI() {
+  const statusDot = document.getElementById("pwa-status-dot");
+  const statusText = document.getElementById("pwa-status-text");
+  const syncPill = document.getElementById("pwa-sync-pill");
+  const isOnline = navigator.onLine;
+
+  const vaulted = await getVaultedScans();
+
+  if (isOnline) {
+    if (statusDot) {
+      statusDot.style.background = "#22c55e";
+      statusDot.style.boxShadow = "0 0 8px #22c55e";
+    }
+    if (statusText) statusText.textContent = "Plant Network Online";
+  } else {
+    if (statusDot) {
+      statusDot.style.background = "#f59e0b";
+      statusDot.style.boxShadow = "0 0 8px #f59e0b";
+    }
+    if (statusText) statusText.textContent = "Plant Dead Zone (Offline Vault Active)";
+  }
+
+  if (syncPill) {
+    if (vaulted.length > 0) {
+      syncPill.style.display = "inline-block";
+      syncPill.textContent = `${vaulted.length} Vaulted`;
+    } else {
+      syncPill.style.display = "none";
+    }
+  }
+}
+
+async function syncOfflineVault() {
+  if (!navigator.onLine) return;
+  const vaulted = await getVaultedScans();
+  if (vaulted.length === 0) return;
+
+  const statusText = document.getElementById("pwa-status-text");
+  if (statusText) statusText.textContent = `🔄 Syncing ${vaulted.length} vaulted scan(s)...`;
+
+  for (const item of vaulted) {
+    try {
+      const uploadPayload = {
+        worker_id: item.worker_id,
+        strip_id: item.strip_id,
+        image_base64: item.image_base64,
+        simulated_ppm: item.simulated_ppm,
+        phone_model: item.phone_model || "Offline Plant Scanner PWA"
+      };
+      await API.submitScan(uploadPayload);
+      await clearVaultedScan(item.vault_id);
+    } catch (err) {
+      console.warn("Could not sync item:", err);
+    }
+  }
+  await updateOfflineVaultUI();
+}
+
+// Service Worker & Connectivity Listeners
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").then(() => {
+      console.log("[PWA] Plant Safety ServiceWorker active");
+    }).catch(e => console.warn("[PWA] ServiceWorker error:", e));
+  });
+}
+
+window.addEventListener("online", () => {
+  updateOfflineVaultUI();
+  syncOfflineVault();
+});
+window.addEventListener("offline", () => {
+  updateOfflineVaultUI();
+});
+
+// Initialize status on start
+updateOfflineVaultUI();
+
+// 7. Complete Scan & Return Listener
+document.getElementById("btn-finish-scan")?.addEventListener("click", () => {
+  if (rejectionCard) rejectionCard.style.display = "none";
+  showScreen(screenStrip);
+});
+
+// ============================================================================
+// Section 7: Wristband QR Auto-Binding in Worker Scanner
+// ============================================================================
+const modalWristbandQr = document.getElementById("modal-wristband-qr");
+const btnOpenQrModal = document.getElementById("btn-open-qr-modal");
+const btnCloseQrModal = document.getElementById("btn-close-qr-modal");
+const btnSimulateQrScan = document.getElementById("btn-simulate-qr-scan");
+const manualQrPayload = document.getElementById("manual-qr-payload");
+const btnApplyManualQr = document.getElementById("btn-apply-manual-qr");
+const wristbandLockedCard = document.getElementById("wristband-locked-card");
+const wbLockInfo = document.getElementById("wb-lock-info");
+
+let boundWristbandData = null;
+
+btnOpenQrModal?.addEventListener("click", () => {
+  if (modalWristbandQr) modalWristbandQr.style.display = "flex";
+});
+btnCloseQrModal?.addEventListener("click", () => {
+  if (modalWristbandQr) modalWristbandQr.style.display = "none";
+});
+
+function applyWristbandData(data) {
+  boundWristbandData = data;
+  if (data.strip_id) {
+    document.getElementById("strip-input-id").value = data.strip_id;
+  }
+  if (wristbandLockedCard && wbLockInfo) {
+    wbLockInfo.innerHTML = `
+      Worker: <strong style="color:#fff;">${data.worker_id || currentWorker?.id || 'EMP_00542'}</strong> • 
+      Batch: <strong style="color:#38bdf8;">${data.batch_id || 'BATCH_2026_Q1_01'}</strong> • 
+      Method: <strong style="color:#facc15;">${data.method_key || 'cupan_optical'}</strong>
+    `;
+    wristbandLockedCard.style.display = "block";
+  }
+  if (modalWristbandQr) modalWristbandQr.style.display = "none";
+}
+
+btnSimulateQrScan?.addEventListener("click", async () => {
+  const workerId = currentWorker ? currentWorker.id : "EMP_00542";
+  const batchId = "BATCH_2026_Q1_01";
+  const stripId = `STR_WB_${Math.floor(1000 + Math.random() * 9000)}`;
+  const methodKey = "cupan_optical";
+  const expiry = "2026-06-15";
+  
+  try {
+    await API.createStrip(stripId, batchId, workerId, 90);
+  } catch (e) {
+    console.warn("Auto-issue strip notice:", e);
+  }
+  
+  applyWristbandData({
+    worker_id: workerId,
+    batch_id: batchId,
+    strip_id: stripId,
+    method_key: methodKey,
+    expiry_date: expiry
+  });
+});
+
+btnApplyManualQr?.addEventListener("click", () => {
+  const raw = (manualQrPayload?.value || "").trim();
+  if (!raw) return;
+  
+  let data = {};
+  if (window.QRGenerator && window.QRGenerator.parseWristbandPayload) {
+    data = window.QRGenerator.parseWristbandPayload(raw) || {};
+  } else {
+    try {
+      const qs = raw.includes("?") ? raw.split("?")[1] : raw;
+      const params = new URLSearchParams(qs);
+      data = {
+        worker_id: params.get("w"),
+        batch_id: params.get("b"),
+        strip_id: params.get("s"),
+        method_key: params.get("m"),
+        expiry_date: params.get("exp")
+      };
+    } catch (e) {
+      console.warn("Manual QR parse error:", e);
+    }
+  }
+  
+  if (data.strip_id || data.batch_id) {
+    applyWristbandData(data);
+  } else {
+    alert("Invalid QR payload format. Expected: H2S://V2?w=...&b=...&s=...&m=...");
+  }
+});
+
+// ============================================================================
+// Section 8: Cryptographic Trust Certificate Inspection in Worker Screen
+// ============================================================================
+const modalTrustCert = document.getElementById("modal-trust-cert");
+const trustModalBody = document.getElementById("trust-modal-body");
+
+async function openTrustCertForWorker() {
+  if (!modalTrustCert || !trustModalBody) return;
+  modalTrustCert.style.display = "flex";
+  
+  const scanId = lastScanResult?.scan_id || document.getElementById("res-scan-id")?.textContent || "SCAN_20260916_361C16";
+  trustModalBody.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">Verifying cryptographic audit trail...</div>`;
+  
+  try {
+    const cert = await API.getAuditCertificate(scanId);
+    trustModalBody.innerHTML = `
+      <div class="trust-cert-seal">
+        <div style="color:#38bdf8; font-weight:800; font-size:10px; letter-spacing:1px; margin-bottom:4px;">CRYPTOGRAPHIC DIGITAL SEAL</div>
+        <div style="font-family:'JetBrains Mono'; font-size:11px; color:#ffffff; font-weight:700;">${cert.cryptographic_seal}</div>
+        <div style="font-size:9.5px; color:#94a3b8; margin-top:4px;">Hash Algorithm: ${cert.hash_algorithm}</div>
+      </div>
+
+      <div style="background:#0f172a; border:1px solid #334155; border-radius:10px; padding:10px; margin-bottom:12px; font-size:11px; display:flex; flex-direction:column; gap:5px;">
+        <div><span style="color:#94a3b8;">Worker / Operator:</span> <strong style="color:#fff;">${cert.worker_name} (${cert.worker_id})</strong></div>
+        <div><span style="color:#94a3b8;">Exposure Reading:</span> <strong style="color:#38bdf8;">${cert.predicted_ppm} ppm (${cert.exposure_level})</strong></div>
+        <div><span style="color:#94a3b8;">Raw Optical Image Hash (SHA-256):</span><br><code class="trust-hash-badge">${cert.raw_image_hash}</code></div>
+        <div><span style="color:#94a3b8;">Vision Pipeline:</span> <strong style="color:#fff;">${cert.pipeline_version}</strong></div>
+        <div><span style="color:#94a3b8;">Calibration Version:</span> <strong style="color:#fff;">${cert.calibration_version}</strong></div>
+        <div><span style="color:#94a3b8;">Batch Lot:</span> <strong style="color:#fff;">${cert.strip_batch}</strong></div>
+        <div><span style="color:#94a3b8;">Timestamp:</span> <strong style="color:#fff;">${cert.timestamp}</strong></div>
+      </div>
+
+      <div style="background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.25); border-radius:10px; padding:10px; margin-bottom:12px;">
+        <div style="color:#f59e0b; font-weight:800; font-size:10px; margin-bottom:4px;">HOW DO WE TRUST THIS NUMBER?</div>
+        <pre style="white-space:pre-wrap; font-size:10px; color:#cbd5e1; font-family:inherit; margin:0; line-height:1.4;">${cert.trust_explanation}</pre>
+      </div>
+
+      <button type="button" class="btn btn-secondary" id="btn-close-trust-inner" style="width:100%; justify-content:center; padding:8px; font-size:11px;">Close Certificate</button>
+    `;
+    document.getElementById("btn-close-trust-inner")?.addEventListener("click", () => {
+      modalTrustCert.style.display = "none";
+    });
+  } catch (err) {
+    trustModalBody.innerHTML = `<div style="color:#f87171; padding:20px; text-align:center;">Failed to load certificate: ${err.detail || 'Audit record unavailable'}</div>`;
+  }
+}
+
+document.getElementById("btn-inspect-trust-cert")?.addEventListener("click", openTrustCertForWorker);
+document.getElementById("res-verified-audit-line")?.addEventListener("click", openTrustCertForWorker);
+document.getElementById("btn-close-trust-modal")?.addEventListener("click", () => {
+  if (modalTrustCert) modalTrustCert.style.display = "none";
+});
 

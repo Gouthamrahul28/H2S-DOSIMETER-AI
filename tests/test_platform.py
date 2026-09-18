@@ -18,6 +18,7 @@ from backend.services.strip_validator import StripValidator
 from backend.services.inference_service import InferenceService
 from backend.services.alert_engine import AlertEngine
 from ai_pipeline.dataset_generator import build_dataset
+import uuid
 import config
 
 client = TestClient(app)
@@ -252,4 +253,246 @@ def test_cupan_spectrum_acceptance():
     data = res_orange.json()
     assert data["predicted_class"] == "C2"  # S5 maps to C2
     assert "Orange" in data["exposure_level"] or "hazard" in data["exposure_level"].lower()
+
+def test_cielab_calibration_curve():
+    """Verify that the AI model active endpoint returns the CIELAB a* calibration curve."""
+    res = client.get("/api/supervisor/ai/active-model")
+    assert res.status_code == 200
+    data = res.json()
+    assert "calibration_curve" in data
+    calib = data["calibration_curve"]
+    assert "points" in calib
+    assert len(calib["points"]) == 18
+    assert calib["meta"]["slope"] == 4.34
+    assert calib["meta"]["intercept"] == 4.65
+    assert calib["meta"]["r_squared"] == 0.99070
+    assert calib["meta"]["max_ppm"] == 20.0
+    
+    # Check linear points and color accuracy
+    p0 = calib["points"][0]
+    assert p0["ppm"] == 0.1
+    assert p0["a_star"] == 5.0
+    assert p0["is_linear"] is True
+    assert p0["hex"].startswith("#")
+    assert len(p0["rgb"]) == 3
+    
+    # Check saturation plateau at 20.0 ppm and color accuracy
+    p_last = calib["points"][-1]
+    assert p_last["ppm"] == 20.0
+    assert p_last["a_star"] == 11.0
+    assert p_last["is_linear"] is False
+    assert p_last["hex"].startswith("#")
+    assert len(p_last["rgb"]) == 3
+
+def test_shift_monitor_factories_act():
+    """Verify Shift Monitor endpoint under Factories Act, 1948 standard."""
+    res = client.get("/api/supervisor/monitoring/shift-monitor?standard=FACTORIES_ACT")
+    assert res.status_code == 200
+    data = res.json()
+    assert "shift_info" in data
+    assert "standard_applied" in data
+    assert data["standard_applied"]["id"] == "FACTORIES_ACT"
+    assert data["standard_applied"]["twa_ppm"] == 10.0
+    assert data["standard_applied"]["stel_ppm"] == 15.0
+    assert data["standard_applied"]["shift_dose_limit_ppm_h"] == 80.0
+    assert "summary_kpis" in data
+    assert data["summary_kpis"]["monitored_workers"] >= 4
+    assert "workers" in data
+    assert len(data["workers"]) >= 4
+
+    # Verify worker fields
+    w0 = data["workers"][0]
+    assert "worker_id" in w0
+    assert "cumulative_dose_ppm_h" in w0
+    assert "tier" in w0
+    assert w0["tier"]["tier_badge"] in ["Emerald", "Amber", "Red"]
+    assert "last_read_str" in w0
+    assert "method" in w0
+    assert "short_badge" in w0["method"]
+    assert "compliance" in w0
+    assert "factories_act_pct" in w0["compliance"]
+
+def test_shift_monitor_acgih():
+    """Verify Shift Monitor endpoint under ACGIH standard."""
+    res = client.get("/api/supervisor/monitoring/shift-monitor?standard=ACGIH")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["standard_applied"]["id"] == "ACGIH"
+    assert data["standard_applied"]["twa_ppm"] == 1.0
+    assert data["standard_applied"]["stel_ppm"] == 5.0
+    assert data["standard_applied"]["shift_dose_limit_ppm_h"] == 8.0
+
+def test_worker_dose_trajectory_curve():
+    """Verify 8-hour shift dose trajectory and threshold lines for worker modal."""
+    res = client.get("/api/supervisor/monitoring/worker-dose/EMP_00542?standard=FACTORIES_ACT")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["worker"]["id"] == "EMP_00542"
+    assert "trajectory" in data
+    assert len(data["trajectory"]) == 9  # H0 through H8
+    assert "threshold_lines" in data
+    assert "factories_act" in data["threshold_lines"]
+    assert "acgih" in data["threshold_lines"]
+    assert "method" in data
+    assert "formula" in data["method"]
+
+def test_badge_stock_qc_pass_and_reject():
+    """Verify Badge Stock / Wristband Lab virgin baseline Delta-E QC testing."""
+    # 1. Test Passing QC: Virgin Cu-PAN baseline within Delta-E <= 3.0
+    pass_payload = {
+        "batch_id": "TEST_BATCH_PASS",
+        "virgin_lab_l": 42.2,
+        "virgin_lab_a": 37.8,
+        "virgin_lab_b": -12.1,
+        "checked_by": "Test QC Chemist",
+        "notes": "Pristine Cu-PAN S0 baseline test"
+    }
+    res = client.post("/api/strips/batches/qc-check", json=pass_payload)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["batch_id"] == "TEST_BATCH_PASS"
+    assert data["qc_status"] == "PASSED"
+    assert data["passed"] is True
+    assert data["virgin_baseline_delta_e"] <= 3.0
+
+    # 2. Test Failing QC: Virgin baseline out of spec (compromised/aged chemistry Delta-E > 3.0)
+    fail_payload = {
+        "batch_id": "TEST_BATCH_FAIL",
+        "virgin_lab_l": 52.0,
+        "virgin_lab_a": 30.0,
+        "virgin_lab_b": -2.0,
+        "checked_by": "Test QC Chemist",
+        "notes": "Aged indicator strip test"
+    }
+    res_fail = client.post("/api/strips/batches/qc-check", json=fail_payload)
+    assert res_fail.status_code == 200
+    data_fail = res_fail.json()
+    assert data_fail["batch_id"] == "TEST_BATCH_FAIL"
+    assert data_fail["qc_status"] == "REJECTED"
+    assert data_fail["passed"] is False
+    assert data_fail["virgin_baseline_delta_e"] > 3.0
+    assert "QC_FAILED_BASELINE_OUT_OF_SPEC" in data_fail["rejection_reason"]
+
+    # 3. Test Batch Listing endpoint
+    res_batches = client.get("/api/strips/batches")
+    assert res_batches.status_code == 200
+    batch_list = res_batches.json()
+    assert len(batch_list) >= 2
+    batch_ids = [b["batch_id"] for b in batch_list]
+    assert "TEST_BATCH_PASS" in batch_ids
+    assert "TEST_BATCH_FAIL" in batch_ids
+
+def test_strip_validation_rejects_unhealthy_batch():
+    """Verify that strips belonging to a QC-rejected batch cannot be scanned."""
+    # Register strip under the rejected batch
+    client.post("/api/strips", json={
+        "strip_id": "STR_REJECTED_BATCH_01",
+        "batch_id": "TEST_BATCH_FAIL",
+        "assigned_worker_id": "EMP_00542",
+        "days_valid": 90
+    })
+
+    val_res = client.post("/api/strips/validate", json={
+        "worker_id": "EMP_00542",
+        "strip_id": "STR_REJECTED_BATCH_01"
+    })
+    assert val_res.status_code == 200
+    val_data = val_res.json()
+    assert val_data["valid"] is False
+    assert val_data["reason_code"] in ["BATCH_QC_REJECTED", "BATCH_INVALID"]
+
+def test_wristband_qr_assignment():
+    """Verify Workers Roster + Wristband QR Assignment linking Worker <-> Batch <-> Method."""
+    req = {
+        "worker_id": "EMP_00542",
+        "batch_id": "TEST_BATCH_PASS",
+        "method_key": "cupan_optical"
+    }
+    res = client.post("/api/strips/wristbands/assign-qr", json=req)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["worker_id"] == "EMP_00542"
+    assert data["worker_name"] == "John Martinez"
+    assert data["batch_id"] == "TEST_BATCH_PASS"
+    assert data["method_key"] == "cupan_optical"
+    assert data["verification_status"] == "ASSIGNED_AND_QC_VERIFIED"
+    assert data["qr_payload"].startswith("H2S://V2?")
+    assert "w=EMP_00542" in data["qr_payload"]
+    assert "b=TEST_BATCH_PASS" in data["qr_payload"]
+    assert "m=cupan_optical" in data["qr_payload"]
+
+def test_cryptographic_audit_trail_and_certificate():
+    """Verify SHA-256 raw optical fingerprinting and 'How do we trust this number?' certificate."""
+    # Create fresh strip under valid batch
+    s_id = f"STR_AUDIT_{uuid.uuid4().hex[:6].upper()}"
+    client.post("/api/strips", json={
+        "strip_id": s_id,
+        "batch_id": "TEST_BATCH_PASS",
+        "assigned_worker_id": "EMP_00542",
+        "days_valid": 90
+    })
+
+    # Submit scan
+    scan_res = client.post("/api/scans", json={
+        "worker_id": "EMP_00542",
+        "strip_id": s_id,
+        "simulated_ppm": 12.5,
+        "phone_model": "Industrial Intrinsic-Safe Terminal"
+    })
+    assert scan_res.status_code == 200
+    scan_id = scan_res.json()["scan_id"]
+
+    # Retrieve Trust Certificate
+    cert_res = client.get(f"/api/scans/{scan_id}/audit-certificate")
+    assert cert_res.status_code == 200
+    cert = cert_res.json()
+    assert cert["scan_id"] == scan_id
+    assert len(cert["raw_image_hash"]) == 64  # Valid SHA-256 hex string
+    assert cert["hash_algorithm"] == "SHA-256"
+    assert cert["pipeline_version"] == "CV-PIPE-v2.1"
+    assert cert["calibration_version"] == "v2.0-SIH26118"
+    assert cert["calibration_curve_id"] == "CURVE-CUPAN-2026-v2"
+    assert cert["operator_id"] == "EMP_00542"
+    assert cert["worker_name"] == "John Martinez"
+    assert cert["predicted_ppm"] == 12.5
+    assert cert["cryptographic_seal"].startswith("SIG_")
+    assert "HOW DO WE TRUST THIS NUMBER?" in cert["trust_explanation"]
+    assert "Cryptographic Optical Hash" in cert["trust_explanation"]
+    assert "Calibrated Vision Pipeline" in cert["trust_explanation"]
+    assert "Chemical Calibration Curve" in cert["trust_explanation"]
+
+def test_role_based_access_control():
+    """Verify RBAC role hierarchy: Worker, Supervisor, Safety Officer, Admin."""
+    # 1. Roles matrix
+    roles_res = client.get("/api/auth/roles")
+    assert roles_res.status_code == 200
+    roles = roles_res.json()
+    assert "Worker" in roles
+    assert "Supervisor" in roles
+    assert "Safety Officer" in roles
+    assert "Admin" in roles
+    assert roles["Worker"]["can_view_all_workers"] is False
+    assert roles["Supervisor"]["can_view_all_workers"] is True
+    assert roles["Admin"]["can_rollback_models"] is True
+
+    # 2. Worker Login receives Worker role
+    w_login = client.post("/api/auth/worker-login", json={"worker_id": "EMP_00542", "pin": "1234"})
+    assert w_login.status_code == 200
+    assert w_login.json()["user_info"]["role"] == "Worker"
+
+    # 3. Supervisor Login
+    s_login = client.post("/api/auth/supervisor-login", json={"username": "supervisor", "password": "safety2025"})
+    assert s_login.status_code == 200
+    assert s_login.json()["user_info"]["role"] == "Supervisor"
+
+    # 4. Safety Officer Login
+    so_login = client.post("/api/auth/supervisor-login", json={"username": "safety_officer", "password": "safety2025"})
+    assert so_login.status_code == 200
+    assert so_login.json()["user_info"]["role"] == "Safety Officer"
+
+    # 5. Admin Login
+    a_login = client.post("/api/auth/supervisor-login", json={"username": "admin", "password": "admin123"})
+    assert a_login.status_code == 200
+    assert a_login.json()["user_info"]["role"] == "Admin"
+
 

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>H₂S Industrial Safety Platform - Supervisor Dashboard</title>
   <link rel="stylesheet" href="/static/css/style.css">
+  <script src="/static/js/qr_generator.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
@@ -25,7 +26,11 @@
         <div class="nav-label">Main Sections</div>
         <div class="nav-item active" data-tab="tab-operations">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
-          Operations Dashboard
+          Shift Monitor (Supervisor Home)
+        </div>
+        <div class="nav-item" data-tab="tab-batches">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+          Badge Stock / Wristband Lab
         </div>
         <div class="nav-item" data-tab="tab-ai-model">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
@@ -67,6 +72,17 @@
       <header class="top-bar">
         <div class="top-bar-title" id="page-title">Operations Monitoring Dashboard</div>
         <div class="top-bar-actions">
+          <!-- Role-Based Access Control (RBAC) Role Selector (Section 9) -->
+          <div class="rbac-role-pill" style="display:flex; align-items:center; gap:6px; background:#0f172a; border:1px solid #334155; border-radius:8px; padding:4px 10px;">
+            <span style="font-size:11px; color:#94a3b8; font-weight:600;">👤 Role:</span>
+            <select id="rbac-role-select" style="background:transparent; border:none; color:#38bdf8; font-weight:700; font-size:12px; cursor:pointer; outline:none;">
+              <option value="Supervisor">Supervisor (Shift Lead)</option>
+              <option value="Safety Officer">Safety Officer (Compliance)</option>
+              <option value="Admin">Admin (Full System Access)</option>
+              <option value="Worker">Worker (Own Dose Only)</option>
+            </select>
+          </div>
+
           <button class="btn btn-secondary" id="btn-refresh">
             <svg style="width:16px;height:16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
             Refresh
@@ -81,8 +97,125 @@
       </header>
 
       <div class="content-scroll">
-        <!-- 1. OPERATIONS DASHBOARD -->
+        <!-- 1. SHIFT MONITOR & OPERATIONS DASHBOARD -->
         <section id="tab-operations" class="tab-panel active">
+          <!-- Shift Status & Statutory Standards Control Header -->
+          <div class="shift-monitor-header">
+            <div>
+              <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
+                <span style="font-size:18px; font-weight:800; color:#f8fafc;" id="shift-display-name">Shift B (Evening Shift)</span>
+                <span class="shift-meta-badge" id="shift-elapsed-badge">⏱️ Loading shift clock...</span>
+                <span class="badge-cat badge-green" style="font-size:11px;">● Shift Active</span>
+              </div>
+              <p style="font-size:12px; color:var(--text-muted); margin:0;" id="shift-standard-desc">
+                Monitoring cumulative ppm·h dose against statutory limits. Each dosimeter uses its specific response curve.
+              </p>
+            </div>
+
+            <!-- Standard Selector (Factories Act vs ACGIH vs Dual) -->
+            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+              <span style="font-size:12px; font-weight:600; color:var(--text-secondary);">Statutory Standard:</span>
+              <div class="std-toggle-group">
+                <button class="std-toggle-btn active" id="btn-std-factories" data-std="FACTORIES_ACT">
+                  🇮🇳 Factories Act (10 ppm TWA)
+                </button>
+                <button class="std-toggle-btn" id="btn-std-acgih" data-std="ACGIH">
+                  🌐 ACGIH (1 ppm TWA / 5 STEL)
+                </button>
+                <button class="std-toggle-btn" id="btn-std-dual" data-std="DUAL">
+                  ⚖️ Dual View
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Shift Tier Summary Cards -->
+          <div class="kpi-grid" style="grid-template-columns: repeat(5, 1fr); margin-bottom:24px;">
+            <div class="glass-card">
+              <div class="kpi-header">
+                <span class="kpi-title">Monitored Workers</span>
+                <span style="color:#3b82f6;">●</span>
+              </div>
+              <div class="kpi-value" id="shift-kpi-total">--</div>
+              <div class="kpi-subtext">Active on shift roster</div>
+            </div>
+
+            <div class="glass-card" style="border-bottom: 3px solid #10b981;">
+              <div class="kpi-header">
+                <span class="kpi-title" style="color:#34d399;">Emerald (Safe)</span>
+                <span style="color:#10b981;">●</span>
+              </div>
+              <div class="kpi-value" style="color:#34d399;" id="shift-kpi-emerald">--</div>
+              <div class="kpi-subtext" id="subtext-emerald">&lt; 50% TWA threshold</div>
+            </div>
+
+            <div class="glass-card" style="border-bottom: 3px solid #f59e0b;">
+              <div class="kpi-header">
+                <span class="kpi-title" style="color:#fbbf24;">Amber (Caution)</span>
+                <span style="color:#f59e0b;">●</span>
+              </div>
+              <div class="kpi-value" style="color:#fbbf24;" id="shift-kpi-amber">--</div>
+              <div class="kpi-subtext" id="subtext-amber">50%–100% TWA threshold</div>
+            </div>
+
+            <div class="glass-card" style="border-bottom: 3px solid #ef4444;">
+              <div class="kpi-header">
+                <span class="kpi-title" style="color:#f87171;">Red (Action Level)</span>
+                <span style="color:#ef4444;">●</span>
+              </div>
+              <div class="kpi-value" style="color:#f87171;" id="shift-kpi-red">--</div>
+              <div class="kpi-subtext" id="subtext-red">&gt; 100% TWA or STEL breach</div>
+            </div>
+
+            <div class="glass-card">
+              <div class="kpi-header">
+                <span class="kpi-title">Avg Shift Dose</span>
+                <span style="color:#8b5cf6;">●</span>
+              </div>
+              <div class="kpi-value" style="font-size:24px;" id="shift-kpi-avg-dose">--</div>
+              <div class="kpi-subtext">Cumulative ppm·h average</div>
+            </div>
+          </div>
+
+          <!-- Shift Monitor Worker Table -->
+          <div class="table-container" style="margin-bottom: 28px;">
+            <div class="table-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+              <div>
+                <div class="table-title" style="display:flex; align-items:center; gap:8px;">
+                  <span>👥 Shift Worker Dosimetry & Exposure Roster</span>
+                  <span class="badge-cat badge-blue" style="font-size:11px;" id="active-std-badge">Factories Act (India)</span>
+                </div>
+                <div style="font-size:13px; color:var(--text-muted);">
+                  Real-time cumulative dose (<code style="color:#38bdf8;">ppm·h</code>), dosimeter response curves, relative last read times, and statutory TWA/STEL compliance meters.
+                </div>
+              </div>
+              <div style="display:flex; gap:8px; align-items:center;">
+                <input type="text" id="shift-worker-search" placeholder="Search worker or badge..." style="padding:6px 12px; background:#0f172a; border:1px solid var(--border-color); border-radius:6px; color:#fff; font-size:12px; width:200px;">
+                <button class="btn btn-secondary" id="btn-refresh-shift" style="padding:6px 10px; font-size:12px;">↺ Refresh Shift</button>
+              </div>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Worker</th>
+                  <th>Dosimeter Method</th>
+                  <th>Cumulative Dose</th>
+                  <th>Status Tier</th>
+                  <th>Last Read</th>
+                  <th id="th-compliance">TWA / STEL Compliance</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="shift-workers-table-body">
+                <tr><td colspan="7" style="text-align:center; padding:20px; color:var(--text-muted);">Loading active shift dosimetry...</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Operational Analytics Row (Original KPIs) -->
+          <div style="margin-top:28px; margin-bottom:14px; font-size:14px; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px;">
+            Facility Operational Telemetry
+          </div>
           <div class="kpi-grid">
             <div class="glass-card">
               <div class="kpi-header">
@@ -170,6 +303,99 @@
               </thead>
               <tbody id="alerts-table-body">
                 <tr><td colspan="7" style="text-align:center;">Loading alerts...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- 1B. BADGE STOCK / WRISTBAND LAB (Section 1 & 7) -->
+        <section id="tab-batches" class="tab-panel">
+          <div class="shift-monitor-header">
+            <div>
+              <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
+                <span style="font-size:18px; font-weight:800; color:#f8fafc;">Badge Stock / Wristband Lab</span>
+                <span class="badge-cat badge-green" style="font-size:11px;">● QC Gating Active</span>
+              </div>
+              <p style="font-size:12px; color:var(--text-muted); margin:0;">
+                Batch ID, cast date, expiry, storage conditions, and virgin baseline ΔE specification checks (ΔE ≤ 3.0 vs intact Cu-PAN S₀).
+              </p>
+            </div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <button class="btn btn-secondary" id="btn-open-cast-batch-modal" style="color:#38bdf8; border-color:rgba(56,189,248,0.4);">
+                + Cast New Batch
+              </button>
+              <button class="btn btn-secondary" id="btn-open-batch-qc-modal" style="color:#f59e0b; border-color:rgba(245,158,11,0.4);">
+                🧪 Run Virgin Baseline QC
+              </button>
+              <button class="btn btn-primary" id="btn-open-wristband-qr-modal">
+                🪪 Issue Wristband QR
+              </button>
+            </div>
+          </div>
+
+          <!-- Batch Stock KPIs -->
+          <div class="kpi-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom:24px;">
+            <div class="glass-card">
+              <div class="kpi-header"><span class="kpi-title">Total Batches</span><span style="color:#38bdf8;">📦</span></div>
+              <div class="kpi-value" id="kpi-batch-total">--</div>
+              <div class="kpi-subtext" style="color:var(--text-muted);">Stock lots on record</div>
+            </div>
+            <div class="glass-card">
+              <div class="kpi-header"><span class="kpi-title">QC Approved</span><span style="color:#22c55e;">✓</span></div>
+              <div class="kpi-value text-emerald-400" id="kpi-batch-passed">--</div>
+              <div class="kpi-subtext text-emerald-400">Virgin ΔE ≤ 3.0 within spec</div>
+            </div>
+            <div class="glass-card">
+              <div class="kpi-header"><span class="kpi-title">QC Rejected</span><span style="color:#ef4444;">⚠️</span></div>
+              <div class="kpi-value text-red-400" id="kpi-batch-rejected">--</div>
+              <div class="kpi-subtext text-red-400">Baseline out of spec</div>
+            </div>
+            <div class="glass-card">
+              <div class="kpi-header"><span class="kpi-title">Available Strips</span><span style="color:#f59e0b;">🏷️</span></div>
+              <div class="kpi-value text-amber-400" id="kpi-batch-available">--</div>
+              <div class="kpi-subtext" style="color:var(--text-muted);">Ready for wristbands</div>
+            </div>
+          </div>
+
+          <!-- Virgin Baseline Specification Reference Card -->
+          <div class="glass-card" style="margin-bottom:24px; border-left: 4px solid #38bdf8; padding:16px;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">
+              <div>
+                <h4 style="margin:0 0 6px 0; font-size:14px; font-weight:800; color:#38bdf8;">
+                  🔬 Virgin Baseline CIEDE2000 Quality Control Specification
+                </h4>
+                <p style="margin:0 0 8px 0; font-size:12px; color:var(--text-secondary); max-width:720px; line-height:1.4;">
+                  Standard intact Cu(II)–PAN complex (S₀) baseline: <strong>L* = 42.0, a* = 38.0, b* = -12.0</strong> (deep purple-magenta <span style="display:inline-block; width:12px; height:12px; background:#954978; border-radius:2px; vertical-align:middle;"></span> #954978). Any freshly cast or stored badge batch whose virgin baseline exceeds <strong>ΔE₀₀ &gt; 3.0</strong> is automatically rejected from field dispatch to prevent baseline drift errors.
+                </p>
+              </div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span class="badge-cat badge-green">Spec: ΔE ≤ 3.0</span>
+                <span class="badge-cat badge-red">Reject: ΔE &gt; 3.0</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Batch Inventory Table -->
+          <div class="table-container">
+            <div class="table-header">
+              <div class="table-title">Badge Stock Batches & Wristband Lots</div>
+              <div style="font-size:13px; color:var(--text-muted);">Real-time inventory and quality control verification</div>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Batch ID</th>
+                  <th>Cast Date</th>
+                  <th>Expiration</th>
+                  <th>Storage Condition</th>
+                  <th>Virgin Baseline ΔE</th>
+                  <th>QC Status</th>
+                  <th>Available / Total</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="batches-table-body">
+                <tr><td colspan="8" style="text-align:center;">Loading batch inventory...</td></tr>
               </tbody>
             </table>
           </div>
@@ -282,51 +508,58 @@
             </div>
           </div>
 
-          <!-- Row 3: Cu-PAN Calibration Response & Parity Plot (RGB vs PPM, True PPM vs Estimated PPM) -->
+          <!-- Row 3: Colorimetric Calibration Response & Regression Parity -->
           <div style="display:flex; justify-content:space-between; align-items:center; margin-top:24px; margin-bottom:16px;">
             <div>
-              <h3 style="font-size:18px; font-weight:700;">Chemical Calibration & Regression Parity</h3>
-              <p style="font-size:13px; color:var(--text-muted);">Cu-PAN chelate displacement optical response (RGB vs PPM) and test set estimation parity (True vs Predicted PPM).</p>
+              <h3 style="font-size:18px; font-weight:700;">Colorimetric Calibration & Regression Parity</h3>
+              <p style="font-size:13px; color:var(--text-muted);">CIELAB <em>a*</em> chromaticity dosimeter response ([H₂S] vs <em>a*</em>) and test set estimation parity (True vs Predicted PPM).</p>
             </div>
             <div style="display:flex; gap:8px;">
-              <span class="badge-cat badge-green" style="font-size:11px;">R² = 0.9924</span>
-              <span class="badge-cat badge-yellow" style="font-size:11px;">MAE = 1.21 ppm</span>
+              <span class="badge-cat badge-green" style="font-size:11px;">R² = 0.9907</span>
+              <span class="badge-cat badge-blue" style="font-size:11px;">Slope = +4.34 a*/ppm</span>
             </div>
           </div>
 
           <div class="accuracy-grid">
-            <!-- Graph 4: Cu-PAN Calibration Response: RGB Intensity vs H2S Concentration -->
+            <!-- Graph 4: Colorimetric Calibration: a* Coordinate in L*a*b* vs [H2S] Concentration -->
             <div class="chart-card">
               <div class="chart-card-header">
-                <div class="chart-title" style="display:flex; flex-direction:column; gap:2px;">
-                  <span>🧪 Cu-PAN Calibration: RGB Intensity vs H₂S (PPM)</span>
-                  <span style="font-size:10.5px; color:var(--text-muted); font-weight:500;">X-Axis: H₂S (ppm) • Y-Axis: RGB Intensity (0–255)</span>
+                <div class="chart-title">
+                  <span>🧪 Colorimetric Response: <em>a*</em> Coordinate vs [H₂S]</span>
                 </div>
-                <div class="chart-legend">
-                  <div class="legend-item"><span class="legend-dot" style="background:#ef4444;"></span> Red (R)</div>
-                  <div class="legend-item"><span class="legend-dot" style="background:#22c55e;"></span> Green (G)</div>
-                  <div class="legend-item"><span class="legend-dot" style="background:#3b82f6;"></span> Blue (B)</div>
+                <div class="chart-legend" style="flex-wrap:wrap; gap:6px 12px;">
+                  <div class="legend-item"><span class="legend-dot" style="background:#f8fafc; border: 1px dashed #64748b;"></span> Linear Fit (R² = 0.9907)</div>
+                  <div class="legend-item"><span class="legend-dot" style="background:#f472b6; border: 1px dashed #f472b6;"></span> Plateau (11.0)</div>
+                  <div class="legend-item"><span class="legend-dot" style="background:#954978;"></span> 0.0 ppm</div>
+                  <div class="legend-item"><span class="legend-dot" style="background:#c1586a;"></span> 2.5 ppm</div>
+                  <div class="legend-item"><span class="legend-dot" style="background:#d16662;"></span> 6.0 ppm</div>
+                  <div class="legend-item"><span class="legend-dot" style="background:#df7a5b;"></span> 12.0 ppm</div>
+                  <div class="legend-item"><span class="legend-dot" style="background:#e78c55;"></span> 20.0 ppm</div>
+                  <div class="legend-item" style="margin-left:2px;">
+                    <span style="width:36px; height:8px; border-radius:4px; background:linear-gradient(90deg, #954978, #c1586a, #d16662, #df7a5b, #e78c55); display:inline-block; border:1px solid rgba(255,255,255,0.25);"></span>
+                    <span style="font-size:10px; color:#cbd5e1; font-weight:600;">Spectrum</span>
+                  </div>
                 </div>
               </div>
-              <div class="svg-chart-container" id="calib-chart-container">
-                <svg id="calib-curve-svg" class="accuracy-svg" viewBox="0 0 500 240" preserveAspectRatio="none">
+              <div class="svg-chart-container" id="calib-chart-container" style="height:270px;">
+                <svg id="calib-curve-svg" class="accuracy-svg" viewBox="0 0 520 280" preserveAspectRatio="none">
                   <!-- Rendered dynamically -->
                 </svg>
                 <div id="calib-tooltip" class="chart-tooltip-box"></div>
               </div>
-              <div style="display:flex; justify-content:space-between; margin-top:10px; font-size:11px; color:var(--text-muted);">
-                <span>0 PPM (Purple: R:149, G:73, B:120)</span>
-                <span style="color:#eab308; font-weight:600;">ΔG = +145 (Yellow PAN Liberation)</span>
-                <span>100 PPM (Yellow: R:247, G:218, B:52)</span>
+              <div style="display:flex; justify-content:space-between; margin-top:10px; font-size:11px; color:var(--text-muted); flex-wrap:wrap; gap:6px;">
+                <span>Concentration Range: <strong style="color:#38bdf8;">0.0 – 20.0 ppm</strong></span>
+                <span>Fit: <strong style="color:#a78bfa;">a* = 4.65 + 4.34·[H₂S]</strong></span>
+                <span>Linearity: <strong style="color:#34d399;">R² = 0.99070 (0–1.5 ppm)</strong></span>
+                <span>Plateau: <strong style="color:#f472b6;">a* = 11.0 (1.5 – 20.0 ppm)</strong></span>
               </div>
             </div>
 
             <!-- Graph 5: Parity / Regression Plot: True PPM vs Estimated PPM -->
             <div class="chart-card">
               <div class="chart-card-header">
-                <div class="chart-title" style="display:flex; flex-direction:column; gap:2px;">
+                <div class="chart-title">
                   <span>🎯 Prediction Parity: True PPM vs Estimated PPM</span>
-                  <span style="font-size:10.5px; color:var(--text-muted); font-weight:500;">X-Axis: True PPM (Reference) • Y-Axis: Estimated PPM (AI Prediction)</span>
                 </div>
                 <div class="chart-legend" style="flex-wrap:wrap; gap:6px 12px;">
                   <div class="legend-item"><span class="legend-dot" style="background:#64748b; border: 1px dashed #cbd5e1;"></span> 1:1 Parity</div>
@@ -640,6 +873,79 @@
     </div>
   </div>
 
+  <!-- Worker Shift Dose Curve Modal -->
+  <div id="dose-curve-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(10px); z-index:100; align-items:center; justify-content:center; overflow-y:auto; padding:20px;">
+    <div class="glass-card" style="max-width:720px; width:100%; border:1px solid rgba(56,189,248,0.3); box-shadow:0 8px 32px rgba(0,0,0,0.6);">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px;">
+        <div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <h3 style="font-size:18px; margin:0;" id="dc-modal-worker-name">Worker Dose Trajectory</h3>
+            <span id="dc-modal-tier-badge" class="tier-badge tier-emerald">Emerald</span>
+          </div>
+          <p style="font-size:12px; color:var(--text-muted); margin-top:4px;" id="dc-modal-worker-meta">
+            Badge: BDG-542 • Dept: Refinery Operations • Method: Cu-PAN Optical
+          </p>
+        </div>
+        <button class="btn btn-secondary" id="btn-close-dose-modal" style="padding:4px 10px; font-size:12px;">✕ Close</button>
+      </div>
+
+      <!-- Quick Metrics Grid -->
+      <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:12px; margin-bottom:18px;">
+        <div style="background:rgba(15,23,42,0.6); padding:10px; border-radius:8px; border:1px solid var(--border-color);">
+          <div style="font-size:11px; color:var(--text-muted);">CUMULATIVE DOSE</div>
+          <div style="font-size:18px; font-weight:800; color:#38bdf8;" id="dc-stat-dose">-- ppm·h</div>
+        </div>
+        <div style="background:rgba(15,23,42,0.6); padding:10px; border-radius:8px; border:1px solid var(--border-color);">
+          <div style="font-size:11px; color:var(--text-muted);">8-HR TWA AVG</div>
+          <div style="font-size:18px; font-weight:800; color:#34d399;" id="dc-stat-twa">-- ppm</div>
+        </div>
+        <div style="background:rgba(15,23,42,0.6); padding:10px; border-radius:8px; border:1px solid var(--border-color);">
+          <div style="font-size:11px; color:var(--text-muted);">15-MIN STEL PEAK</div>
+          <div style="font-size:18px; font-weight:800; color:#fbbf24;" id="dc-stat-stel">-- ppm</div>
+        </div>
+        <div style="background:rgba(15,23,42,0.6); padding:10px; border-radius:8px; border:1px solid var(--border-color);">
+          <div style="font-size:11px; color:var(--text-muted);">ACTION LEVEL</div>
+          <div style="font-size:16px; font-weight:800; color:#a78bfa;" id="dc-stat-action">NORMAL</div>
+        </div>
+      </div>
+
+      <!-- SVG Chart for 8-Hour Shift Dose Trajectory -->
+      <div class="chart-card" style="margin-bottom:16px; padding:16px;">
+        <div class="chart-card-header" style="margin-bottom:8px;">
+          <div class="chart-title">
+            <span>📈 8-Hour Shift Cumulative Dose Accumulation Curve</span>
+          </div>
+          <div class="chart-legend" style="flex-wrap:wrap; gap:8px;">
+            <div class="legend-item"><span class="legend-dot" style="background:#38bdf8;"></span> Dose (ppm·h)</div>
+            <div class="legend-item"><span class="legend-dot" style="background:#facc15; border:1px dashed #facc15;"></span> Factories Act TWA (10 ppm)</div>
+            <div class="legend-item"><span class="legend-dot" style="background:#ef4444; border:1px dashed #ef4444;"></span> Factories Act STEL (15 ppm)</div>
+            <div class="legend-item"><span class="legend-dot" style="background:#34d399; border:1px dashed #34d399;"></span> ACGIH TWA (1 ppm)</div>
+          </div>
+        </div>
+        <div class="svg-chart-container" style="height:230px; position:relative;" id="dc-chart-container">
+          <svg id="dc-curve-svg" class="accuracy-svg" viewBox="0 0 540 220" preserveAspectRatio="none"></svg>
+          <div id="dc-tooltip" class="chart-tooltip-box"></div>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-top:8px; font-size:11px; color:var(--text-muted);">
+          <span>Shift Start (0h)</span>
+          <span>Shift Mid (4h)</span>
+          <span>Shift End (8h)</span>
+        </div>
+      </div>
+
+      <!-- Method Specific Scientific Curve Explanation -->
+      <div style="background:rgba(15,23,42,0.8); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:12px 14px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:6px;">
+          <span style="font-size:12px; font-weight:700; color:#38bdf8;" id="dc-method-title">🔬 Method: Cu-PAN Optical Colorimetric Strip</span>
+          <span style="font-family:'JetBrains Mono'; font-size:11px; color:#facc15;" id="dc-method-formula">Formula: a* = 4.65 + 4.34·[H₂S]</span>
+        </div>
+        <div style="font-size:12px; color:var(--text-secondary); line-height:1.4;" id="dc-method-desc">
+          Calculates cumulative shift dose by integrating discrete scans over time using that method's calibration curve. Shared regulatory thresholds (Factories Act & ACGIH) apply uniformly across all detection methods.
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Quick Scan Simulator Modal -->
   <div id="scan-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); backdrop-filter:blur(8px); z-index:100; align-items:center; justify-content:center;">
     <div class="glass-card" style="max-width:460px; width:90%;">
@@ -695,6 +1001,153 @@
       <div style="display:flex; justify-content:flex-end; gap:10px;">
         <button class="btn btn-secondary" id="btn-cancel-issue-strip">Cancel</button>
         <button class="btn btn-primary" id="btn-submit-issue-strip">Issue & Activate Strip ✓</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cast New Batch Modal (Section 1) -->
+  <div id="modal-cast-batch" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); backdrop-filter:blur(8px); z-index:100; align-items:center; justify-content:center;">
+    <div class="glass-card" style="max-width:480px; width:90%; border:1px solid #38bdf8;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h3 style="color:#38bdf8; margin:0;">Cast New Dosimeter Batch</h3>
+        <button class="btn btn-secondary" id="btn-close-cast-modal" style="padding:4px 8px;">✕</button>
+      </div>
+      <p style="font-size:13px; color:var(--text-secondary); margin-bottom:18px;">
+        Registers freshly synthesized Cu-PAN indicator strips with virgin baseline verification.
+      </p>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;">Batch ID:</label>
+        <input type="text" id="cast-batch-id" value="BATCH_2026_Q2_01" style="width:100%; padding:10px; background:#0f172a; color:#38bdf8; border:1px solid var(--border-color); border-radius:8px; font-family:'JetBrains Mono'; font-weight:700;">
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
+        <div>
+          <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;">Shelf Validity (Days):</label>
+          <input type="number" id="cast-days-expiry" value="90" min="1" max="365" style="width:100%; padding:10px; background:#0f172a; color:#fff; border:1px solid var(--border-color); border-radius:8px;">
+        </div>
+        <div>
+          <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;">Total Strips Cast:</label>
+          <input type="number" id="cast-total-strips" value="500" min="50" max="5000" style="width:100%; padding:10px; background:#0f172a; color:#fff; border:1px solid var(--border-color); border-radius:8px;">
+        </div>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;">Storage Condition:</label>
+        <input type="text" id="cast-storage" value="Desiccated pouch, 4°C sealed dark container" style="width:100%; padding:10px; background:#0f172a; color:#fff; border:1px solid var(--border-color); border-radius:8px;">
+      </div>
+      <div style="margin-bottom:18px;">
+        <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;">Virgin Baseline CIE L*a*b* (Target: 42.0, 38.0, -12.0):</label>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
+          <input type="number" step="0.1" id="cast-lab-l" value="42.1" placeholder="L*" style="padding:8px; background:#0f172a; color:#fff; border:1px solid var(--border-color); border-radius:8px; text-align:center;">
+          <input type="number" step="0.1" id="cast-lab-a" value="37.9" placeholder="a*" style="padding:8px; background:#0f172a; color:#fff; border:1px solid var(--border-color); border-radius:8px; text-align:center;">
+          <input type="number" step="0.1" id="cast-lab-b" value="-11.9" placeholder="b*" style="padding:8px; background:#0f172a; color:#fff; border:1px solid var(--border-color); border-radius:8px; text-align:center;">
+        </div>
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:10px;">
+        <button class="btn btn-secondary" id="btn-cancel-cast-batch">Cancel</button>
+        <button class="btn btn-primary" id="btn-submit-cast-batch">Cast & Certify Batch ✓</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Run Virgin Baseline QC Check Modal (Section 1) -->
+  <div id="modal-batch-qc" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); backdrop-filter:blur(8px); z-index:100; align-items:center; justify-content:center;">
+    <div class="glass-card" style="max-width:500px; width:90%; border:1px solid #f59e0b;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h3 style="color:#f59e0b; margin:0;">🧪 Virgin Baseline QC Specification Check</h3>
+        <button class="btn btn-secondary" id="btn-close-qc-modal" style="padding:4px 8px;">✕</button>
+      </div>
+      <p style="font-size:13px; color:var(--text-secondary); margin-bottom:16px;">
+        Evaluates virgin indicator strip chemistry against pristine Cu(II)–PAN complex S₀ (L*=42.0, a*=38.0, b*=-12.0). If CIEDE2000 ΔE > 3.0, the batch is rejected.
+      </p>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;">Select Target Batch:</label>
+        <select id="qc-batch-select" style="width:100%; padding:10px; background:#0f172a; color:#38bdf8; border:1px solid var(--border-color); border-radius:8px; font-weight:700;"></select>
+      </div>
+
+      <!-- Presets -->
+      <div style="margin-bottom:14px;">
+        <span style="font-size:11px; color:var(--text-muted); text-transform:uppercase;">Test Presets:</span>
+        <div style="display:flex; gap:8px; margin-top:4px;">
+          <button class="btn btn-secondary" id="qc-preset-pass" style="padding:4px 10px; font-size:11px; color:#34d399;">
+            ✓ Pristine Cu-PAN (ΔE ≈ 0.3)
+          </button>
+          <button class="btn btn-secondary" id="qc-preset-fail" style="padding:4px 10px; font-size:11px; color:#f87171;">
+            ⚠️ Compromised / Aged (ΔE ≈ 4.8)
+          </button>
+        </div>
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;">Measured Virgin CIE L*a*b*:</label>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
+          <input type="number" step="0.1" id="qc-lab-l" value="42.2" placeholder="L*" style="padding:8px; background:#0f172a; color:#fff; border:1px solid var(--border-color); border-radius:8px; text-align:center;">
+          <input type="number" step="0.1" id="qc-lab-a" value="37.8" placeholder="a*" style="padding:8px; background:#0f172a; color:#fff; border:1px solid var(--border-color); border-radius:8px; text-align:center;">
+          <input type="number" step="0.1" id="qc-lab-b" value="-12.1" placeholder="b*" style="padding:8px; background:#0f172a; color:#fff; border:1px solid var(--border-color); border-radius:8px; text-align:center;">
+        </div>
+      </div>
+
+      <div id="qc-result-box" style="display:none; padding:12px; border-radius:10px; margin-bottom:16px; font-size:12px; line-height:1.4;"></div>
+
+      <div style="display:flex; justify-content:flex-end; gap:10px;">
+        <button class="btn btn-secondary" id="btn-cancel-batch-qc">Cancel</button>
+        <button class="btn btn-primary" id="btn-execute-batch-qc" style="background:#f59e0b; border-color:#f59e0b; color:#020617;">Execute QC Decision →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Issue Wristband QR Modal (Section 7) -->
+  <div id="modal-wristband-issue-qr" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); z-index:100; align-items:center; justify-content:center;">
+    <div class="glass-card" style="max-width:540px; width:92%; border:1px solid #38bdf8;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h3 style="color:#38bdf8; margin:0;">🪪 Issue Dosimeter Wristband QR</h3>
+        <button class="btn btn-secondary" id="btn-close-wristband-modal" style="padding:4px 8px;">✕</button>
+      </div>
+      <p style="font-size:12.5px; color:var(--text-secondary); margin-bottom:16px;">
+        Encodes <strong>Worker ↔ Batch ↔ Method</strong> into an unforgeable QR code on the physical wristband, eliminating manual entry and mix-ups.
+      </p>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+        <div>
+          <label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:4px;">Worker:</label>
+          <select id="wb-assign-worker-select" style="width:100%; padding:8px; background:#0f172a; color:#fff; border:1px solid var(--border-color); border-radius:8px;"></select>
+        </div>
+        <div>
+          <label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:4px;">Stock Batch (QC Passed):</label>
+          <select id="wb-assign-batch-select" style="width:100%; padding:8px; background:#0f172a; color:#34d399; border:1px solid var(--border-color); border-radius:8px; font-weight:700;"></select>
+        </div>
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:4px;">Detection Method:</label>
+        <select id="wb-assign-method-select" style="width:100%; padding:8px; background:#0f172a; color:#facc15; border:1px solid var(--border-color); border-radius:8px; font-weight:600;">
+          <option value="cupan_optical">Cu-PAN Optical Strip (SIH26118 Standard, 0.1-100 ppm)</option>
+          <option value="lead_acetate">Lead Acetate Colorimetric (Historical Indicator, 1-20 ppm)</option>
+          <option value="gold_np">Gold Nanoparticle Resonator (High Sensitivity, 0.05-10 ppm)</option>
+          <option value="fluorescent">Fluorescent Quenching Film (Organic Fluorophore, 0.01-5 ppm)</option>
+        </select>
+      </div>
+
+      <div id="wb-preview-container" style="margin-bottom:16px;"></div>
+
+      <div style="display:flex; justify-content:flex-end; gap:10px;">
+        <button class="btn btn-secondary" id="btn-cancel-wristband-issue">Cancel</button>
+        <button class="btn btn-primary" id="btn-generate-wristband-qr">Generate Wristband QR Badge ✓</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Trust Certificate Modal (Section 8) -->
+  <div id="modal-audit-cert" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); z-index:100; align-items:center; justify-content:center; padding:16px;">
+    <div class="glass-card" style="max-width:560px; width:92%; border:1px solid #38bdf8; max-height:92vh; overflow-y:auto;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; border-bottom:1px solid #334155; padding-bottom:12px;">
+        <div>
+          <div style="color:#38bdf8; font-size:11px; font-weight:800; letter-spacing:1px;">CYBER-PHYSICAL SYSTEM VERIFICATION</div>
+          <h3 style="margin:4px 0 0 0; color:#fff; font-size:18px;">🛡️ Cryptographic Scan Audit Certificate</h3>
+        </div>
+        <button class="btn btn-secondary" id="btn-close-audit-cert" style="padding:4px 10px;">✕</button>
+      </div>
+
+      <div id="audit-cert-content" style="font-size:13px; color:#cbd5e1; line-height:1.5;">
+        <div style="text-align:center; padding:30px; color:var(--text-muted);">Loading cryptographic certificate...</div>
       </div>
     </div>
   </div>

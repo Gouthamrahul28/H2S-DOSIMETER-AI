@@ -18,7 +18,8 @@ tabButtons.forEach(btn => {
     document.getElementById(targetId).classList.add("active");
 
     const titles = {
-      "tab-operations": "Operations Monitoring Dashboard",
+      "tab-operations": "Shift Monitor (Supervisor Home) & Operations Dashboard",
+      "tab-batches": "Badge Stock / Wristband Lab & Virgin Baseline QC",
       "tab-ai-model": "AI Model Center & Version Registry",
       "tab-safety": "Safety Center & Threshold Version Control",
       "tab-workers": "Worker & Analytics Explorer",
@@ -28,10 +29,16 @@ tabButtons.forEach(btn => {
   });
 });
 
+// Shift Monitor State
+let currentStandard = "FACTORIES_ACT";
+let shiftWorkersCache = [];
+
 // Load All Dashboard Data
 async function loadDashboard() {
   try {
     await Promise.all([
+      loadShiftMonitor(),
+      loadBatches(),
       loadKPIs(),
       loadScans(),
       loadAlerts(),
@@ -43,6 +50,138 @@ async function loadDashboard() {
   } catch (err) {
     console.error("Error loading dashboard data:", err);
   }
+}
+
+// 0. Shift Monitor & Cumulative Dose Engine
+async function loadShiftMonitor() {
+  try {
+    const data = await API.getShiftMonitor(currentStandard);
+    if (!data) return;
+
+    // Shift Info Header
+    const shift = data.shift_info;
+    const std = data.standard_applied;
+    const nameEl = document.getElementById("shift-display-name");
+    if (nameEl) nameEl.textContent = shift.shift_name;
+
+    const badgeEl = document.getElementById("shift-elapsed-badge");
+    if (badgeEl) badgeEl.textContent = `⏱️ ${shift.elapsed_hours}h elapsed / ${shift.total_shift_hours}h shift`;
+
+    // Standard description
+    const descEl = document.getElementById("shift-standard-desc");
+    if (descEl) {
+      if (currentStandard === "DUAL") {
+        descEl.innerHTML = `<strong>Dual Compliance Mode:</strong> Comparing live shift exposure against both <em>Factories Act, 1948</em> (10 ppm TWA / 15 ppm STEL) and <em>ACGIH</em> (1 ppm TWA / 5 ppm STEL).`;
+      } else {
+        descEl.innerHTML = `<strong>${std.name}:</strong> 8-hr TWA ceiling: <strong>${std.twa_ppm} ppm</strong> (${std.shift_dose_limit_ppm_h} ppm·h) | 15-min STEL: <strong>${std.stel_ppm} ppm</strong>. Each method computes dose with its specific curve.`;
+      }
+    }
+
+    // Active Standard Badge
+    const activeBadge = document.getElementById("active-std-badge");
+    if (activeBadge) {
+      activeBadge.textContent = currentStandard === "DUAL" ? "Dual Compliance View" : std.name;
+    }
+
+    // Shift KPIs
+    const kpis = data.summary_kpis;
+    const totalEl = document.getElementById("shift-kpi-total");
+    if (totalEl) totalEl.textContent = kpis.monitored_workers;
+    const emEl = document.getElementById("shift-kpi-emerald");
+    if (emEl) emEl.textContent = kpis.emerald_count;
+    const amEl = document.getElementById("shift-kpi-amber");
+    if (amEl) amEl.textContent = kpis.amber_count;
+    const redEl = document.getElementById("shift-kpi-red");
+    if (redEl) redEl.textContent = kpis.red_count;
+    const avgEl = document.getElementById("shift-kpi-avg-dose");
+    if (avgEl) avgEl.textContent = `${kpis.avg_shift_dose_ppm_h} ppm·h`;
+
+    // Cache workers for search
+    shiftWorkersCache = data.workers || [];
+    renderShiftWorkersTable(shiftWorkersCache, currentStandard);
+  } catch (err) {
+    console.error("Error loading shift monitor:", err);
+  }
+}
+
+function renderShiftWorkersTable(workers, standard) {
+  const tbody = document.getElementById("shift-workers-table-body");
+  if (!tbody) return;
+
+  if (!workers || workers.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:24px; color:var(--text-muted);">No workers match the search criteria.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = workers.map(w => {
+    const tier = w.tier;
+    const tierClass = tier.tier_code === "RED" ? "tier-red" : (tier.tier_code === "AMBER" ? "tier-amber" : "tier-emerald");
+    const tierIcon = tier.tier_code === "RED" ? "🚨" : (tier.tier_code === "AMBER" ? "⚠️" : "✓");
+
+    // Method badge class & icon
+    const mKey = w.method_key;
+    const mBadgeClass = mKey === "CUPAN_OPTICAL" ? "method-cupan" : (mKey === "LEAD_ACETATE" ? "method-lead" : (mKey === "ELECTROCHEMICAL" ? "method-elec" : "method-nano"));
+    const methodInfo = w.method || {};
+
+    // Compliance Bar Calculation
+    const comp = w.compliance || {};
+    const pct = standard === "ACGIH" ? comp.acgih_pct : comp.factories_act_pct;
+    const barColor = pct >= 100 ? "#ef4444" : (pct >= 50 ? "#f59e0b" : "#10b981");
+
+    return `
+      <tr>
+        <td>
+          <div style="font-weight:700; color:#fff;">${w.name}</div>
+          <div style="font-size:11px; color:var(--text-muted);">${w.badge_number} • ${w.department}</div>
+        </td>
+        <td>
+          <span class="method-badge ${mBadgeClass}" title="${methodInfo.name} - Calibration: ${methodInfo.formula || 'Calibrated'}">
+            <span>${methodInfo.icon || '🧪'}</span>
+            <span>${methodInfo.short_badge || w.method_key}</span>
+          </span>
+          <div style="font-size:10px; color:var(--text-muted); margin-top:3px; font-family:'JetBrains Mono';">${methodInfo.formula || ''}</div>
+        </td>
+        <td>
+          <div class="dose-val-display" style="color:#38bdf8;">${w.cumulative_dose_ppm_h.toFixed(2)} <span style="font-size:11px; color:var(--text-muted);">ppm·h</span></div>
+          <div style="font-size:10.5px; color:var(--text-muted);">TWA: ${w.twa_current_ppm.toFixed(2)} ppm</div>
+        </td>
+        <td>
+          <span class="tier-badge ${tierClass}">
+            <span>${tierIcon}</span>
+            <span>${tier.tier_badge}</span>
+          </span>
+          <div style="font-size:10px; color:${tier.color_hex}; margin-top:3px; font-weight:600;">${tier.status_text}</div>
+        </td>
+        <td>
+          <div style="font-weight:600; color:#cbd5e1;">${w.last_read_str}</div>
+          <div style="font-size:10.5px; color:var(--text-muted);">${w.last_ppm.toFixed(1)} ppm • ${w.scan_count} scans</div>
+        </td>
+        <td>
+          <div class="comp-meter-container">
+            <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:3px;">
+              <span style="font-weight:700; color:${barColor};">${pct.toFixed(0)}% Limit</span>
+              <span style="font-size:10px; color:var(--text-muted);">Peak: ${w.stel_peak_ppm.toFixed(1)} ppm</span>
+            </div>
+            <div class="comp-meter-bar-wrapper">
+              <div class="comp-meter-fill" style="width:${Math.min(100, pct)}%; background:${barColor};"></div>
+              <!-- 50% Amber marker line -->
+              <div class="comp-marker-twa" style="left:50%;" title="50% Amber Caution Threshold"></div>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:9.5px; color:var(--text-muted);">
+              <span>0</span>
+              <span style="color:#facc15;">50%</span>
+              <span style="color:#ef4444;">100%</span>
+            </div>
+          </div>
+        </td>
+        <td>
+          <button class="btn btn-secondary" style="padding:5px 10px; font-size:11px; display:inline-flex; align-items:center; gap:4px; color:#38bdf8; border-color:rgba(56,189,248,0.35);" onclick="window.openWorkerDoseModal('${w.worker_id}')">
+            📈 Dose Curve
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join("");
 }
 
 // 1. Operations KPIs
@@ -84,9 +223,14 @@ async function loadScans() {
         <td>${statusPill}</td>
         <td>${Math.round(s.model_confidence * 100)}%</td>
         <td>
-          <button class="btn btn-secondary" style="padding:4px 8px; font-size:11px;" onclick="window.reviewScan('${s.scan_id}')">
-            ${s.supervisor_reviewed ? "✓ Reviewed" : "Approve for Training"}
-          </button>
+          <div style="display:flex; gap:4px;">
+            <button class="btn btn-secondary" style="padding:4px 8px; font-size:11px;" onclick="window.reviewScan('${s.scan_id}')">
+              ${s.supervisor_reviewed ? "✓ Reviewed" : "Approve"}
+            </button>
+            <button class="btn btn-secondary" style="padding:4px 8px; font-size:11px; color:#38bdf8; border-color:rgba(56,189,248,0.4);" onclick="window.openAuditCertificateModal('${s.scan_id}')" title="Inspect cryptographic SHA-256 hash & certified calibration curve">
+              🛡️ Audit
+            </button>
+          </div>
         </td>
       </tr>
     `;
@@ -411,83 +555,268 @@ function renderConfusionMatrix(matrix, classes) {
   container.innerHTML = html;
 }
 
-// Graph 4: Cu-PAN Calibration Response (RGB Intensity vs H2S PPM)
-function renderCalibrationCurve(curve) {
+// Shared Cu-PAN Chemical Optical Spectrum Ladder (Purple-Magenta -> Rose -> Coral -> Orange -> Yellow)
+const CUPAN_SPECTRUM_LADDER = [
+  { ppm: 0.0, rgb: [149, 73, 120], hex: "#954978", name: "Intact Cu-PAN (Purple-Magenta)" },
+  { ppm: 0.8, rgb: [171, 78, 114], hex: "#AB4E72", name: "Magenta-Violet" },
+  { ppm: 2.5, rgb: [193, 88, 106], hex: "#C1586A", name: "Rose-Red" },
+  { ppm: 6.0, rgb: [209, 102, 98], hex: "#D16662", name: "Coral" },
+  { ppm: 12.0, rgb: [223, 122, 91], hex: "#DF7A5B", name: "Salmon-Orange" },
+  { ppm: 22.0, rgb: [233, 144, 83], hex: "#E99053", name: "Orange" },
+  { ppm: 38.0, rgb: [236, 165, 74], hex: "#ECA54A", name: "Amber-Orange" },
+  { ppm: 55.0, rgb: [238, 185, 68], hex: "#EEB944", name: "Amber" },
+  { ppm: 72.0, rgb: [239, 201, 62], hex: "#EFC93E", name: "Golden Yellow" },
+  { ppm: 90.0, rgb: [243, 211, 59], hex: "#F3D33B", name: "Yellow" },
+  { ppm: 110.0, rgb: [247, 218, 52], hex: "#F7DA34", name: "Free PAN Yellow" }
+];
+
+function getCupanSpectrumColor(ppm) {
+  const p = Math.max(0.0, parseFloat(ppm) || 0.0);
+  if (p <= CUPAN_SPECTRUM_LADDER[0].ppm) return CUPAN_SPECTRUM_LADDER[0].hex;
+  const last = CUPAN_SPECTRUM_LADDER[CUPAN_SPECTRUM_LADDER.length - 1];
+  if (p >= last.ppm) return last.hex;
+  for (let i = 0; i < CUPAN_SPECTRUM_LADDER.length - 1; i++) {
+    const a1 = CUPAN_SPECTRUM_LADDER[i];
+    const a2 = CUPAN_SPECTRUM_LADDER[i + 1];
+    if (p >= a1.ppm && p <= a2.ppm) {
+      const frac = (p - a1.ppm) / (a2.ppm - a1.ppm);
+      const r = Math.round(a1.rgb[0] + frac * (a2.rgb[0] - a1.rgb[0]));
+      const g = Math.round(a1.rgb[1] + frac * (a2.rgb[1] - a1.rgb[1]));
+      const b = Math.round(a1.rgb[2] + frac * (a2.rgb[2] - a1.rgb[2]));
+      return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+    }
+  }
+  return last.hex;
+}
+
+function getCupanSpectrumRgb(ppm) {
+  const p = Math.max(0.0, parseFloat(ppm) || 0.0);
+  if (p <= CUPAN_SPECTRUM_LADDER[0].ppm) return CUPAN_SPECTRUM_LADDER[0].rgb;
+  const last = CUPAN_SPECTRUM_LADDER[CUPAN_SPECTRUM_LADDER.length - 1];
+  if (p >= last.ppm) return last.rgb;
+  for (let i = 0; i < CUPAN_SPECTRUM_LADDER.length - 1; i++) {
+    const a1 = CUPAN_SPECTRUM_LADDER[i];
+    const a2 = CUPAN_SPECTRUM_LADDER[i + 1];
+    if (p >= a1.ppm && p <= a2.ppm) {
+      const frac = (p - a1.ppm) / (a2.ppm - a1.ppm);
+      const r = Math.round(a1.rgb[0] + frac * (a2.rgb[0] - a1.rgb[0]));
+      const g = Math.round(a1.rgb[1] + frac * (a2.rgb[1] - a1.rgb[1]));
+      const b = Math.round(a1.rgb[2] + frac * (a2.rgb[2] - a1.rgb[2]));
+      return [r, g, b];
+    }
+  }
+  return last.rgb;
+}
+
+function getSpectrumStageName(ppm) {
+  const p = Math.max(0.0, parseFloat(ppm) || 0.0);
+  if (p <= 0.4) return "Intact Cu-PAN (Purple)";
+  if (p <= 1.5) return "Magenta-Violet";
+  if (p <= 4.0) return "Rose-Red";
+  if (p <= 8.0) return "Coral";
+  if (p <= 16.0) return "Salmon-Orange";
+  if (p <= 28.0) return "Orange";
+  if (p <= 45.0) return "Amber-Orange";
+  if (p <= 60.0) return "Amber";
+  return "Yellow";
+}
+
+// Graph 4: Colorimetric CIELAB a* Coordinate vs [H2S] Calibration Response
+function renderCalibrationCurve(calibData) {
   const svg = document.getElementById("calib-curve-svg");
-  if (!svg || !curve || curve.length === 0) return;
+  if (!svg) return;
 
-  const w = 500, h = 240;
-  const padL = 50, padR = 20, padT = 18, padB = 34;
-  const plotW = w - padL - padR;
-  const plotH = h - padT - padB;
+  // Calibrated experimental dosimeter reference dataset (18 precision points up to 20 ppm)
+  // Each point's color is strictly derived from the Cu-PAN chemical optical spectrum
+  const defaultPoints = [
+    { ppm: 0.1, a_star: 5.0, stage: "0.1 ppm (Intact Cu-PAN Purple)", is_linear: true },
+    { ppm: 0.3, a_star: 6.0, stage: "0.3 ppm (Sub-PPM Trace Purple)", is_linear: true },
+    { ppm: 0.6, a_star: 7.0, stage: "0.6 ppm (First Displacement)", is_linear: true },
+    { ppm: 0.7, a_star: 8.0, stage: "0.7 ppm (Magenta-Violet)", is_linear: true },
+    { ppm: 1.0, a_star: 9.0, stage: "1.0 ppm (OSHA PEL Threshold)", is_linear: true },
+    { ppm: 1.2, a_star: 10.0, stage: "1.2 ppm (Violet-Rose)", is_linear: true },
+    { ppm: 1.5, a_star: 11.0, stage: "1.5 ppm (Reaction Knee Point)", is_linear: true },
+    { ppm: 2.0, a_star: 11.0, stage: "2.0 ppm (Saturation Plateau / Rose)", is_linear: false },
+    { ppm: 2.5, a_star: 11.0, stage: "2.5 ppm (Rose-Red S2)", is_linear: false },
+    { ppm: 4.0, a_star: 11.0, stage: "4.0 ppm (Plateau / Rose-Coral)", is_linear: false },
+    { ppm: 6.0, a_star: 11.0, stage: "6.0 ppm (Plateau / Coral S3)", is_linear: false },
+    { ppm: 8.0, a_star: 11.0, stage: "8.0 ppm (Plateau / Coral-Orange)", is_linear: false },
+    { ppm: 10.0, a_star: 11.0, stage: "10.0 ppm (OSHA Ceiling / Salmon)", is_linear: false },
+    { ppm: 12.0, a_star: 11.0, stage: "12.0 ppm (Salmon-Orange S4)", is_linear: false },
+    { ppm: 14.0, a_star: 11.0, stage: "14.0 ppm (Plateau / Salmon-Orange)", is_linear: false },
+    { ppm: 16.0, a_star: 11.0, stage: "16.0 ppm (Plateau / Orange Transition)", is_linear: false },
+    { ppm: 18.0, a_star: 11.0, stage: "18.0 ppm (Plateau / Orange)", is_linear: false },
+    { ppm: 20.0, a_star: 11.0, stage: "20.0 ppm (OSHA Peak / Orange)", is_linear: false }
+  ];
 
-  const maxPpm = 120;
-  const x = ppm => padL + (ppm / maxPpm) * plotW;
-  const y = rgb => padT + ((255 - rgb) / 255) * plotH;
+  const points = (calibData && Array.isArray(calibData.points) && calibData.points.length > 0)
+    ? calibData.points
+    : (Array.isArray(calibData) && calibData.length > 0 && calibData[0].a_star !== undefined ? calibData : defaultPoints);
 
-  // Build grid lines
-  let gridLines = "";
-  // Y-axis: RGB 0 to 255
-  [0, 50, 100, 150, 200, 255].forEach(val => {
+  const w = 520, h = 280;
+  const padL = 62, padR = 26, padT = 66, padB = 40;
+  const plotW = w - padL - padR; // 432
+  const plotH = h - padT - padB; // 174
+
+  const maxPpm = 20.0;
+  // Coordinate transformations
+  // X: [H2S] (ppm) from 0.0 to 20.0 ppm
+  const x = ppm => padL + (Math.max(0.0, Math.min(maxPpm, ppm)) / maxPpm) * plotW;
+  // Y: a* coordinate in L*a*b* color space from 4.0 to 14.0
+  const y = aStar => padT + ((14.0 - Math.max(4.0, Math.min(14.0, aStar))) / 10.0) * plotH;
+
+  // Build Grid lines and Ticks
+  let gridAndTicks = "";
+
+  // Y-axis: 4 to 14 (step of 2 for labels, step of 1 for minor ticks)
+  [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14].forEach(val => {
     const yPos = y(val);
-    gridLines += `
-      <line x1="${padL}" y1="${yPos}" x2="${w - padR}" y2="${yPos}" stroke="rgba(255,255,255,0.06)" stroke-dasharray="3,3" />
-      <text x="${padL - 6}" y="${yPos + 3}" fill="#64748b" font-size="9" text-anchor="end">${val}</text>
-    `;
+    const isMajor = (val % 2 === 0);
+    if (isMajor) {
+      gridAndTicks += `
+        <line x1="${padL}" y1="${yPos.toFixed(1)}" x2="${w - padR}" y2="${yPos.toFixed(1)}" stroke="rgba(255,255,255,0.06)" stroke-dasharray="3,3" />
+        <line x1="${(padL - 6).toFixed(1)}" y1="${yPos.toFixed(1)}" x2="${padL}" y2="${yPos.toFixed(1)}" stroke="#94a3b8" stroke-width="1.4" />
+        <text x="${(padL - 9).toFixed(1)}" y="${(yPos + 3.5).toFixed(1)}" fill="#cbd5e1" font-size="10.5" font-family="'JetBrains Mono', monospace" text-anchor="end">${val}</text>
+      `;
+    } else {
+      // Minor tick
+      gridAndTicks += `
+        <line x1="${(padL - 3.5).toFixed(1)}" y1="${yPos.toFixed(1)}" x2="${padL}" y2="${yPos.toFixed(1)}" stroke="#64748b" stroke-width="1.1" />
+      `;
+    }
   });
 
-  // X-axis: 0 to 120 PPM
-  [0, 20, 40, 60, 80, 100, 120].forEach(ppm => {
-    const xPos = x(ppm);
-    gridLines += `
-      <line x1="${xPos}" y1="${padT}" x2="${xPos}" y2="${h - padB}" stroke="rgba(255,255,255,0.04)" />
-      <text x="${xPos}" y="${h - padB + 13}" fill="#64748b" font-size="9" text-anchor="middle">${ppm}</text>
-    `;
-  });
+  // X-axis: 0 to 20 (step of 2 for labels, step of 1 for minor ticks)
+  for (let pVal = 0; pVal <= 20; pVal += 1) {
+    const xPos = x(pVal);
+    const isMajor = (pVal % 2 === 0);
+    if (isMajor) {
+      gridAndTicks += `
+        <line x1="${xPos.toFixed(1)}" y1="${padT}" x2="${xPos.toFixed(1)}" y2="${h - padB}" stroke="rgba(255,255,255,0.05)" stroke-dasharray="3,3" />
+        <line x1="${xPos.toFixed(1)}" y1="${h - padB}" x2="${xPos.toFixed(1)}" y2="${h - padB + 6}" stroke="#94a3b8" stroke-width="1.4" />
+        <text x="${xPos.toFixed(1)}" y="${h - padB + 18}" fill="#cbd5e1" font-size="10" font-family="'JetBrains Mono', monospace" text-anchor="middle">${pVal}</text>
+      `;
+    } else {
+      // Minor tick
+      gridAndTicks += `
+        <line x1="${xPos.toFixed(1)}" y1="${h - padB}" x2="${xPos.toFixed(1)}" y2="${h - padB + 3.5}" stroke="#64748b" stroke-width="1.1" />
+      `;
+    }
+  }
 
-  // Polylines for R, G, B
-  const rPts = curve.map(pt => `${x(pt.ppm).toFixed(1)},${y(pt.r).toFixed(1)}`).join(" ");
-  const gPts = curve.map(pt => `${x(pt.ppm).toFixed(1)},${y(pt.g).toFixed(1)}`).join(" ");
-  const bPts = curve.map(pt => `${x(pt.ppm).toFixed(1)},${y(pt.b).toFixed(1)}`).join(" ");
+  // Linear Fit dashed line: a* = 4.65 + 4.34 · [H2S] (up to knee at ~1.46 ppm, a* = 11.0)
+  const lineX1 = x(0.0).toFixed(1);
+  const lineY1 = y(4.65).toFixed(1);
+  const lineX2 = x(1.46).toFixed(1);
+  const lineY2 = y(11.0).toFixed(1);
 
+  // Saturation Plateau Line: a* = 11.0 from 1.46 ppm across to 20.0 ppm
+  const platX1 = x(1.46).toFixed(1);
+  const platX2 = x(20.0).toFixed(1);
+  const platY = y(11.0).toFixed(1);
+
+  // Colors for 0.0 ppm and 20.0 ppm in Cu-PAN spectrum
+  const colorZero = getCupanSpectrumColor(0.0);   // #954978 (Deep Purple)
+  const colorMax = getCupanSpectrumColor(20.0);   // #e78c55 (Orange)
+
+  // Render SVG Content
   svg.innerHTML = `
     <defs>
-      <filter id="glowGreen" x="-20%" y="-20%" width="140%" height="140%">
-        <feGaussianBlur stdDeviation="2" result="blur" />
-        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+      <!-- Top Arrowhead Marker -->
+      <marker id="calib-top-arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#cbd5e1" />
+      </marker>
+      <!-- Subtle point glow -->
+      <filter id="pointGlow" x="-30%" y="-30%" width="160%" height="160%">
+        <feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#000000" flood-opacity="0.6" />
       </filter>
     </defs>
-    ${gridLines}
+
+    <!-- Top Visual Swatch Banner: Color-accurate Cu-PAN spectrum transition (0.0 ppm Purple -> 20.0 ppm Orange) -->
+    <g class="calib-top-swatches">
+      <!-- 0.0 ppm unexposed spectrum card -->
+      <g transform="translate(${padL + 4}, 8)">
+        <rect width="40" height="40" rx="6" fill="${colorZero}" stroke="rgba(255,255,255,0.3)" stroke-width="1.5" />
+        <image href="assets/dosimeter_unexposed.png" x="2" y="2" width="36" height="36" preserveAspectRatio="none" opacity="0.3" style="border-radius:4px; mix-blend-mode:luminosity;" />
+        <text x="20" y="49" fill="#c084fc" font-size="8.5" font-family="'JetBrains Mono', monospace" font-weight="700" text-anchor="middle">0.0 ppm</text>
+      </g>
+
+      <!-- Center Transition Arrow -->
+      <g>
+        <line x1="${padL + 58}" y1="28" x2="${w - padR - 58}" y2="28" stroke="#cbd5e1" stroke-width="2.2" marker-end="url(#calib-top-arrow)" />
+        <text x="${(padL + w - padR) / 2}" y="21" fill="#94a3b8" font-size="9" font-weight="600" text-anchor="middle" letter-spacing="0.5">Cu-PAN Chemical Reaction Spectrum (Purple ➔ Rose ➔ Orange) →</text>
+      </g>
+
+      <!-- 20.0 ppm exposed spectrum card -->
+      <g transform="translate(${w - padR - 44}, 8)">
+        <rect width="40" height="40" rx="6" fill="${colorMax}" stroke="rgba(255,255,255,0.3)" stroke-width="1.5" />
+        <image href="assets/dosimeter_exposed.png" x="2" y="2" width="36" height="36" preserveAspectRatio="none" opacity="0.3" style="border-radius:4px; mix-blend-mode:luminosity;" />
+        <text x="20" y="49" fill="#fb923c" font-size="8.5" font-family="'JetBrains Mono', monospace" font-weight="700" text-anchor="middle">20.0 ppm</text>
+      </g>
+    </g>
+
+    <!-- Grid lines and ticks -->
+    ${gridAndTicks}
+
     <!-- Axis Baselines -->
-    <line x1="${padL}" y1="${h - padB}" x2="${w - padR}" y2="${h - padB}" stroke="rgba(255,255,255,0.15)" stroke-width="1.2" />
-    <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${h - padB}" stroke="rgba(255,255,255,0.15)" stroke-width="1.2" />
+    <line x1="${padL}" y1="${h - padB}" x2="${w - padR}" y2="${h - padB}" stroke="#cbd5e1" stroke-width="1.5" />
+    <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${h - padB}" stroke="#cbd5e1" stroke-width="1.5" />
+
     <!-- Axis Titles -->
-    <text x="${padL + plotW / 2}" y="${h - 4}" fill="#cbd5e1" font-size="9.5" font-weight="700" text-anchor="middle" letter-spacing="0.4">H₂S Concentration (PPM) →</text>
-    <text transform="rotate(-90)" x="${-(padT + plotH / 2)}" y="13" fill="#cbd5e1" font-size="9.5" font-weight="700" text-anchor="middle" letter-spacing="0.4">← Optical RGB Intensity (0–255)</text>
-    <!-- Red channel polyline -->
-    <polyline points="${rPts}" fill="none" stroke="#ef4444" stroke-width="2.2" opacity="0.9" />
-    <!-- Blue channel polyline -->
-    <polyline points="${bPts}" fill="none" stroke="#3b82f6" stroke-width="2.2" opacity="0.9" />
-    <!-- Green channel polyline (Primary displacement indicator) -->
-    <polyline points="${gPts}" fill="none" stroke="#22c55e" stroke-width="2.8" filter="url(#glowGreen)" />
-    <!-- Data points for hover -->
-    ${curve.map(pt => `
-      <circle cx="${x(pt.ppm).toFixed(1)}" cy="${y(pt.g).toFixed(1)}" r="4" fill="#0f172a" stroke="#22c55e" stroke-width="1.8" class="calib-point" data-ppm="${pt.ppm}" data-r="${pt.r}" data-g="${pt.g}" data-b="${pt.b}" data-stage="${pt.stage}" style="cursor:pointer;" />
-    `).join("")}
+    <text transform="rotate(-90)" x="${-(padT + plotH / 2)}" y="18" fill="#f8fafc" font-size="11" font-weight="600" text-anchor="middle" letter-spacing="0.3">
+      <tspan font-style="italic">a</tspan><tspan dy="-3" font-size="8.5">*</tspan><tspan dy="3"> coordinate in </tspan><tspan font-style="italic">L</tspan><tspan dy="-3" font-size="8.5">*</tspan><tspan dy="3" font-style="italic">a</tspan><tspan dy="-3" font-size="8.5">*</tspan><tspan dy="3" font-style="italic">b</tspan><tspan dy="-3" font-size="8.5">*</tspan><tspan dy="3"> color space</tspan>
+    </text>
+
+    <text x="${padL + plotW / 2}" y="${h - 6}" fill="#f8fafc" font-size="11" font-weight="600" text-anchor="middle" letter-spacing="0.3">
+      [H<tspan dy="2" font-size="8.5">2</tspan><tspan dy="-2">S] (ppm)</tspan>
+    </text>
+
+    <!-- Linear Regression Fit Line (Dashed White) -->
+    <line x1="${lineX1}" y1="${lineY1}" x2="${lineX2}" y2="${lineY2}" stroke="#ffffff" stroke-width="2.4" stroke-dasharray="6,4" stroke-linecap="round" />
+
+    <!-- Saturation Plateau Line (Dashed Pink) -->
+    <line x1="${platX1}" y1="${platY}" x2="${platX2}" y2="${platY}" stroke="#f472b6" stroke-width="2.2" stroke-dasharray="5,4" stroke-linecap="round" opacity="0.9" />
+
+    <!-- Annotation Box: Equation and R^2 -->
+    <g transform="translate(${x(10.2).toFixed(1)}, ${(y(7.2)).toFixed(1)})">
+      <rect width="150" height="48" rx="6" fill="rgba(15,23,42,0.92)" stroke="rgba(255,255,255,0.12)" />
+      <text x="12" y="21" font-size="11" font-family="'JetBrains Mono', monospace" fill="#f8fafc" font-weight="600">
+        <tspan font-style="italic">a</tspan><tspan dy="-3" font-size="8.5">*</tspan><tspan dy="3">=4.65+4.34·[H</tspan><tspan dy="2" font-size="8.5">2</tspan><tspan dy="-2">S]</tspan>
+      </text>
+      <text x="12" y="38" font-size="10.5" font-family="'JetBrains Mono', monospace" fill="#38bdf8" font-weight="700">R²=0.99070 (0–1.5 ppm)</text>
+    </g>
+
+    <!-- Calibration Data Points (18 precision points up to 20 ppm) accurately colored from Cu-PAN chemical spectrum -->
+    ${points.map(pt => {
+      const cx = x(pt.ppm).toFixed(1);
+      const cy = y(pt.a_star).toFixed(1);
+      // Strictly enforce color accuracy from the Cu-PAN optical spectrum
+      const spectrumHex = getCupanSpectrumColor(pt.ppm);
+      const spectrumRgb = getCupanSpectrumRgb(pt.ppm);
+      const rgbStr = spectrumRgb.join(", ");
+      const stage = pt.stage || getSpectrumStageName(pt.ppm);
+      return `
+        <g class="calib-point" data-ppm="${pt.ppm}" data-astar="${pt.a_star}" data-hex="${spectrumHex}" data-rgb="${rgbStr}" data-stage="${stage}" data-linear="${pt.is_linear !== false}" style="cursor:pointer;" filter="url(#pointGlow)">
+          <circle cx="${cx}" cy="${cy}" r="6.2" fill="${spectrumHex}" stroke="#0f172a" stroke-width="1.8" />
+          <circle cx="${cx}" cy="${cy}" r="7.4" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="0.9" />
+        </g>
+      `;
+    }).join("")}
   `;
 
-  // Tooltip interaction
+  // Tooltip Interaction
   const tooltip = document.getElementById("calib-tooltip");
   const container = document.getElementById("calib-chart-container");
   if (tooltip && container) {
-    const points = svg.querySelectorAll(".calib-point");
-    points.forEach(p => {
+    const pointEls = svg.querySelectorAll(".calib-point");
+    pointEls.forEach(p => {
       p.addEventListener("mouseenter", (e) => {
-        const ppm = parseFloat(e.target.getAttribute("data-ppm")).toFixed(1);
-        const r = e.target.getAttribute("data-r");
-        const g = e.target.getAttribute("data-g");
-        const b = e.target.getAttribute("data-b");
-        const stage = e.target.getAttribute("data-stage");
+        const ppm = parseFloat(p.getAttribute("data-ppm")).toFixed(1);
+        const aStar = parseFloat(p.getAttribute("data-astar")).toFixed(1);
+        const hex = p.getAttribute("data-hex");
+        const rgb = p.getAttribute("data-rgb");
+        const stage = p.getAttribute("data-stage");
+        const isLinear = (p.getAttribute("data-linear") === "true");
 
         const rect = container.getBoundingClientRect();
         const ptX = e.clientX - rect.left;
@@ -496,12 +825,22 @@ function renderCalibrationCurve(curve) {
         tooltip.style.left = `${ptX}px`;
         tooltip.style.top = `${ptY}px`;
         tooltip.innerHTML = `
-          <strong>${ppm} PPM</strong> <span style="color:#94a3b8; font-size:10px;">(${stage})</span><br>
-          <span style="color:#ef4444;">● R: ${r}</span> | <span style="color:#22c55e;">● G: ${g}</span> | <span style="color:#3b82f6;">● B: ${b}</span>
-          <div style="margin-top:4px; display:flex; align-items:center; gap:6px;">
-            <span style="width:14px; height:14px; border-radius:3px; background:rgb(${r},${g},${b}); border:1px solid #fff; display:inline-block;"></span>
-            <span style="font-family:'JetBrains Mono'; font-size:10px; color:#cbd5e1;">rgb(${r}, ${g}, ${b})</span>
+          <div style="font-size:11px; font-weight:700; color:#f8fafc; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
+            <span>[H₂S] = ${ppm} ppm</span>
+            <span style="font-size:9.5px; padding:1px 5px; border-radius:3px; font-weight:600; ${isLinear ? 'background:rgba(56,189,248,0.2); color:#38bdf8;' : 'background:rgba(244,114,182,0.2); color:#f472b6;'}">${isLinear ? 'Linear Dynamic Range' : 'Saturation Plateau'}</span>
           </div>
+          <div style="font-size:11px; color:#cbd5e1; margin-bottom:4px;">
+            <em>a*</em> coordinate: <strong style="color:#ffffff; font-family:'JetBrains Mono';">${aStar}</strong>
+            ${isLinear ? `<span style="color:#94a3b8; font-size:10px;"> (Fit: ${(4.65 + 4.34 * ppm).toFixed(2)})</span>` : `<span style="color:#f472b6; font-size:10px;"> (Ceiling)</span>`}
+          </div>
+          <div style="margin-top:6px; display:flex; align-items:center; gap:8px; padding-top:4px; border-top:1px solid rgba(255,255,255,0.08);">
+            <span style="width:16px; height:16px; border-radius:4px; background:${hex}; border:1px solid #ffffff; display:inline-block; box-shadow:0 0 4px rgba(0,0,0,0.5);"></span>
+            <div>
+              <div style="font-family:'JetBrains Mono'; font-size:10.5px; font-weight:700; color:${hex};">${hex.toUpperCase()}</div>
+              <div style="font-size:9.5px; color:#94a3b8;">Spectrum rgb(${rgb})</div>
+            </div>
+          </div>
+          ${stage ? `<div style="font-size:9.5px; color:#cbd5e1; margin-top:4px; font-weight:500;">${stage}</div>` : ''}
         `;
         tooltip.style.display = "block";
       });
@@ -580,53 +919,6 @@ function renderParityPlot(parityData) {
     return `${x(p).toFixed(1)},${y(low).toFixed(1)}`;
   });
   const conePolyPts = topPts.join(" ") + " " + botPts.join(" ");
-
-  // Continuous Cu-PAN displacement chemical spectrum ladder (Purple -> Violet -> Rose -> Coral -> Orange -> Amber)
-  const CUPAN_SPECTRUM_LADDER = [
-    { ppm: 0.0, rgb: [149, 73, 120], hex: "#954978", name: "Intact Cu-PAN (Purple-Magenta)" },
-    { ppm: 0.8, rgb: [171, 78, 114], hex: "#AB4E72", name: "Magenta-Violet" },
-    { ppm: 2.5, rgb: [193, 88, 106], hex: "#C1586A", name: "Rose-Red" },
-    { ppm: 6.0, rgb: [209, 102, 98], hex: "#D16662", name: "Coral" },
-    { ppm: 12.0, rgb: [223, 122, 91], hex: "#DF7A5B", name: "Salmon-Orange" },
-    { ppm: 22.0, rgb: [233, 144, 83], hex: "#E99053", name: "Orange" },
-    { ppm: 38.0, rgb: [236, 165, 74], hex: "#ECA54A", name: "Amber-Orange" },
-    { ppm: 55.0, rgb: [238, 185, 68], hex: "#EEB944", name: "Amber" },
-    { ppm: 72.0, rgb: [239, 201, 62], hex: "#EFC93E", name: "Golden Yellow" },
-    { ppm: 90.0, rgb: [243, 211, 59], hex: "#F3D33B", name: "Yellow" },
-    { ppm: 110.0, rgb: [247, 218, 52], hex: "#F7DA34", name: "Free PAN Yellow" }
-  ];
-
-  function getCupanSpectrumColor(ppm) {
-    const p = Math.max(0.0, parseFloat(ppm) || 0.0);
-    if (p <= CUPAN_SPECTRUM_LADDER[0].ppm) return CUPAN_SPECTRUM_LADDER[0].hex;
-    const last = CUPAN_SPECTRUM_LADDER[CUPAN_SPECTRUM_LADDER.length - 1];
-    if (p >= last.ppm) return last.hex;
-    for (let i = 0; i < CUPAN_SPECTRUM_LADDER.length - 1; i++) {
-      const a1 = CUPAN_SPECTRUM_LADDER[i];
-      const a2 = CUPAN_SPECTRUM_LADDER[i + 1];
-      if (p >= a1.ppm && p <= a2.ppm) {
-        const frac = (p - a1.ppm) / (a2.ppm - a1.ppm);
-        const r = Math.round(a1.rgb[0] + frac * (a2.rgb[0] - a1.rgb[0]));
-        const g = Math.round(a1.rgb[1] + frac * (a2.rgb[1] - a1.rgb[1]));
-        const b = Math.round(a1.rgb[2] + frac * (a2.rgb[2] - a1.rgb[2]));
-        return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
-      }
-    }
-    return last.hex;
-  }
-
-  function getSpectrumStageName(ppm) {
-    const p = Math.max(0.0, parseFloat(ppm) || 0.0);
-    if (p <= 0.4) return "Intact Cu-PAN (Purple)";
-    if (p <= 1.5) return "Magenta-Violet";
-    if (p <= 4.0) return "Rose-Red";
-    if (p <= 8.0) return "Coral";
-    if (p <= 16.0) return "Salmon-Orange";
-    if (p <= 28.0) return "Orange";
-    if (p <= 45.0) return "Amber-Orange";
-    if (p <= 60.0) return "Amber";
-    return "Yellow";
-  }
 
   // Only plot points within 0 to 60 PPM
   const filteredPoints = points.filter(pt => pt.true_ppm <= 60.0);
@@ -1008,6 +1300,670 @@ if (btnSubmitIssueStrip) {
       alert("Error issuing strip: " + (err.detail || JSON.stringify(err)));
     }
   });
+}
+
+// ============================================================================
+// Shift Monitor Interactive Controls: Standard Selector & Worker Search
+// ============================================================================
+const stdButtons = [
+  { id: "btn-std-factories", code: "FACTORIES_ACT" },
+  { id: "btn-std-acgih", code: "ACGIH" },
+  { id: "btn-std-dual", code: "DUAL" }
+];
+
+stdButtons.forEach(btnInfo => {
+  const el = document.getElementById(btnInfo.id);
+  if (el) {
+    el.addEventListener("click", () => {
+      stdButtons.forEach(b => {
+        const bEl = document.getElementById(b.id);
+        if (bEl) bEl.classList.remove("active");
+      });
+      el.classList.add("active");
+      currentStandard = btnInfo.code;
+      loadShiftMonitor();
+    });
+  }
+});
+
+// Search Worker in Shift Monitor
+const shiftSearchInput = document.getElementById("shift-worker-search");
+if (shiftSearchInput) {
+  shiftSearchInput.addEventListener("input", (e) => {
+    const query = e.target.value.toLowerCase().trim();
+    if (!query) {
+      renderShiftWorkersTable(shiftWorkersCache, currentStandard);
+      return;
+    }
+    const filtered = shiftWorkersCache.filter(w =>
+      w.name.toLowerCase().includes(query) ||
+      w.worker_id.toLowerCase().includes(query) ||
+      w.badge_number.toLowerCase().includes(query) ||
+      w.department.toLowerCase().includes(query) ||
+      w.method.name.toLowerCase().includes(query)
+    );
+    renderShiftWorkersTable(filtered, currentStandard);
+  });
+}
+
+// Refresh Shift Button
+const btnRefreshShift = document.getElementById("btn-refresh-shift");
+if (btnRefreshShift) {
+  btnRefreshShift.addEventListener("click", () => {
+    loadShiftMonitor();
+  });
+}
+
+// ============================================================================
+// Worker Shift Dose Curve Modal & Dynamic SVG Trajectory Engine
+// ============================================================================
+window.openWorkerDoseModal = async function(workerId) {
+  try {
+    const stdQuery = currentStandard === "DUAL" ? "FACTORIES_ACT" : currentStandard;
+    const data = await API.getWorkerDoseCurve(workerId, stdQuery);
+    if (!data || !data.worker) return;
+
+    const modal = document.getElementById("dose-curve-modal");
+    modal.style.display = "flex";
+
+    // Header & Meta
+    document.getElementById("dc-modal-worker-name").textContent = `${data.worker.name} (${data.worker.id})`;
+    document.getElementById("dc-modal-worker-meta").textContent = `Badge: ${data.worker.badge_number} • Dept: ${data.worker.department} • Method: ${data.method.name}`;
+
+    // Tier badge
+    const tierBadge = document.getElementById("dc-modal-tier-badge");
+    const tier = data.tier;
+    tierBadge.className = `tier-badge ${tier.tier_code === 'RED' ? 'tier-red' : (tier.tier_code === 'AMBER' ? 'tier-amber' : 'tier-emerald')}`;
+    tierBadge.textContent = tier.tier_badge;
+
+    // Quick Stats
+    const cur = data.current_dose;
+    document.getElementById("dc-stat-dose").textContent = `${cur.cumulative_dose_ppm_h.toFixed(2)} ppm·h`;
+    document.getElementById("dc-stat-twa").textContent = `${cur.twa_current_ppm.toFixed(2)} ppm`;
+    document.getElementById("dc-stat-stel").textContent = `${cur.stel_peak_ppm.toFixed(2)} ppm`;
+    const actEl = document.getElementById("dc-stat-action");
+    actEl.textContent = tier.status_text;
+    actEl.style.color = tier.color_hex;
+
+    // Method Callout Box
+    const m = data.method;
+    document.getElementById("dc-method-title").textContent = `🔬 Method: ${m.name} (${m.type})`;
+    document.getElementById("dc-method-formula").textContent = `Curve: ${m.formula}`;
+    document.getElementById("dc-method-desc").textContent = `${m.curve_type}. Sampling: ${m.sampling_rate}. Calibrated: ${m.calibration_version}. Shared regulatory limits apply uniformly across all detection methods.`;
+
+    // Render SVG Dose Trajectory Chart
+    renderDoseTrajectoryChart(data);
+  } catch (err) {
+    console.error("Error loading worker dose curve:", err);
+    alert("Could not load worker dose curve.");
+  }
+};
+
+const btnCloseDoseModal = document.getElementById("btn-close-dose-modal");
+if (btnCloseDoseModal) {
+  btnCloseDoseModal.addEventListener("click", () => {
+    document.getElementById("dose-curve-modal").style.display = "none";
+  });
+}
+
+// Close modal when clicking on backdrop
+const doseModal = document.getElementById("dose-curve-modal");
+if (doseModal) {
+  doseModal.addEventListener("click", (e) => {
+    if (e.target === doseModal) {
+      doseModal.style.display = "none";
+    }
+  });
+}
+
+function renderDoseTrajectoryChart(data) {
+  const svg = document.getElementById("dc-curve-svg");
+  if (!svg || !data) return;
+
+  const trajectory = data.trajectory || [];
+  const markers = data.scan_markers || [];
+  const thresholdLines = data.threshold_lines || {};
+
+  const w = 540, h = 220;
+  const padL = 46, padR = 18, padT = 20, padB = 32;
+  const plotW = w - padL - padR;
+  const plotH = h - padT - padB;
+
+  // Compute maximum Y for scale (Dose in ppm·h)
+  const validDoses = trajectory.filter(p => p.cumulative_dose !== null).map(p => p.cumulative_dose);
+  const maxObserved = validDoses.length > 0 ? Math.max(...validDoses) : 5.0;
+  const maxY = Math.max(16.0, Math.ceil(maxObserved * 1.3));
+
+  const x = hour => padL + (hour / 8.0) * plotW;
+  const y = dose => padT + ((maxY - dose) / maxY) * plotH;
+
+  // Grid Lines across 8 hours
+  let gridLines = "";
+  for (let hr = 0; hr <= 8; hr += 2) {
+    const xPos = x(hr);
+    gridLines += `
+      <line x1="${xPos}" y1="${padT}" x2="${xPos}" y2="${h - padB}" stroke="rgba(255,255,255,0.05)" />
+      <text x="${xPos}" y="${h - padB + 14}" fill="#64748b" font-size="9" text-anchor="middle">H${hr}</text>
+    `;
+  }
+
+  // Horizontal Y-grid lines
+  const ySteps = 4;
+  for (let i = 0; i <= ySteps; i++) {
+    const val = (maxY / ySteps) * i;
+    const yPos = y(val);
+    gridLines += `
+      <line x1="${padL}" y1="${yPos}" x2="${w - padR}" y2="${yPos}" stroke="rgba(255,255,255,0.05)" stroke-dasharray="3,3" />
+      <text x="${padL - 6}" y="${yPos + 3}" fill="#64748b" font-size="9" text-anchor="end">${val.toFixed(0)}</text>
+    `;
+  }
+
+  // Statutory Threshold Lines
+  let thresholdSvg = "";
+  // 1. Factories Act 8-hr ceiling scaled (e.g. 10 ppm average)
+  if (thresholdLines.factories_act) {
+    const factTwaDose = 10.0; // 10 ppm baseline reference on scale
+    if (factTwaDose <= maxY) {
+      const yFact = y(factTwaDose);
+      thresholdSvg += `
+        <line x1="${padL}" y1="${yFact}" x2="${w - padR}" y2="${yFact}" stroke="#facc15" stroke-width="1.2" stroke-dasharray="4,4" />
+        <text x="${w - padR - 4}" y="${yFact - 4}" fill="#facc15" font-size="8.5" font-weight="600" text-anchor="end">Factories Act 8-hr TWA (10 ppm)</text>
+      `;
+    }
+  }
+
+  // 2. ACGIH TLV-TWA (1.0 ppm)
+  if (thresholdLines.acgih) {
+    const acgihDose = 1.0;
+    if (acgihDose <= maxY) {
+      const yAcgih = y(acgihDose);
+      thresholdSvg += `
+        <line x1="${padL}" y1="${yAcgih}" x2="${w - padR}" y2="${yAcgih}" stroke="#34d399" stroke-width="1.2" stroke-dasharray="3,3" />
+        <text x="${padL + 6}" y="${yAcgih - 4}" fill="#34d399" font-size="8.5" font-weight="600">ACGIH TWA (1 ppm)</text>
+      `;
+    }
+  }
+
+  // Polyline for observed trajectory
+  const observedPts = trajectory.filter(p => !p.is_projected && p.cumulative_dose !== null);
+  const polyCoords = observedPts.map(p => `${x(p.hour).toFixed(1)},${y(p.cumulative_dose).toFixed(1)}`).join(" ");
+
+  // Gradient Area points
+  let areaSvg = "";
+  if (observedPts.length > 1) {
+    const firstX = x(observedPts[0].hour).toFixed(1);
+    const lastX = x(observedPts[observedPts.length - 1].hour).toFixed(1);
+    const bottomY = (h - padB).toFixed(1);
+    const areaPts = `${firstX},${bottomY} ` + polyCoords + ` ${lastX},${bottomY}`;
+    areaSvg = `<polygon points="${areaPts}" fill="url(#doseGradArea)" />`;
+  }
+
+  // Hourly plot circles
+  const circlesSvg = observedPts.map(p => `
+    <circle cx="${x(p.hour).toFixed(1)}" cy="${y(p.cumulative_dose).toFixed(1)}" r="4" fill="#38bdf8" stroke="#0f172a" stroke-width="1.5" class="dose-chart-dot" data-hr="${p.hour}" data-time="${p.time_str}" data-dose="${p.cumulative_dose.toFixed(2)}" data-ppm="${p.instant_ppm.toFixed(1)}" style="cursor:pointer;" />
+  `).join("");
+
+  // Discrete Scan Markers
+  const scanMarkersSvg = markers.map(m => {
+    const hr = m.minutes_from_start / 60.0;
+    if (hr <= 8.0) {
+      const cx = x(hr).toFixed(1);
+      // approximate dose at that hour
+      const markerDose = observedPts.length > 0 ? (observedPts[Math.min(observedPts.length - 1, Math.round(hr))].cumulative_dose || 0) : 0;
+      const cy = y(markerDose).toFixed(1);
+      return `
+        <g class="dose-scan-pin" data-id="${m.scan_id}" data-time="${m.timestamp}" data-ppm="${m.ppm}" style="cursor:pointer;">
+          <circle cx="${cx}" cy="${cy}" r="6.5" fill="#f59e0b" stroke="#ffffff" stroke-width="1.5" />
+          <circle cx="${cx}" cy="${cy}" r="2" fill="#0f172a" />
+        </g>
+      `;
+    }
+    return "";
+  }).join("");
+
+  svg.innerHTML = `
+    <defs>
+      <linearGradient id="doseGradArea" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.35" />
+        <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.0" />
+      </linearGradient>
+    </defs>
+    ${gridLines}
+    ${thresholdSvg}
+    ${areaSvg}
+    <!-- Base Axes -->
+    <line x1="${padL}" y1="${h - padB}" x2="${w - padR}" y2="${h - padB}" stroke="rgba(255,255,255,0.12)" />
+    <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${h - padB}" stroke="rgba(255,255,255,0.12)" />
+    <!-- Axis Titles -->
+    <text x="${padL + plotW / 2}" y="${h - 4}" fill="#cbd5e1" font-size="9.5" font-weight="700" text-anchor="middle">Shift Elapsed Time (Hours) →</text>
+    <text transform="rotate(-90)" x="${-(padT + plotH / 2)}" y="13" fill="#cbd5e1" font-size="9" font-weight="700" text-anchor="middle">Cumulative Dose (ppm·h) →</text>
+    <!-- Trajectory Polyline -->
+    <polyline points="${polyCoords}" fill="none" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" filter="drop-shadow(0 0 6px #38bdf8)" />
+    <!-- Circles & Markers -->
+    ${circlesSvg}
+    ${scanMarkersSvg}
+  `;
+
+  // Tooltip Interaction
+  const tooltip = document.getElementById("dc-tooltip");
+  const container = document.getElementById("dc-chart-container");
+  if (tooltip && container) {
+    const dots = svg.querySelectorAll(".dose-chart-dot, .dose-scan-pin");
+    dots.forEach(d => {
+      d.addEventListener("mouseenter", (e) => {
+        const rect = container.getBoundingClientRect();
+        const ptX = e.clientX - rect.left;
+        const ptY = e.clientY - rect.top;
+
+        tooltip.style.left = `${ptX}px`;
+        tooltip.style.top = `${ptY}px`;
+
+        if (d.classList.contains("dose-chart-dot")) {
+          const hr = d.getAttribute("data-hr");
+          const time = d.getAttribute("data-time");
+          const dose = d.getAttribute("data-dose");
+          const ppm = d.getAttribute("data-ppm");
+          tooltip.innerHTML = `
+            <strong>Hour ${hr} (${time})</strong><br>
+            <span>Cumulative Dose: <strong style="color:#38bdf8;">${dose} ppm·h</strong></span><br>
+            <span>Instant PPM: <strong>${ppm} ppm</strong></span>
+          `;
+        } else {
+          const scanId = d.getAttribute("data-id");
+          const time = d.getAttribute("data-time");
+          const ppm = d.getAttribute("data-ppm");
+          tooltip.innerHTML = `
+            <strong style="color:#f59e0b;">Scan Event (${time})</strong><br>
+            <span>Scan ID: <code>${scanId}</code></span><br>
+            <span>Reading: <strong style="color:#34d399;">${ppm} ppm</strong></span>
+          `;
+        }
+        tooltip.style.display = "block";
+      });
+
+      d.addEventListener("mouseleave", () => {
+        tooltip.style.display = "none";
+      });
+    });
+  }
+}
+
+// ============================================================================
+// Section 1 & 7: Badge Stock / Wristband Lab Subsystem
+// ============================================================================
+
+let cachedBatches = [];
+
+async function loadBatches() {
+  const tbody = document.getElementById("batches-table-body");
+  if (!tbody) return;
+
+  try {
+    const batches = await API.getBatches();
+    cachedBatches = batches || [];
+
+    // Update KPI indicators
+    const total = cachedBatches.length;
+    const passed = cachedBatches.filter(b => b.qc_status === "PASSED").length;
+    const rejected = cachedBatches.filter(b => b.qc_status === "REJECTED").length;
+    const available = cachedBatches.reduce((acc, b) => acc + (b.available_strips || 0), 0);
+
+    const kpiTot = document.getElementById("kpi-batch-total");
+    if (kpiTot) kpiTot.textContent = total;
+    const kpiPass = document.getElementById("kpi-batch-passed");
+    if (kpiPass) kpiPass.textContent = passed;
+    const kpiRej = document.getElementById("kpi-batch-rejected");
+    if (kpiRej) kpiRej.textContent = rejected;
+    const kpiAvail = document.getElementById("kpi-batch-available");
+    if (kpiAvail) kpiAvail.textContent = available;
+
+    if (cachedBatches.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-muted);">No batch lots registered. Click "+ Cast New Batch" above.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = cachedBatches.map(b => {
+      const isPassed = b.qc_status === "PASSED";
+      const qcBadge = isPassed
+        ? `<span class="badge-cat badge-green">✓ PASSED</span>`
+        : `<span class="badge-cat badge-red">⚠️ REJECTED</span>`;
+
+      const deltaEBadge = b.virgin_baseline_delta_e <= 3.0
+        ? `<span style="color:#34d399; font-weight:700;">ΔE ${b.virgin_baseline_delta_e.toFixed(2)}</span>`
+        : `<span style="color:#f87171; font-weight:700;">ΔE ${b.virgin_baseline_delta_e.toFixed(2)} (Out of Spec)</span>`;
+
+      return `
+        <tr>
+          <td><code style="color:#38bdf8; font-weight:700;">${b.batch_id}</code></td>
+          <td>${b.cast_date}</td>
+          <td><span style="color:#e2e8f0;">${b.expiration_date}</span></td>
+          <td style="font-size:12px; max-width:180px; color:#94a3b8;">${b.storage_condition}</td>
+          <td>${deltaEBadge}</td>
+          <td>${qcBadge}</td>
+          <td><strong style="color:${isPassed ? '#34d399' : '#64748b'};">${b.available_strips}</strong> / ${b.total_strips}</td>
+          <td>
+            <div style="display:flex; gap:6px;">
+              <button class="btn btn-secondary" style="padding:4px 8px; font-size:11px; color:#f59e0b;" onclick="window.openQCModalForBatch('${b.batch_id}')">
+                🧪 Test QC
+              </button>
+              ${isPassed ? `
+                <button class="btn btn-secondary" style="padding:4px 8px; font-size:11px; color:#38bdf8; border-color:rgba(56,189,248,0.4);" onclick="window.openWristbandModalForBatch('${b.batch_id}')">
+                  🪪 Wristband
+                </button>
+              ` : `
+                <span style="font-size:11px; color:#ef4444; align-self:center;">Locked</span>
+              `}
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join("");
+  } catch (err) {
+    console.error("Error loading batches:", err);
+  }
+}
+
+// Modal: Cast New Batch
+const modalCast = document.getElementById("modal-cast-batch");
+document.getElementById("btn-open-cast-batch-modal")?.addEventListener("click", () => {
+  if (modalCast) modalCast.style.display = "flex";
+});
+document.getElementById("btn-close-cast-modal")?.addEventListener("click", () => {
+  if (modalCast) modalCast.style.display = "none";
+});
+document.getElementById("btn-cancel-cast-batch")?.addEventListener("click", () => {
+  if (modalCast) modalCast.style.display = "none";
+});
+document.getElementById("btn-submit-cast-batch")?.addEventListener("click", async () => {
+  const batchId = document.getElementById("cast-batch-id")?.value.trim();
+  const daysExpiry = parseInt(document.getElementById("cast-days-expiry")?.value || "90");
+  const totalStrips = parseInt(document.getElementById("cast-total-strips")?.value || "500");
+  const storage = document.getElementById("cast-storage")?.value.trim();
+  const labL = parseFloat(document.getElementById("cast-lab-l")?.value || "42.0");
+  const labA = parseFloat(document.getElementById("cast-lab-a")?.value || "38.0");
+  const labB = parseFloat(document.getElementById("cast-lab-b")?.value || "-12.0");
+
+  if (!batchId) {
+    alert("Please enter a valid Batch ID.");
+    return;
+  }
+
+  try {
+    await API.createBatch({
+      batch_id: batchId,
+      days_to_expiry: daysExpiry,
+      total_strips: totalStrips,
+      storage_condition: storage,
+      virgin_lab_l: labL,
+      virgin_lab_a: labA,
+      virgin_lab_b: labB,
+      checked_by: "QC Production Specialist"
+    });
+    alert(`Batch ${batchId} cast and certified!`);
+    if (modalCast) modalCast.style.display = "none";
+    loadBatches();
+  } catch (err) {
+    alert("Error casting batch: " + (err.detail || "Server error"));
+  }
+});
+
+// Modal: Virgin Baseline QC Check
+const modalQC = document.getElementById("modal-batch-qc");
+const qcBatchSelect = document.getElementById("qc-batch-select");
+const qcResultBox = document.getElementById("qc-result-box");
+
+window.openQCModalForBatch = function(batchId) {
+  if (!modalQC) return;
+  modalQC.style.display = "flex";
+  if (qcResultBox) qcResultBox.style.display = "none";
+
+  // Populate batch select
+  if (qcBatchSelect) {
+    qcBatchSelect.innerHTML = cachedBatches.map(b => `<option value="${b.batch_id}" ${b.batch_id === batchId ? "selected" : ""}>${b.batch_id} (${b.qc_status})</option>`).join("");
+  }
+};
+
+document.getElementById("btn-open-batch-qc-modal")?.addEventListener("click", () => {
+  window.openQCModalForBatch(cachedBatches[0]?.batch_id || "");
+});
+document.getElementById("btn-close-qc-modal")?.addEventListener("click", () => {
+  if (modalQC) modalQC.style.display = "none";
+});
+document.getElementById("btn-cancel-batch-qc")?.addEventListener("click", () => {
+  if (modalQC) modalQC.style.display = "none";
+});
+
+// Preset buttons
+document.getElementById("qc-preset-pass")?.addEventListener("click", () => {
+  document.getElementById("qc-lab-l").value = "42.2";
+  document.getElementById("qc-lab-a").value = "37.8";
+  document.getElementById("qc-lab-b").value = "-12.1";
+});
+document.getElementById("qc-preset-fail")?.addEventListener("click", () => {
+  document.getElementById("qc-lab-l").value = "52.0";
+  document.getElementById("qc-lab-a").value = "30.0";
+  document.getElementById("qc-lab-b").value = "-2.0";
+});
+
+document.getElementById("btn-execute-batch-qc")?.addEventListener("click", async () => {
+  const batchId = qcBatchSelect ? qcBatchSelect.value : "";
+  const labL = parseFloat(document.getElementById("qc-lab-l")?.value || "42.0");
+  const labA = parseFloat(document.getElementById("qc-lab-a")?.value || "38.0");
+  const labB = parseFloat(document.getElementById("qc-lab-b")?.value || "-12.0");
+
+  try {
+    const res = await API.performBatchQCCheck({
+      batch_id: batchId,
+      virgin_lab_l: labL,
+      virgin_lab_a: labA,
+      virgin_lab_b: labB,
+      checked_by: "Senior QC Chemist Dr. Rao",
+      notes: "Laboratory baseline certification"
+    });
+
+    if (qcResultBox) {
+      qcResultBox.style.display = "block";
+      if (res.passed) {
+        qcResultBox.style.background = "rgba(16, 185, 129, 0.15)";
+        qcResultBox.style.border = "1px solid rgba(16, 185, 129, 0.4)";
+        qcResultBox.style.color = "#34d399";
+        qcResultBox.innerHTML = `
+          <strong>✓ QC PASSED (WITHIN SPECIFICATION)</strong><br>
+          Measured Virgin ΔE₀₀ = <strong>${res.virgin_baseline_delta_e}</strong> (Spec limit ≤ ${res.spec_threshold}).<br>
+          Batch ${batchId} certified for wristband assignment.
+        `;
+      } else {
+        qcResultBox.style.background = "rgba(239, 68, 68, 0.15)";
+        qcResultBox.style.border = "1px solid rgba(239, 68, 68, 0.4)";
+        qcResultBox.style.color = "#f87171";
+        qcResultBox.innerHTML = `
+          <strong>⚠️ QC REJECTED (BASELINE OUT OF SPEC)</strong><br>
+          Measured Virgin ΔE₀₀ = <strong>${res.virgin_baseline_delta_e}</strong> exceeds tolerance (≤ ${res.spec_threshold}).<br>
+          ${res.rejection_reason}<br>
+          Strips in this batch have been automatically locked & recalled.
+        `;
+      }
+    }
+    loadBatches();
+  } catch (err) {
+    alert("Error executing QC: " + (err.detail || "Server error"));
+  }
+});
+
+// Modal: Issue Wristband QR
+const modalWristband = document.getElementById("modal-wristband-issue-qr");
+const wbWorkerSelect = document.getElementById("wb-assign-worker-select");
+const wbBatchSelect = document.getElementById("wb-assign-batch-select");
+const wbMethodSelect = document.getElementById("wb-assign-method-select");
+const wbPreviewContainer = document.getElementById("wb-preview-container");
+
+window.openWristbandModalForBatch = async function(batchId) {
+  if (!modalWristband) return;
+  modalWristband.style.display = "flex";
+
+  // Populate workers
+  const workers = await API.getWorkers();
+  if (wbWorkerSelect) {
+    wbWorkerSelect.innerHTML = (workers || []).map(w => `<option value="${w.id}">${w.name} (${w.id}) - ${w.department}</option>`).join("");
+  }
+
+  // Populate passed batches
+  if (wbBatchSelect) {
+    const passed = cachedBatches.filter(b => b.qc_status === "PASSED");
+    wbBatchSelect.innerHTML = passed.map(b => `<option value="${b.batch_id}" ${b.batch_id === batchId ? "selected" : ""}>${b.batch_id} (Expires: ${b.expiration_date})</option>`).join("");
+  }
+
+  updateWristbandPreview();
+};
+
+document.getElementById("btn-open-wristband-qr-modal")?.addEventListener("click", () => {
+  const passedBatch = cachedBatches.find(b => b.qc_status === "PASSED");
+  window.openWristbandModalForBatch(passedBatch ? passedBatch.batch_id : "");
+});
+document.getElementById("btn-close-wristband-modal")?.addEventListener("click", () => {
+  if (modalWristband) modalWristband.style.display = "none";
+});
+document.getElementById("btn-cancel-wristband-issue")?.addEventListener("click", () => {
+  if (modalWristband) modalWristband.style.display = "none";
+});
+
+function updateWristbandPreview() {
+  if (!wbPreviewContainer || !window.QRGenerator) return;
+  const workerId = wbWorkerSelect ? wbWorkerSelect.value : "EMP_00542";
+  const workerText = wbWorkerSelect?.options[wbWorkerSelect.selectedIndex]?.text || "John Martinez (EMP_00542)";
+  const batchId = wbBatchSelect ? wbBatchSelect.value : "BATCH_2026_Q1_01";
+  const batchObj = cachedBatches.find(b => b.batch_id === batchId) || {
+    batch_id: batchId, expiration_date: "2026-06-15", virgin_baseline_delta_e: 0.28
+  };
+  const methodKey = wbMethodSelect ? wbMethodSelect.value : "cupan_optical";
+  const stripId = `STR_${batchId.slice(-4)}_${Math.floor(1000 + Math.random() * 9000)}`;
+
+  window.QRGenerator.renderWristbandBadge(
+    { id: workerId, name: workerText.split(" (")[0] },
+    batchObj,
+    stripId,
+    { id: methodKey, short_badge: methodKey === "cupan_optical" ? "Cu-PAN" : "Sensor", badge_class: "badge-green" },
+    wbPreviewContainer
+  );
+}
+
+wbWorkerSelect?.addEventListener("change", updateWristbandPreview);
+wbBatchSelect?.addEventListener("change", updateWristbandPreview);
+wbMethodSelect?.addEventListener("change", updateWristbandPreview);
+
+document.getElementById("btn-generate-wristband-qr")?.addEventListener("click", async () => {
+  const workerId = wbWorkerSelect ? wbWorkerSelect.value : "";
+  const batchId = wbBatchSelect ? wbBatchSelect.value : "";
+  const methodKey = wbMethodSelect ? wbMethodSelect.value : "cupan_optical";
+
+  try {
+    const res = await API.assignWristbandQR({
+      worker_id: workerId,
+      batch_id: batchId,
+      method_key: methodKey
+    });
+
+    alert(`✓ Wristband QR Issued for ${res.worker_name}!\nLinked to Batch ${res.batch_id} & Method ${res.method_key.toUpperCase()}.\nPayload: ${res.qr_payload}`);
+    updateWristbandPreview();
+  } catch (err) {
+    alert("Error issuing wristband: " + (err.detail || "Server error"));
+  }
+});
+
+// ============================================================================
+// Section 8: Cryptographic Audit Certificate Modal (Supervisor)
+// ============================================================================
+const modalAuditCert = document.getElementById("modal-audit-cert");
+const auditCertContent = document.getElementById("audit-cert-content");
+
+window.openAuditCertificateModal = async function(scanId) {
+  if (!modalAuditCert || !auditCertContent) return;
+  modalAuditCert.style.display = "flex";
+  auditCertContent.innerHTML = `<div style="text-align:center; padding:30px; color:var(--text-muted);">Fetching cryptographic audit trail & integrity seal...</div>`;
+
+  try {
+    const cert = await API.getAuditCertificate(scanId);
+    auditCertContent.innerHTML = `
+      <div style="background:rgba(2,132,199,0.1); border:1px solid rgba(56,189,248,0.3); border-radius:12px; padding:14px; margin-bottom:14px;">
+        <div style="color:#38bdf8; font-weight:800; font-size:11px; letter-spacing:1px; margin-bottom:4px;">CRYPTOGRAPHIC DIGITAL SEAL</div>
+        <div style="font-family:'JetBrains Mono'; font-size:13px; color:#ffffff; font-weight:700;">${cert.cryptographic_seal}</div>
+        <div style="font-size:11px; color:#94a3b8; margin-top:4px;">Algorithm: ${cert.hash_algorithm} • Certified Immutable Proof</div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+        <div class="glass-card" style="padding:10px;">
+          <span style="font-size:10px; color:var(--text-muted); text-transform:uppercase;">Worker / Operator</span>
+          <div style="font-weight:700; color:#fff; font-size:13px;">${cert.worker_name} (${cert.worker_id})</div>
+        </div>
+        <div class="glass-card" style="padding:10px;">
+          <span style="font-size:10px; color:var(--text-muted); text-transform:uppercase;">PPM Reading & Exposure</span>
+          <div style="font-weight:700; color:#38bdf8; font-size:13px;">${cert.predicted_ppm} ppm • ${cert.exposure_level}</div>
+        </div>
+      </div>
+
+      <div style="background:#0f172a; border:1px solid #334155; border-radius:10px; padding:12px; margin-bottom:14px; font-size:12px; display:flex; flex-direction:column; gap:6px;">
+        <div><span style="color:#94a3b8;">Raw Optical Image Hash (SHA-256):</span><br><strong style="font-family:'JetBrains Mono'; color:#38bdf8; font-size:11px; word-break:break-all;">${cert.raw_image_hash}</strong></div>
+        <div><span style="color:#94a3b8;">Vision Pipeline Version:</span> <strong style="color:#fff;">${cert.pipeline_version}</strong></div>
+        <div><span style="color:#94a3b8;">Certified Calibration Curve:</span> <strong style="color:#fff;">${cert.calibration_version} (${cert.calibration_curve_id})</strong></div>
+        <div><span style="color:#94a3b8;">Physical Strip / Batch:</span> <strong style="color:#fff;">${cert.strip_id} (Lot: ${cert.strip_batch})</strong></div>
+        <div><span style="color:#94a3b8;">Timestamp:</span> <strong style="color:#fff;">${cert.timestamp}</strong></div>
+      </div>
+
+      <div style="background:rgba(245,158,11,0.06); border:1px solid rgba(245,158,11,0.25); border-radius:10px; padding:12px; margin-bottom:16px;">
+        <div style="color:#f59e0b; font-weight:800; font-size:11px; margin-bottom:6px; letter-spacing:0.5px;">HOW DO WE TRUST THIS NUMBER?</div>
+        <pre style="white-space:pre-wrap; font-size:11.5px; color:#cbd5e1; font-family:inherit; margin:0; line-height:1.5;">${cert.trust_explanation}</pre>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:10px;">
+        <button class="btn btn-secondary" onclick="window.print()">🖨️ Print Full Audit Certificate</button>
+      </div>
+    `;
+  } catch (err) {
+    auditCertContent.innerHTML = `<div style="color:#f87171; padding:20px; text-align:center;">Failed to load certificate: ${err.detail || 'Audit record unavailable'}</div>`;
+  }
+};
+
+document.getElementById("btn-close-audit-cert")?.addEventListener("click", () => {
+  if (modalAuditCert) modalAuditCert.style.display = "none";
+});
+
+// ============================================================================
+// Section 9: Role-Based Access Control (RBAC) Switcher
+// ============================================================================
+const rbacSelect = document.getElementById("rbac-role-select");
+rbacSelect?.addEventListener("change", (e) => {
+  const role = e.target.value;
+  applyRBACOverlay(role);
+});
+
+function applyRBACOverlay(role) {
+  const btnIssue = document.getElementById("btn-issue-strip");
+  const btnCast = document.getElementById("btn-open-cast-batch-modal");
+  const btnQC = document.getElementById("btn-open-batch-qc-modal");
+  const undoBtns = document.querySelectorAll(".btn-undo");
+
+  if (role === "Worker") {
+    alert("🔒 Worker Role Active: Limited to personal dose monitoring. Administrative actions, threshold modifications, and batch creation are restricted.");
+    if (btnIssue) btnIssue.style.display = "none";
+    if (btnCast) btnCast.style.display = "none";
+    if (btnQC) btnQC.style.display = "none";
+    undoBtns.forEach(b => b.style.display = "none");
+  } else if (role === "Supervisor") {
+    if (btnIssue) btnIssue.style.display = "inline-flex";
+    if (btnCast) btnCast.style.display = "inline-flex";
+    if (btnQC) btnQC.style.display = "inline-flex";
+    undoBtns.forEach(b => b.style.display = "none");
+  } else if (role === "Safety Officer") {
+    if (btnIssue) btnIssue.style.display = "inline-flex";
+    if (btnCast) btnCast.style.display = "inline-flex";
+    if (btnQC) btnQC.style.display = "inline-flex";
+    undoBtns.forEach(b => b.style.display = "none");
+  } else if (role === "Admin") {
+    if (btnIssue) btnIssue.style.display = "inline-flex";
+    if (btnCast) btnCast.style.display = "inline-flex";
+    if (btnQC) btnQC.style.display = "inline-flex";
+    undoBtns.forEach(b => b.style.display = "inline-flex");
+  }
 }
 
 // Initial Load

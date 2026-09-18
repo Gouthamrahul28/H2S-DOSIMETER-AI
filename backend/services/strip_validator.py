@@ -49,6 +49,13 @@ class StripValidator:
             cls._log_validation_failure(db, worker_id, strip_id, "BATCH_INVALID", "Strip batch recalled.")
             return False, "BATCH_INVALID", "Strip batch has been recalled by safety compliance.", None
 
+        # Check 3b: Batch QC Spec Verification
+        from backend.models import StripBatch
+        batch = db.query(StripBatch).filter(StripBatch.batch_id == strip.batch_id).first()
+        if batch and batch.qc_status == "REJECTED":
+            cls._log_validation_failure(db, worker_id, strip_id, "BATCH_QC_REJECTED", f"Batch {batch.batch_id} failed virgin baseline QC check (Delta-E={batch.virgin_baseline_delta_e}).")
+            return False, "BATCH_QC_REJECTED", f"Strip belongs to Batch {batch.batch_id} which failed laboratory QC specification check.", None
+
         # Check 4: Not Expired
         now = datetime.utcnow()
         if strip.expiration_date and now > strip.expiration_date:
