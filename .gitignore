@@ -23,3 +23,15 @@ Thumbs.db
 # Large temporary datasets (keep sample metadata and seed images)
 data/cache/
 *.tmp
+
+# Video Showcase & Brag Artifacts
+*.mp4
+brag-output/
+brag-output-2min/
+.agents/
+
+# Runtime test scans & uploads
+data/uploads/*.jpg
+data/uploads/*.png
+
+

@@ -3,12 +3,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>H₂S Industrial Safety Platform - Supervisor Dashboard</title>
+  <title>H₂S Industrial Safety Platform - Operations & Dosimetry Center</title>
+  <meta name="color-scheme" content="light dark">
   <link rel="stylesheet" href="/static/css/style.css">
+  <script>
+    (function() {
+      try {
+        var savedTheme = localStorage.getItem("theme");
+        var prefersLight = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches;
+        var theme = savedTheme ? savedTheme : (prefersLight ? "light" : "dark");
+        document.documentElement.setAttribute("data-theme", theme);
+      } catch (e) {}
+    })();
+  </script>
   <script src="/static/js/qr_generator.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
   <div class="app-container">
@@ -18,51 +29,55 @@
         <div class="brand-icon">H₂S</div>
         <div>
           <div class="brand-title">Safety Platform</div>
-          <div class="brand-subtitle">Industrial v2.0</div>
+          <div class="brand-subtitle">Industrial AI v2.0</div>
         </div>
       </div>
 
       <nav class="nav-menu">
-        <div class="nav-label">Main Sections</div>
+        <div class="nav-label">Operations Control</div>
         <div class="nav-item active" data-tab="tab-operations">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
-          Shift Monitor (Supervisor Home)
+          Shift Monitor & Live Roster
         </div>
         <div class="nav-item" data-tab="tab-batches">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
-          Badge Stock / Wristband Lab
+          Badge Stock & Wristband Lab
         </div>
         <div class="nav-item" data-tab="tab-ai-model">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-          AI Model Center
+          AI Model Center & Vision
         </div>
         <div class="nav-item" data-tab="tab-safety">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-          Safety Center & Undo
+          Safety Thresholds & Undo
         </div>
         <div class="nav-item" data-tab="tab-workers">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-          Worker & Analytics
+          Worker Explorer & Doses
         </div>
         <div class="nav-item" data-tab="tab-audit">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-          Audit & Git Versioning
+          Audit Logs & Git Versioning
         </div>
 
-        <div class="nav-label">Interfaces</div>
-        <a href="/worker" target="_blank" class="nav-item" style="color: #38bdf8;">
+        <div class="nav-label">Field Terminals</div>
+        <a href="/worker" target="_blank" class="nav-item" style="color: var(--accent-sky); background: rgba(56, 189, 248, 0.05); border: 1px dashed rgba(56, 189, 248, 0.25);">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
-          Open Worker App ↗
+          Open Worker Scanner ↗
         </a>
       </nav>
 
       <div class="sidebar-footer">
         <div class="app-mode-badge">
-          <div class="dot-indicator"></div>
-          Monitoring Active
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div class="dot-indicator"></div>
+            <span>LIVE TELEMETRY</span>
+          </div>
+          <span style="font-family:'JetBrains Mono'; font-size:10.5px; opacity:0.8;">32ms</span>
         </div>
-        <div style="font-size: 11px; color: var(--text-muted);">
-          System: Facility Alpha<br>Active Model: <span id="sidebar-active-model" style="color:#60a5fa; font-weight:700;">v1.0</span>
+        <div style="font-size: 11px; color: var(--text-muted); display:flex; justify-content:space-between; align-items:center;">
+          <span>Facility: <strong>Alpha Refinery</strong></span>
+          <span style="color:#60a5fa; font-weight:700; font-family:'JetBrains Mono';" id="sidebar-active-model">v1.1</span>
         </div>
       </div>
     </aside>
@@ -70,28 +85,44 @@
     <!-- Main Content Area -->
     <main class="main-wrapper">
       <header class="top-bar">
-        <div class="top-bar-title" id="page-title">Operations Monitoring Dashboard</div>
+        <div class="top-bar-title" id="page-title">
+          Shift Monitor (Supervisor Home) & Operations Dashboard
+        </div>
+        
         <div class="top-bar-actions">
-          <!-- Role-Based Access Control (RBAC) Role Selector (Section 9) -->
-          <div class="rbac-role-pill" style="display:flex; align-items:center; gap:6px; background:#0f172a; border:1px solid #334155; border-radius:8px; padding:4px 10px;">
-            <span style="font-size:11px; color:#94a3b8; font-weight:600;">👤 Role:</span>
-            <select id="rbac-role-select" style="background:transparent; border:none; color:#38bdf8; font-weight:700; font-size:12px; cursor:pointer; outline:none;">
+          <!-- Role-Based Access Control (RBAC) Role Selector -->
+          <div class="rbac-role-pill" style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:11.5px; color:#94a3b8; font-weight:600;">👤 Role:</span>
+            <select id="rbac-role-select" style="background:transparent; border:none; color:var(--accent-sky); font-weight:800; font-size:12.5px; cursor:pointer; outline:none;">
               <option value="Supervisor">Supervisor (Shift Lead)</option>
               <option value="Safety Officer">Safety Officer (Compliance)</option>
               <option value="Admin">Admin (Full System Access)</option>
-              <option value="Worker">Worker (Own Dose Only)</option>
+              <option value="Worker">Worker (Personal Dose Only)</option>
             </select>
           </div>
 
-          <button class="btn btn-secondary" id="btn-refresh">
-            <svg style="width:16px;height:16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+          <!-- Theme Toggle Switch -->
+          <button class="theme-toggle-btn" id="theme-toggle-btn" type="button" title="Switch Theme (Light / Dark Mode)" aria-label="Toggle theme">
+            <div class="theme-toggle-track">
+              <span class="theme-toggle-thumb">
+                <span class="theme-icon-sun">☀️</span>
+                <span class="theme-icon-moon">🌙</span>
+              </span>
+            </div>
+            <span id="theme-toggle-text" style="font-size:11.5px; font-weight:700;">Dark</span>
+          </button>
+
+          <button class="btn btn-secondary" id="btn-refresh" title="Refresh live telemetry stream">
+            <svg style="width:15px;height:15px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
             Refresh
           </button>
-          <button class="btn btn-secondary" id="btn-issue-strip" style="color:#38bdf8; border-color:rgba(56,189,248,0.4);">
-            + Issue New Strip
+          
+          <button class="btn btn-secondary" id="btn-issue-strip" style="color:var(--accent-sky); border-color:rgba(56,189,248,0.4);">
+            + Issue Strip
           </button>
+          
           <button class="btn btn-primary" id="btn-quick-scan">
-            + Simulate Worker Scan
+            + Simulate Scan
           </button>
         </div>
       </header>
@@ -102,19 +133,19 @@
           <!-- Shift Status & Statutory Standards Control Header -->
           <div class="shift-monitor-header">
             <div>
-              <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
-                <span style="font-size:18px; font-weight:800; color:#f8fafc;" id="shift-display-name">Shift B (Evening Shift)</span>
+              <div style="display:flex; align-items:center; gap:12px; margin-bottom:6px; flex-wrap:wrap;">
+                <span style="font-size:20px; font-weight:800; color:var(--text-primary);" id="shift-display-name">Shift B (Evening Shift)</span>
                 <span class="shift-meta-badge" id="shift-elapsed-badge">⏱️ Loading shift clock...</span>
                 <span class="badge-cat badge-green" style="font-size:11px;">● Shift Active</span>
               </div>
-              <p style="font-size:12px; color:var(--text-muted); margin:0;" id="shift-standard-desc">
-                Monitoring cumulative ppm·h dose against statutory limits. Each dosimeter uses its specific response curve.
+              <p style="font-size:12.5px; color:var(--text-secondary); margin:0;" id="shift-standard-desc">
+                Monitoring cumulative ppm·h dose against statutory limits. Each dosimeter uses its specific chemical response curve.
               </p>
             </div>
 
             <!-- Standard Selector (Factories Act vs ACGIH vs Dual) -->
             <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-              <span style="font-size:12px; font-weight:600; color:var(--text-secondary);">Statutory Standard:</span>
+              <span style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Statutory Standard:</span>
               <div class="std-toggle-group">
                 <button class="std-toggle-btn active" id="btn-std-factories" data-std="FACTORIES_ACT">
                   🇮🇳 Factories Act (10 ppm TWA)
@@ -131,48 +162,48 @@
 
           <!-- Shift Tier Summary Cards -->
           <div class="kpi-grid" style="grid-template-columns: repeat(5, 1fr); margin-bottom:24px;">
-            <div class="glass-card">
+            <div class="glass-card" style="border-top: 3px solid var(--accent-primary);">
               <div class="kpi-header">
                 <span class="kpi-title">Monitored Workers</span>
-                <span style="color:#3b82f6;">●</span>
+                <span style="color:var(--accent-primary);">●</span>
               </div>
               <div class="kpi-value" id="shift-kpi-total">--</div>
               <div class="kpi-subtext">Active on shift roster</div>
             </div>
 
-            <div class="glass-card" style="border-bottom: 3px solid #10b981;">
+            <div class="glass-card" style="border-top: 3px solid #10b981;">
               <div class="kpi-header">
                 <span class="kpi-title" style="color:#34d399;">Emerald (Safe)</span>
-                <span style="color:#10b981;">●</span>
+                <span style="color:#10b981;">✓</span>
               </div>
               <div class="kpi-value" style="color:#34d399;" id="shift-kpi-emerald">--</div>
               <div class="kpi-subtext" id="subtext-emerald">&lt; 50% TWA threshold</div>
             </div>
 
-            <div class="glass-card" style="border-bottom: 3px solid #f59e0b;">
+            <div class="glass-card" style="border-top: 3px solid #f59e0b;">
               <div class="kpi-header">
                 <span class="kpi-title" style="color:#fbbf24;">Amber (Caution)</span>
-                <span style="color:#f59e0b;">●</span>
+                <span style="color:#f59e0b;">⚠️</span>
               </div>
               <div class="kpi-value" style="color:#fbbf24;" id="shift-kpi-amber">--</div>
               <div class="kpi-subtext" id="subtext-amber">50%–100% TWA threshold</div>
             </div>
 
-            <div class="glass-card" style="border-bottom: 3px solid #ef4444;">
+            <div class="glass-card" style="border-top: 3px solid #ef4444;">
               <div class="kpi-header">
                 <span class="kpi-title" style="color:#f87171;">Red (Action Level)</span>
-                <span style="color:#ef4444;">●</span>
+                <span style="color:#ef4444;">🚨</span>
               </div>
               <div class="kpi-value" style="color:#f87171;" id="shift-kpi-red">--</div>
               <div class="kpi-subtext" id="subtext-red">&gt; 100% TWA or STEL breach</div>
             </div>
 
-            <div class="glass-card">
+            <div class="glass-card" style="border-top: 3px solid #8b5cf6;">
               <div class="kpi-header">
                 <span class="kpi-title">Avg Shift Dose</span>
                 <span style="color:#8b5cf6;">●</span>
               </div>
-              <div class="kpi-value" style="font-size:24px;" id="shift-kpi-avg-dose">--</div>
+              <div class="kpi-value" style="font-size:26px;" id="shift-kpi-avg-dose">--</div>
               <div class="kpi-subtext">Cumulative ppm·h average</div>
             </div>
           </div>
@@ -185,13 +216,13 @@
                   <span>👥 Shift Worker Dosimetry & Exposure Roster</span>
                   <span class="badge-cat badge-blue" style="font-size:11px;" id="active-std-badge">Factories Act (India)</span>
                 </div>
-                <div style="font-size:13px; color:var(--text-muted);">
-                  Real-time cumulative dose (<code style="color:#38bdf8;">ppm·h</code>), dosimeter response curves, relative last read times, and statutory TWA/STEL compliance meters.
+                <div style="font-size:12.5px; color:var(--text-muted); margin-top:3px;">
+                  Real-time cumulative dose (<code style="color:var(--accent-mint);">ppm·h</code>), chemical response curves, relative last read times, and statutory TWA/STEL compliance meters.
                 </div>
               </div>
               <div style="display:flex; gap:8px; align-items:center;">
-                <input type="text" id="shift-worker-search" placeholder="Search worker or badge..." style="padding:6px 12px; background:#0f172a; border:1px solid var(--border-color); border-radius:6px; color:#fff; font-size:12px; width:200px;">
-                <button class="btn btn-secondary" id="btn-refresh-shift" style="padding:6px 10px; font-size:12px;">↺ Refresh Shift</button>
+                <input type="text" id="shift-worker-search" placeholder="Search worker or badge..." style="padding:7px 14px; background:var(--bg-input); border:1px solid var(--border-medium); border-radius:8px; color:var(--text-primary); font-size:12px; width:220px;">
+                <button class="btn btn-secondary" id="btn-refresh-shift" style="padding:7px 12px; font-size:12px;">↺ Refresh Shift</button>
               </div>
             </div>
             <table>
@@ -207,13 +238,13 @@
                 </tr>
               </thead>
               <tbody id="shift-workers-table-body">
-                <tr><td colspan="7" style="text-align:center; padding:20px; color:var(--text-muted);">Loading active shift dosimetry...</td></tr>
+                <tr><td colspan="7" style="text-align:center; padding:24px; color:var(--text-muted);">Loading active shift dosimetry...</td></tr>
               </tbody>
             </table>
           </div>
 
-          <!-- Operational Analytics Row (Original KPIs) -->
-          <div style="margin-top:28px; margin-bottom:14px; font-size:14px; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px;">
+          <!-- Operational Analytics Section -->
+          <div style="margin-top:28px; margin-bottom:14px; font-size:13px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.8px;">
             Facility Operational Telemetry
           </div>
           <div class="kpi-grid">
@@ -229,10 +260,10 @@
             <div class="glass-card">
               <div class="kpi-header">
                 <span class="kpi-title">Scans Today</span>
-                <span style="color:#10b981;">●</span>
+                <span style="color:var(--accent-primary);">●</span>
               </div>
               <div class="kpi-value" id="kpi-scans-today">--</div>
-              <div class="kpi-subtext">Average: <span id="kpi-avg-ppm">0.0</span> ppm</div>
+              <div class="kpi-subtext">Average: <span id="kpi-avg-ppm" style="color:var(--text-heading); font-weight:700;">0.0</span> ppm</div>
             </div>
 
             <div class="glass-card">
@@ -253,8 +284,8 @@
                 <span class="kpi-title">Active AI Model</span>
                 <span style="color:#8b5cf6;">●</span>
               </div>
-              <div class="kpi-value" style="font-size:26px;" id="kpi-model-version">v1.0</div>
-              <div class="kpi-subtext" style="color:#34d399;">Test Accuracy: 96.2%</div>
+              <div class="kpi-value" style="font-size:28px;" id="kpi-model-version">v1.1</div>
+              <div class="kpi-subtext" style="color:var(--accent-mint);">Test Accuracy: 98.5%</div>
             </div>
           </div>
 
@@ -262,7 +293,7 @@
           <div class="table-container">
             <div class="table-header">
               <div class="table-title">Latest Indicator Strip Scans</div>
-              <div style="font-size:13px; color:var(--text-muted);">Real-time stream</div>
+              <div style="font-size:12.5px; color:var(--text-muted); font-family:'JetBrains Mono';">Live Stream</div>
             </div>
             <table>
               <thead>
@@ -278,7 +309,7 @@
                 </tr>
               </thead>
               <tbody id="scans-table-body">
-                <tr><td colspan="8" style="text-align:center;">Loading scans...</td></tr>
+                <tr><td colspan="8" style="text-align:center; padding:20px;">Loading scans...</td></tr>
               </tbody>
             </table>
           </div>
@@ -302,26 +333,26 @@
                 </tr>
               </thead>
               <tbody id="alerts-table-body">
-                <tr><td colspan="7" style="text-align:center;">Loading alerts...</td></tr>
+                <tr><td colspan="7" style="text-align:center; padding:20px;">Loading alerts...</td></tr>
               </tbody>
             </table>
           </div>
         </section>
 
-        <!-- 1B. BADGE STOCK / WRISTBAND LAB (Section 1 & 7) -->
+        <!-- 1B. BADGE STOCK / WRISTBAND LAB -->
         <section id="tab-batches" class="tab-panel">
           <div class="shift-monitor-header">
             <div>
               <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
-                <span style="font-size:18px; font-weight:800; color:#f8fafc;">Badge Stock / Wristband Lab</span>
+                <span style="font-size:19px; font-weight:800; color:#f8fafc;">Badge Stock / Wristband Lab</span>
                 <span class="badge-cat badge-green" style="font-size:11px;">● QC Gating Active</span>
               </div>
-              <p style="font-size:12px; color:var(--text-muted); margin:0;">
+              <p style="font-size:12.5px; color:var(--text-secondary); margin:0;">
                 Batch ID, cast date, expiry, storage conditions, and virgin baseline ΔE specification checks (ΔE ≤ 3.0 vs intact Cu-PAN S₀).
               </p>
             </div>
             <div style="display:flex; gap:10px; flex-wrap:wrap;">
-              <button class="btn btn-secondary" id="btn-open-cast-batch-modal" style="color:#38bdf8; border-color:rgba(56,189,248,0.4);">
+              <button class="btn btn-secondary" id="btn-open-cast-batch-modal" style="color:var(--accent-sky); border-color:rgba(56,189,248,0.4);">
                 + Cast New Batch
               </button>
               <button class="btn btn-secondary" id="btn-open-batch-qc-modal" style="color:#f59e0b; border-color:rgba(245,158,11,0.4);">
@@ -336,7 +367,7 @@
           <!-- Batch Stock KPIs -->
           <div class="kpi-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom:24px;">
             <div class="glass-card">
-              <div class="kpi-header"><span class="kpi-title">Total Batches</span><span style="color:#38bdf8;">📦</span></div>
+              <div class="kpi-header"><span class="kpi-title">Total Batches</span><span style="color:var(--accent-primary);">📦</span></div>
               <div class="kpi-value" id="kpi-batch-total">--</div>
               <div class="kpi-subtext" style="color:var(--text-muted);">Stock lots on record</div>
             </div>
@@ -358,14 +389,14 @@
           </div>
 
           <!-- Virgin Baseline Specification Reference Card -->
-          <div class="glass-card" style="margin-bottom:24px; border-left: 4px solid #38bdf8; padding:16px;">
+          <div class="glass-card" style="margin-bottom:24px; border-left: 4px solid var(--accent-sky); padding:18px 22px;">
             <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">
               <div>
-                <h4 style="margin:0 0 6px 0; font-size:14px; font-weight:800; color:#38bdf8;">
+                <h4 style="margin:0 0 6px 0; font-size:14.5px; font-weight:800; color:var(--accent-sky);">
                   🔬 Virgin Baseline CIEDE2000 Quality Control Specification
                 </h4>
-                <p style="margin:0 0 8px 0; font-size:12px; color:var(--text-secondary); max-width:720px; line-height:1.4;">
-                  Standard intact Cu(II)–PAN complex (S₀) baseline: <strong>L* = 42.0, a* = 38.0, b* = -12.0</strong> (deep purple-magenta <span style="display:inline-block; width:12px; height:12px; background:#954978; border-radius:2px; vertical-align:middle;"></span> #954978). Any freshly cast or stored badge batch whose virgin baseline exceeds <strong>ΔE₀₀ &gt; 3.0</strong> is automatically rejected from field dispatch to prevent baseline drift errors.
+                <p style="margin:0; font-size:12.5px; color:var(--text-secondary); max-width:760px; line-height:1.5;">
+                  Standard intact Cu(II)–PAN complex (S₀) baseline: <strong>L* = 42.0, a* = 38.0, b* = -12.0</strong> (deep purple-magenta <span style="display:inline-block; width:13px; height:13px; background:#954978; border-radius:3px; vertical-align:middle; border:1px solid rgba(255,255,255,0.3);"></span> #954978). Any freshly cast or stored badge batch whose virgin baseline exceeds <strong>ΔE₀₀ &gt; 3.0</strong> is automatically rejected from field dispatch to prevent baseline drift errors.
                 </p>
               </div>
               <div style="display:flex; align-items:center; gap:8px;">
@@ -379,7 +410,7 @@
           <div class="table-container">
             <div class="table-header">
               <div class="table-title">Badge Stock Batches & Wristband Lots</div>
-              <div style="font-size:13px; color:var(--text-muted);">Real-time inventory and quality control verification</div>
+              <div style="font-size:12.5px; color:var(--text-muted);">Real-time inventory and quality control verification</div>
             </div>
             <table>
               <thead>
@@ -395,7 +426,7 @@
                 </tr>
               </thead>
               <tbody id="batches-table-body">
-                <tr><td colspan="8" style="text-align:center;">Loading batch inventory...</td></tr>
+                <tr><td colspan="8" style="text-align:center; padding:20px;">Loading batch inventory...</td></tr>
               </tbody>
             </table>
           </div>
@@ -403,16 +434,16 @@
 
         <!-- 2. AI MODEL CENTER -->
         <section id="tab-ai-model" class="tab-panel">
-          <div class="glass-card" style="margin-bottom: 24px; border-left: 4px solid #8b5cf6;">
-            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <div class="glass-card" style="margin-bottom: 24px; border-left: 4px solid var(--accent-violet);">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
               <div>
-                <h3 style="font-size:18px; margin-bottom:8px;">Active AI Model: <span id="model-center-active-ver" style="color:#a78bfa;">v1.1</span></h3>
-                <p style="color:var(--text-secondary); font-size:14px;">Architecture: MobileNetV3-Small + 8 RGB/Lab Statistical Features (Section 3.2)</p>
-                <div style="display:flex; gap:24px; margin-top:16px;">
-                  <div><span style="color:var(--text-muted); font-size:12px;">TEST ACCURACY</span><div style="font-size:22px; font-weight:800; color:#34d399;" id="model-center-acc">98.5%</div></div>
-                  <div><span style="color:var(--text-muted); font-size:12px;">MACRO F1-SCORE</span><div style="font-size:22px; font-weight:800; color:#38bdf8;" id="model-center-f1">98.4%</div></div>
-                  <div><span style="color:var(--text-muted); font-size:12px;">DEPLOYMENT STATUS</span><div style="font-size:22px; font-weight:800; color:#60a5fa;" id="model-center-status">Approved (Active)</div></div>
-                  <div><span style="color:var(--text-muted); font-size:12px;">INPUT FORMAT</span><div style="font-size:22px; font-weight:800;">224×224×3 RGB</div></div>
+                <h3 style="font-size:19px; margin-bottom:6px;">Active AI Model: <span id="model-center-active-ver" style="color:#a78bfa;">v1.1</span></h3>
+                <p style="color:var(--text-secondary); font-size:13.5px;">Architecture: MobileNetV3-Small + 8 RGB/Lab Statistical Features (Section 3.2)</p>
+                <div style="display:flex; gap:28px; margin-top:16px; flex-wrap:wrap;">
+                  <div><span style="color:var(--text-muted); font-size:11px; text-transform:uppercase; font-weight:700;">TEST ACCURACY</span><div style="font-size:24px; font-weight:800; color:var(--accent-mint);" id="model-center-acc">98.5%</div></div>
+                  <div><span style="color:var(--text-muted); font-size:11px; text-transform:uppercase; font-weight:700;">MACRO F1-SCORE</span><div style="font-size:24px; font-weight:800; color:var(--accent-mint);" id="model-center-f1">98.4%</div></div>
+                  <div><span style="color:var(--text-muted); font-size:11px; text-transform:uppercase; font-weight:700;">DEPLOYMENT STATUS</span><div style="font-size:24px; font-weight:800; color:var(--accent-mint);" id="model-center-status">Approved (Active)</div></div>
+                  <div><span style="color:var(--text-muted); font-size:11px; text-transform:uppercase; font-weight:700;">INPUT TENSOR</span><div style="font-size:24px; font-weight:800; font-family:'JetBrains Mono';">224×224×3 RGB</div></div>
                 </div>
               </div>
               <button class="btn btn-undo" id="btn-show-rollback-modal">
@@ -422,10 +453,10 @@
           </div>
 
           <!-- Accuracy Graphs Section Header -->
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
             <div>
-              <h3 style="font-size:18px; font-weight:700;">AI Model Accuracy & Performance Curves</h3>
-              <p style="font-size:13px; color:var(--text-muted);">Real-time learning curves, version benchmarks, and per-class chemical stage sensitivity.</p>
+              <h3 style="font-size:18px; font-weight:800;">AI Model Accuracy & Performance Curves</h3>
+              <p style="font-size:12.5px; color:var(--text-muted); margin-top:2px;">Real-time learning curves, version benchmarks, and per-class chemical stage sensitivity.</p>
             </div>
             <div style="display:flex; gap:8px;">
               <span class="badge-cat badge-green" style="font-size:11px;">Zero Data Leakage Split (175/50/25)</span>
@@ -433,7 +464,7 @@
             </div>
           </div>
 
-          <!-- Accuracy Graphs Grid (Row 1: Learning Curve & Version Comparison) -->
+          <!-- Accuracy Graphs Grid (Row 1) -->
           <div class="accuracy-grid">
             <!-- Graph 1: Interactive Learning Curve SVG -->
             <div class="chart-card">
@@ -442,20 +473,18 @@
                   <span>📈 Training & Validation Accuracy Learning Curve</span>
                 </div>
                 <div class="chart-legend">
-                  <div class="legend-item"><span class="legend-dot" style="background:#10b981;"></span> Train Acc</div>
-                  <div class="legend-item"><span class="legend-dot" style="background:#38bdf8;"></span> Val Acc</div>
+                  <div class="legend-item"><span class="legend-dot" style="background:#f59e0b;"></span> Train Acc</div>
+                  <div class="legend-item"><span class="legend-dot" style="background:#f97316;"></span> Val Acc</div>
                   <div class="legend-item"><span class="legend-dot" style="background:#f43f5e;"></span> Loss</div>
                 </div>
               </div>
               <div class="svg-chart-container" id="curve-chart-container">
-                <svg id="learning-curve-svg" class="accuracy-svg" viewBox="0 0 500 220" preserveAspectRatio="none">
-                  <!-- Rendered dynamically -->
-                </svg>
+                <svg id="learning-curve-svg" class="accuracy-svg" viewBox="0 0 500 220" preserveAspectRatio="none"></svg>
                 <div id="chart-tooltip" class="chart-tooltip-box"></div>
               </div>
-              <div style="display:flex; justify-content:space-between; margin-top:10px; font-size:11px; color:var(--text-muted);">
+              <div style="display:flex; justify-content:space-between; margin-top:10px; font-size:11.5px; color:var(--text-muted);">
                 <span>Epoch 1 (Initial: 60.8%)</span>
-                <span>Peak Validation Accuracy: <strong style="color:#34d399;">98.5%</strong> at Epoch 25</span>
+                <span>Peak Validation Accuracy: <strong style="color:var(--accent-mint);">98.5%</strong> at Epoch 25</span>
               </div>
             </div>
 
@@ -465,12 +494,12 @@
                 <div class="chart-title">
                   <span>📊 Model Accuracy Progression Across Versions</span>
                 </div>
-                <span style="font-size:11px; color:var(--text-muted);">Benchmark</span>
+                <span style="font-size:11px; color:var(--text-muted); font-family:'JetBrains Mono';">Benchmark</span>
               </div>
               <div id="version-comparison-bars" style="padding-top:6px;">
                 <!-- Rendered dynamically -->
               </div>
-              <div style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); border-radius:8px; padding:10px; margin-top:14px; font-size:12px; color:#34d399;">
+              <div style="background:linear-gradient(135deg, rgba(249,115,22,0.1), rgba(225,29,72,0.05)); border:1px solid rgba(249,115,22,0.3); border-radius:10px; padding:12px; margin-top:14px; font-size:12.5px; color:var(--accent-mint);">
                 <strong>✓ Accuracy Evolution:</strong> +6.7% accuracy improvement from pilot (v0.9) to enhanced Cu-PAN spectrum model (v1.1).
               </div>
             </div>
@@ -509,10 +538,10 @@
           </div>
 
           <!-- Row 3: Colorimetric Calibration Response & Regression Parity -->
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:24px; margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:24px; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
             <div>
-              <h3 style="font-size:18px; font-weight:700;">Colorimetric Calibration & Regression Parity</h3>
-              <p style="font-size:13px; color:var(--text-muted);">CIELAB <em>a*</em> chromaticity dosimeter response ([H₂S] vs <em>a*</em>) and test set estimation parity (True vs Predicted PPM).</p>
+              <h3 style="font-size:18px; font-weight:800;">Colorimetric Calibration & Regression Parity</h3>
+              <p style="font-size:12.5px; color:var(--text-muted); margin-top:2px;">CIELAB <em>a*</em> chromaticity dosimeter response ([H₂S] vs <em>a*</em>) and test set estimation parity (True vs Predicted PPM).</p>
             </div>
             <div style="display:flex; gap:8px;">
               <span class="badge-cat badge-green" style="font-size:11px;">R² = 0.9907</span>
@@ -537,20 +566,18 @@
                   <div class="legend-item"><span class="legend-dot" style="background:#e78c55;"></span> 20.0 ppm</div>
                   <div class="legend-item" style="margin-left:2px;">
                     <span style="width:36px; height:8px; border-radius:4px; background:linear-gradient(90deg, #954978, #c1586a, #d16662, #df7a5b, #e78c55); display:inline-block; border:1px solid rgba(255,255,255,0.25);"></span>
-                    <span style="font-size:10px; color:#cbd5e1; font-weight:600;">Spectrum</span>
+                    <span style="font-size:10px; color:#cbd5e1; font-weight:700;">Spectrum</span>
                   </div>
                 </div>
               </div>
               <div class="svg-chart-container" id="calib-chart-container" style="height:270px;">
-                <svg id="calib-curve-svg" class="accuracy-svg" viewBox="0 0 520 280" preserveAspectRatio="none">
-                  <!-- Rendered dynamically -->
-                </svg>
+                <svg id="calib-curve-svg" class="accuracy-svg" viewBox="0 0 520 280" preserveAspectRatio="none"></svg>
                 <div id="calib-tooltip" class="chart-tooltip-box"></div>
               </div>
-              <div style="display:flex; justify-content:space-between; margin-top:10px; font-size:11px; color:var(--text-muted); flex-wrap:wrap; gap:6px;">
-                <span>Concentration Range: <strong style="color:#38bdf8;">0.0 – 20.0 ppm</strong></span>
+              <div style="display:flex; justify-content:space-between; margin-top:10px; font-size:11.5px; color:var(--text-muted); flex-wrap:wrap; gap:6px;">
+                <span>Concentration Range: <strong style="color:var(--accent-mint);">0.0 – 20.0 ppm</strong></span>
                 <span>Fit: <strong style="color:#a78bfa;">a* = 4.65 + 4.34·[H₂S]</strong></span>
-                <span>Linearity: <strong style="color:#34d399;">R² = 0.99070 (0–1.5 ppm)</strong></span>
+                <span>Linearity: <strong style="color:var(--accent-mint);">R² = 0.99070 (0–1.5 ppm)</strong></span>
                 <span>Plateau: <strong style="color:#f472b6;">a* = 11.0 (1.5 – 20.0 ppm)</strong></span>
               </div>
             </div>
@@ -570,30 +597,30 @@
                   <div class="legend-item"><span class="legend-dot" style="background:#eeb944;"></span> 60 ppm (Amber)</div>
                   <div class="legend-item" style="margin-left:2px;">
                     <span style="width:38px; height:8px; border-radius:4px; background:linear-gradient(90deg, #954978, #c1586a, #e99053, #eeb944); display:inline-block; border:1px solid rgba(255,255,255,0.25);"></span>
-                    <span style="font-size:10px; color:#cbd5e1; font-weight:600;">Spectrum</span>
+                    <span style="font-size:10px; color:#cbd5e1; font-weight:700;">Spectrum</span>
                   </div>
                 </div>
               </div>
               <div class="svg-chart-container" id="parity-chart-container">
-                <svg id="parity-scatter-svg" class="accuracy-svg" viewBox="0 0 500 240" preserveAspectRatio="none">
-                  <!-- Rendered dynamically -->
-                </svg>
+                <svg id="parity-scatter-svg" class="accuracy-svg" viewBox="0 0 500 240" preserveAspectRatio="none"></svg>
                 <div id="parity-tooltip" class="chart-tooltip-box"></div>
               </div>
-              <div style="display:flex; justify-content:space-between; margin-top:10px; font-size:11px; color:var(--text-muted);">
-                <span>R²: <strong style="color:#34d399;" id="parity-stat-r2">0.9984</strong></span>
-                <span>MAE: <strong style="color:#38bdf8;" id="parity-stat-mae">0.25 ppm</strong></span>
+              <div style="display:flex; justify-content:space-between; margin-top:10px; font-size:11.5px; color:var(--text-muted);">
+                <span>R²: <strong style="color:var(--accent-mint);" id="parity-stat-r2">0.9984</strong></span>
+                <span>MAE: <strong style="color:var(--accent-mint);" id="parity-stat-mae">0.25 ppm</strong></span>
                 <span>RMSE: <strong style="color:#a78bfa;" id="parity-stat-rmse">0.32 ppm</strong></span>
                 <span>Max Err: <strong style="color:#fbbf24;" id="parity-stat-maxerr">0.65 ppm</strong></span>
               </div>
             </div>
           </div>
 
-
           <!-- Model Version Registry Table -->
-          <div class="glass-card" style="margin-bottom: 28px;">
-            <h3 style="font-size:16px; margin-bottom:14px;">Model Version Registry & Deployment Actions</h3>
-            <table style="font-size:13px;">
+          <div class="table-container" style="margin-bottom: 28px;">
+            <div class="table-header">
+              <div class="table-title">Model Version Registry & Deployment Actions</div>
+              <div style="font-size:12.5px; color:var(--text-muted);">Production and rollback candidates</div>
+            </div>
+            <table>
               <thead>
                 <tr>
                   <th>Version</th>
@@ -609,107 +636,108 @@
               </tbody>
             </table>
           </div>
+
           <!-- Cu-PAN Reference Color Scale & Strict Spectral Gating -->
           <div class="glass-card" style="margin-bottom: 32px; border-left: 4px solid #f59e0b;">
-            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
               <div>
                 <h3 style="font-size:18px; margin-bottom:6px;">Cu-PAN Optical Reference Scale (SIH26118 Calibration)</h3>
-                <p style="font-size:13px; color:var(--text-secondary); max-width:850px;">
+                <p style="font-size:13px; color:var(--text-secondary); max-width:880px; line-height:1.5;">
                   The dosimeter relies on the stoichiometric displacement of Copper(II) from the PAN chelate by sulfide ions:
-                  <code style="display:inline-block; background:rgba(0,0,0,0.4); padding:2px 8px; border-radius:4px; color:#facc15; font-family:'JetBrains Mono'; margin-top:4px;">
+                  <code style="display:inline-block; background:rgba(0,0,0,0.5); padding:4px 10px; border-radius:6px; color:#facc15; font-family:'JetBrains Mono'; margin-top:6px; border:1px solid rgba(250,204,21,0.2);">
                     Cu(II)-PAN [Purple-Magenta] + H₂S ➔ CuS↓ [Precipitate] + Free PAN [Yellow] + 2H⁺
                   </code>
                 </p>
               </div>
-              <span class="badge-cat badge-green" style="font-size:12px;">Spectral Gating Active</span>
+              <span class="badge-cat badge-green" style="font-size:11.5px;">Spectral Gating Active</span>
             </div>
 
             <!-- 11-Stage Color Swatches -->
-            <div style="display:grid; grid-template-columns: repeat(11, 1fr); gap:8px; margin-bottom:20px;">
-              <div style="text-align:center; background:#1e293b; border-radius:8px; padding:8px 4px; border:1px solid #334155;">
-                <div style="height:36px; border-radius:6px; background:#954978; margin-bottom:6px; box-shadow:0 2px 8px rgba(149,73,120,0.5);"></div>
-                <div style="font-weight:700; font-size:12px; color:#fff;">S0</div>
-                <div style="font-size:10px; color:var(--text-muted);">0 ppm</div>
-                <div style="font-size:9px; color:#38bdf8; font-family:'JetBrains Mono';">#954978</div>
+            <div class="cupan-rail-container">
+              <div class="cupan-swatch-card">
+                <div class="cupan-swatch-block" style="background:#954978; box-shadow:0 2px 10px rgba(149,73,120,0.5);"></div>
+                <div style="font-weight:800; font-size:12px; color:var(--text-heading);">S0</div>
+                <div style="font-size:10.5px; color:var(--text-muted);">0 ppm</div>
+                <div style="font-size:9.5px; color:var(--accent-mint); font-family:'JetBrains Mono';">#954978</div>
               </div>
-              <div style="text-align:center; background:#1e293b; border-radius:8px; padding:8px 4px; border:1px solid #334155;">
-                <div style="height:36px; border-radius:6px; background:#A84D72; margin-bottom:6px; box-shadow:0 2px 8px rgba(168,77,114,0.5);"></div>
-                <div style="font-weight:700; font-size:12px; color:#fff;">S1</div>
-                <div style="font-size:10px; color:var(--text-muted);">0.8 ppm</div>
-                <div style="font-size:9px; color:#38bdf8; font-family:'JetBrains Mono';">#A84D72</div>
+              <div class="cupan-swatch-card">
+                <div class="cupan-swatch-block" style="background:#A84D72; box-shadow:0 2px 10px rgba(168,77,114,0.5);"></div>
+                <div style="font-weight:800; font-size:12px; color:var(--text-heading);">S1</div>
+                <div style="font-size:10.5px; color:var(--text-muted);">0.8 ppm</div>
+                <div style="font-size:9.5px; color:var(--accent-mint); font-family:'JetBrains Mono';">#A84D72</div>
               </div>
-              <div style="text-align:center; background:#1e293b; border-radius:8px; padding:8px 4px; border:1px solid #334155;">
-                <div style="height:36px; border-radius:6px; background:#C1586A; margin-bottom:6px; box-shadow:0 2px 8px rgba(193,88,106,0.5);"></div>
-                <div style="font-weight:700; font-size:12px; color:#fff;">S2</div>
-                <div style="font-size:10px; color:var(--text-muted);">2.5 ppm</div>
-                <div style="font-size:9px; color:#38bdf8; font-family:'JetBrains Mono';">#C1586A</div>
+              <div class="cupan-swatch-card">
+                <div class="cupan-swatch-block" style="background:#C1586A; box-shadow:0 2px 10px rgba(193,88,106,0.5);"></div>
+                <div style="font-weight:800; font-size:12px; color:var(--text-heading);">S2</div>
+                <div style="font-size:10.5px; color:var(--text-muted);">2.5 ppm</div>
+                <div style="font-size:9.5px; color:var(--accent-mint); font-family:'JetBrains Mono';">#C1586A</div>
               </div>
-              <div style="text-align:center; background:#1e293b; border-radius:8px; padding:8px 4px; border:1px solid #334155;">
-                <div style="height:36px; border-radius:6px; background:#D36B5F; margin-bottom:6px; box-shadow:0 2px 8px rgba(211,107,95,0.5);"></div>
-                <div style="font-weight:700; font-size:12px; color:#fff;">S3</div>
-                <div style="font-size:10px; color:var(--text-muted);">6 ppm</div>
-                <div style="font-size:9px; color:#38bdf8; font-family:'JetBrains Mono';">#D36B5F</div>
+              <div class="cupan-swatch-card">
+                <div class="cupan-swatch-block" style="background:#D36B5F; box-shadow:0 2px 10px rgba(211,107,95,0.5);"></div>
+                <div style="font-weight:800; font-size:12px; color:var(--text-heading);">S3</div>
+                <div style="font-size:10.5px; color:var(--text-muted);">6 ppm</div>
+                <div style="font-size:9.5px; color:var(--accent-mint); font-family:'JetBrains Mono';">#D36B5F</div>
               </div>
-              <div style="text-align:center; background:#1e293b; border-radius:8px; padding:8px 4px; border:1px solid #334155;">
-                <div style="height:36px; border-radius:6px; background:#DF7A5B; margin-bottom:6px; box-shadow:0 2px 8px rgba(223,122,91,0.5);"></div>
-                <div style="font-weight:700; font-size:12px; color:#fff;">S4</div>
-                <div style="font-size:10px; color:var(--text-muted);">12 ppm</div>
-                <div style="font-size:9px; color:#38bdf8; font-family:'JetBrains Mono';">#DF7A5B</div>
+              <div class="cupan-swatch-card">
+                <div class="cupan-swatch-block" style="background:#DF7A5B; box-shadow:0 2px 10px rgba(223,122,91,0.5);"></div>
+                <div style="font-weight:800; font-size:12px; color:var(--text-heading);">S4</div>
+                <div style="font-size:10.5px; color:var(--text-muted);">12 ppm</div>
+                <div style="font-size:9.5px; color:var(--accent-mint); font-family:'JetBrains Mono';">#DF7A5B</div>
               </div>
-              <div style="text-align:center; background:#1e293b; border-radius:8px; padding:8px 4px; border:1px solid #334155;">
-                <div style="height:36px; border-radius:6px; background:#E99053; margin-bottom:6px; box-shadow:0 2px 8px rgba(233,144,83,0.5);"></div>
-                <div style="font-weight:700; font-size:12px; color:#fff;">S5</div>
-                <div style="font-size:10px; color:var(--text-muted);">22 ppm</div>
-                <div style="font-size:9px; color:#38bdf8; font-family:'JetBrains Mono';">#E99053</div>
+              <div class="cupan-swatch-card">
+                <div class="cupan-swatch-block" style="background:#E99053; box-shadow:0 2px 10px rgba(233,144,83,0.5);"></div>
+                <div style="font-weight:800; font-size:12px; color:var(--text-heading);">S5</div>
+                <div style="font-size:10.5px; color:var(--text-muted);">22 ppm</div>
+                <div style="font-size:9.5px; color:var(--accent-mint); font-family:'JetBrains Mono';">#E99053</div>
               </div>
-              <div style="text-align:center; background:#1e293b; border-radius:8px; padding:8px 4px; border:1px solid #334155;">
-                <div style="height:36px; border-radius:6px; background:#ECA44C; margin-bottom:6px; box-shadow:0 2px 8px rgba(236,164,76,0.5);"></div>
-                <div style="font-weight:700; font-size:12px; color:#fff;">S6</div>
-                <div style="font-size:10px; color:var(--text-muted);">38 ppm</div>
-                <div style="font-size:9px; color:#38bdf8; font-family:'JetBrains Mono';">#ECA44C</div>
+              <div class="cupan-swatch-card">
+                <div class="cupan-swatch-block" style="background:#ECA44C; box-shadow:0 2px 10px rgba(236,164,76,0.5);"></div>
+                <div style="font-weight:800; font-size:12px; color:var(--text-heading);">S6</div>
+                <div style="font-size:10.5px; color:var(--text-muted);">38 ppm</div>
+                <div style="font-size:9.5px; color:var(--accent-mint); font-family:'JetBrains Mono';">#ECA44C</div>
               </div>
-              <div style="text-align:center; background:#1e293b; border-radius:8px; padding:8px 4px; border:1px solid #334155;">
-                <div style="height:36px; border-radius:6px; background:#EEB944; margin-bottom:6px; box-shadow:0 2px 8px rgba(238,185,68,0.5);"></div>
-                <div style="font-weight:700; font-size:12px; color:#fff;">S7</div>
-                <div style="font-size:10px; color:var(--text-muted);">55 ppm</div>
-                <div style="font-size:9px; color:#38bdf8; font-family:'JetBrains Mono';">#EEB944</div>
+              <div class="cupan-swatch-card">
+                <div class="cupan-swatch-block" style="background:#EEB944; box-shadow:0 2px 10px rgba(238,185,68,0.5);"></div>
+                <div style="font-weight:800; font-size:12px; color:var(--text-heading);">S7</div>
+                <div style="font-size:10.5px; color:var(--text-muted);">55 ppm</div>
+                <div style="font-size:9.5px; color:var(--accent-mint); font-family:'JetBrains Mono';">#EEB944</div>
               </div>
-              <div style="text-align:center; background:#1e293b; border-radius:8px; padding:8px 4px; border:1px solid #334155;">
-                <div style="height:36px; border-radius:6px; background:#F2C93E; margin-bottom:6px; box-shadow:0 2px 8px rgba(242,201,62,0.5);"></div>
-                <div style="font-weight:700; font-size:12px; color:#fff;">S8</div>
-                <div style="font-size:10px; color:var(--text-muted);">72 ppm</div>
-                <div style="font-size:9px; color:#38bdf8; font-family:'JetBrains Mono';">#F2C93E</div>
+              <div class="cupan-swatch-card">
+                <div class="cupan-swatch-block" style="background:#F2C93E; box-shadow:0 2px 10px rgba(242,201,62,0.5);"></div>
+                <div style="font-weight:800; font-size:12px; color:var(--text-heading);">S8</div>
+                <div style="font-size:10.5px; color:var(--text-muted);">72 ppm</div>
+                <div style="font-size:9.5px; color:var(--accent-mint); font-family:'JetBrains Mono';">#F2C93E</div>
               </div>
-              <div style="text-align:center; background:#1e293b; border-radius:8px; padding:8px 4px; border:1px solid #334155;">
-                <div style="height:36px; border-radius:6px; background:#F4D338; margin-bottom:6px; box-shadow:0 2px 8px rgba(244,211,56,0.5);"></div>
-                <div style="font-weight:700; font-size:12px; color:#fff;">S9</div>
-                <div style="font-size:10px; color:var(--text-muted);">90 ppm</div>
-                <div style="font-size:9px; color:#38bdf8; font-family:'JetBrains Mono';">#F4D338</div>
+              <div class="cupan-swatch-card">
+                <div class="cupan-swatch-block" style="background:#F4D338; box-shadow:0 2px 10px rgba(244,211,56,0.5);"></div>
+                <div style="font-weight:800; font-size:12px; color:var(--text-heading);">S9</div>
+                <div style="font-size:10.5px; color:var(--text-muted);">90 ppm</div>
+                <div style="font-size:9.5px; color:var(--accent-mint); font-family:'JetBrains Mono';">#F4D338</div>
               </div>
-              <div style="text-align:center; background:#1e293b; border-radius:8px; padding:8px 4px; border:1px solid #334155;">
-                <div style="height:36px; border-radius:6px; background:#F7DA34; margin-bottom:6px; box-shadow:0 2px 8px rgba(247,218,52,0.5);"></div>
-                <div style="font-weight:700; font-size:12px; color:#fff;">S10</div>
-                <div style="font-size:10px; color:var(--text-muted);">110 ppm</div>
-                <div style="font-size:9px; color:#38bdf8; font-family:'JetBrains Mono';">#F7DA34</div>
+              <div class="cupan-swatch-card">
+                <div class="cupan-swatch-block" style="background:#F7DA34; box-shadow:0 2px 10px rgba(247,218,52,0.5);"></div>
+                <div style="font-weight:800; font-size:12px; color:var(--text-heading);">S10</div>
+                <div style="font-size:10.5px; color:var(--text-muted);">110 ppm</div>
+                <div style="font-size:9.5px; color:var(--accent-mint); font-family:'JetBrains Mono';">#F7DA34</div>
               </div>
             </div>
 
             <!-- Spectral Gating Enforcement Details -->
-            <div style="background:rgba(15,23,42,0.8); border:1px solid var(--border-color); border-radius:10px; padding:16px;">
+            <div style="background:rgba(11,17,33,0.85); border:1px solid var(--border-medium); border-radius:12px; padding:16px;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                <span style="font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#38bdf8;">Spectral Guardrail Rules (Zero False Positives from Non-H₂S Colors):</span>
+                <span style="font-size:13px; font-weight:800; text-transform:uppercase; letter-spacing:0.6px; color:var(--accent-sky);">Spectral Guardrail Rules (Zero False Positives from Non-H₂S Colors):</span>
                 <span style="font-size:11px; font-family:'JetBrains Mono'; color:var(--text-muted);">CIEDE2000 ΔE₀₀ ≤ 22.0 Limit</span>
               </div>
-              <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; font-size:12px;">
-                <div style="border-left:3px solid #10b981; padding-left:12px;">
-                  <div style="color:#34d399; font-weight:700; margin-bottom:4px;">✓ ACCEPTED Cu-PAN Continuum</div>
-                  <div style="color:var(--text-secondary); line-height:1.4;">
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; font-size:12.5px;">
+                <div style="border-left:3px solid var(--accent-primary); padding-left:12px;">
+                  <div style="color:var(--accent-mint); font-weight:800; margin-bottom:4px;">✓ ACCEPTED Cu-PAN Continuum</div>
+                  <div style="color:var(--text-secondary); line-height:1.45;">
                     Hue Angle <code style="color:#fff;">315°–360°</code> (Purple-Magenta) and <code style="color:#fff;">0°–105°</code> (Coral ➔ Orange ➔ Amber ➔ Yellow). Matches authentic reaction physics.
                   </div>
                 </div>
                 <div style="border-left:3px solid #ef4444; padding-left:12px;">
-                  <div style="color:#f87171; font-weight:700; margin-bottom:4px;">⛔ STRICTLY REJECTED Foreign Colors (HTTP 422)</div>
-                  <div style="color:var(--text-secondary); line-height:1.4;">
+                  <div style="color:#f87171; font-weight:800; margin-bottom:4px;">⛔ STRICTLY REJECTED Foreign Colors (HTTP 422)</div>
+                  <div style="color:var(--text-secondary); line-height:1.45;">
                     <strong style="color:#4ade80;">Green (106°–180°)</strong> and <strong style="color:#60a5fa;">Blue / Cyan (181°–314°)</strong> are rejected immediately. Prevents non-strip objects, pen marks, or lighting artifacts from triggering false alarms.
                   </div>
                 </div>
@@ -720,10 +748,10 @@
 
         <!-- 3. SAFETY CENTER & UNDO -->
         <section id="tab-safety" class="tab-panel">
-          <div class="glass-card" style="margin-bottom: 32px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+          <div class="glass-card" style="margin-bottom: 28px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:22px;">
               <div>
-                <h3 style="font-size:18px;">Configurable Safety Parameters</h3>
+                <h3 style="font-size:19px; margin-bottom:4px;">Configurable Safety Parameters</h3>
                 <p style="font-size:13px; color:var(--text-muted);">Thresholds trigger automatic worker caution, hazard warnings, and evacuation alerts.</p>
               </div>
               <div class="badge-cat badge-green" id="active-config-tag">Active: CFG_v2.0</div>
@@ -734,7 +762,7 @@
                 <div class="slider-group">
                   <div class="slider-label">
                     <span style="color:#facc15;">Yellow Alert (Caution)</span>
-                    <span id="val-yellow">5.0 ppm</span>
+                    <span id="val-yellow" style="font-family:'JetBrains Mono';">5.0 ppm</span>
                   </div>
                   <input type="range" id="input-yellow" min="1" max="15" step="0.5" value="5.0">
                 </div>
@@ -742,7 +770,7 @@
                 <div class="slider-group">
                   <div class="slider-label">
                     <span style="color:#fb923c;">Orange Alert (Moderate)</span>
-                    <span id="val-orange">15.0 ppm</span>
+                    <span id="val-orange" style="font-family:'JetBrains Mono';">15.0 ppm</span>
                   </div>
                   <input type="range" id="input-orange" min="10" max="30" step="1" value="15.0">
                 </div>
@@ -750,7 +778,7 @@
                 <div class="slider-group">
                   <div class="slider-label">
                     <span style="color:#f87171;">Red Alert (Hazard)</span>
-                    <span id="val-red">50.0 ppm</span>
+                    <span id="val-red" style="font-family:'JetBrains Mono';">50.0 ppm</span>
                   </div>
                   <input type="range" id="input-red" min="30" max="80" step="1" value="50.0">
                 </div>
@@ -758,7 +786,7 @@
                 <div class="slider-group">
                   <div class="slider-label">
                     <span style="color:#dc2626;">Evacuation (Critical)</span>
-                    <span id="val-evac">100.0 ppm</span>
+                    <span id="val-evac" style="font-family:'JetBrains Mono';">100.0 ppm</span>
                   </div>
                   <input type="range" id="input-evac" min="80" max="150" step="5" value="100.0">
                 </div>
@@ -776,7 +804,7 @@
             <div class="table-header">
               <div>
                 <div class="table-title">Safety Configuration Version History</div>
-                <div style="font-size:13px; color:var(--text-muted);">Every change is snapshotted. You can UNDO / REVERT to any prior version at any time.</div>
+                <div style="font-size:12.5px; color:var(--text-muted); margin-top:3px;">Every change is snapshotted. You can UNDO / REVERT to any prior version at any time.</div>
               </div>
             </div>
             <table>
@@ -802,10 +830,10 @@
 
         <!-- 4. WORKER & ANALYTICS EXPLORER -->
         <section id="tab-workers" class="tab-panel">
-          <div style="display:grid; grid-template-columns: 320px 1fr; gap:24px;">
+          <div style="display:grid; grid-template-columns: 340px 1fr; gap:24px;">
             <!-- Worker List -->
             <div class="glass-card" style="height:fit-content;">
-              <h3 style="font-size:16px; margin-bottom:16px;">Worker Directory</h3>
+              <h3 style="font-size:17px; margin-bottom:16px;">Worker Directory</h3>
               <div id="worker-list-cards" style="display:flex; flex-direction:column; gap:10px;">
                 <!-- Rendered dynamically -->
               </div>
@@ -813,11 +841,11 @@
 
             <!-- Worker Detail Timeline -->
             <div class="glass-card" id="worker-timeline-panel">
-              <h3 style="font-size:18px; margin-bottom:8px;" id="wt-worker-name">Select a worker</h3>
+              <h3 style="font-size:19px; margin-bottom:6px;" id="wt-worker-name">Select a worker</h3>
               <div style="color:var(--text-muted); font-size:13px; margin-bottom:24px;" id="wt-worker-meta">--</div>
               
-              <h4 style="font-size:14px; text-transform:uppercase; color:var(--text-muted); margin-bottom:16px;">Exposure History Timeline</h4>
-              <div id="worker-timeline-items" style="max-height:400px; overflow-y:auto;">
+              <h4 style="font-size:13px; text-transform:uppercase; color:var(--text-muted); margin-bottom:16px; letter-spacing:0.8px; font-weight:800;">Exposure History Timeline</h4>
+              <div id="worker-timeline-items" style="max-height:420px; overflow-y:auto;">
                 <p style="color:var(--text-muted);">Select a worker on the left to view exposure history.</p>
               </div>
             </div>
@@ -830,12 +858,12 @@
             <!-- Git Version Checkpoints -->
             <div class="glass-card">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-                <h3 style="font-size:16px;">Git Version Checkpoints & Tags</h3>
+                <h3 style="font-size:17px;">Git Version Checkpoints & Tags</h3>
                 <span class="badge-cat badge-green">Git Active</span>
               </div>
-              <p style="font-size:13px; color:var(--text-secondary); margin-bottom:16px;">
+              <p style="font-size:13px; color:var(--text-secondary); margin-bottom:16px; line-height:1.5;">
                 All codebase changes are committed to Git with version tags. To undo changes via CLI, run:
-                <code style="display:block; background:#000; padding:8px; border-radius:6px; margin-top:6px; color:#38bdf8; font-family:'JetBrains Mono';">python undo.py --history<br>python undo.py --undo</code>
+                <code style="display:block; background:#000; padding:10px; border-radius:8px; margin-top:8px; color:var(--accent-sky); font-family:'JetBrains Mono'; border:1px solid #1e293b;">python undo.py --history<br>python undo.py --undo</code>
               </p>
               <div id="git-commits-list" style="display:flex; flex-direction:column; gap:8px;">
                 <!-- Rendered dynamically -->
@@ -844,8 +872,8 @@
 
             <!-- System Audit Trail -->
             <div class="glass-card">
-              <h3 style="font-size:16px; margin-bottom:16px;">Immutable System Audit Trail</h3>
-              <div id="system-audit-list" style="max-height:420px; overflow-y:auto; display:flex; flex-direction:column; gap:12px;">
+              <h3 style="font-size:17px; margin-bottom:16px;">Immutable System Audit Trail</h3>
+              <div id="system-audit-list" style="max-height:440px; overflow-y:auto; display:flex; flex-direction:column; gap:12px;">
                 <!-- Rendered dynamically -->
               </div>
             </div>
@@ -856,15 +884,15 @@
   </div>
 
   <!-- Rollback Modal -->
-  <div id="rollback-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); backdrop-filter:blur(8px); z-index:100; align-items:center; justify-content:center;">
-    <div class="glass-card" style="max-width:440px; width:90%; border:1px solid #f59e0b;">
-      <h3 style="color:#f59e0b; margin-bottom:12px;">Rollback Active AI Model</h3>
-      <p style="font-size:14px; color:var(--text-secondary); margin-bottom:20px;">
-        Choose an earlier model version to immediately replace the active production model.
+  <div id="rollback-modal" class="modal-backdrop" style="display:none;">
+    <div class="modal-dialog" style="max-width:460px; border-color:#f59e0b;">
+      <h3 style="color:#f59e0b; margin-bottom:10px; font-size:18px;">Rollback Active AI Model</h3>
+      <p style="font-size:13.5px; color:var(--text-secondary); margin-bottom:18px; line-height:1.5;">
+        Choose an earlier model version to immediately replace the active production model with zero system downtime.
       </p>
-      <div style="margin-bottom:16px;">
-        <label style="font-size:13px; color:var(--text-muted); display:block; margin-bottom:6px;">Target Model Version:</label>
-        <select id="modal-select-model" style="width:100%; padding:10px; background:#0f172a; color:#fff; border:1px solid var(--border-color); border-radius:8px;"></select>
+      <div style="margin-bottom:18px;">
+        <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:6px; font-weight:700;">Target Model Version:</label>
+        <select id="modal-select-model" style="width:100%; padding:10px 12px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-medium); border-radius:8px;"></select>
       </div>
       <div style="display:flex; justify-content:flex-end; gap:10px;">
         <button class="btn btn-secondary" id="btn-cancel-rollback">Cancel</button>
@@ -874,15 +902,15 @@
   </div>
 
   <!-- Worker Shift Dose Curve Modal -->
-  <div id="dose-curve-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(10px); z-index:100; align-items:center; justify-content:center; overflow-y:auto; padding:20px;">
-    <div class="glass-card" style="max-width:720px; width:100%; border:1px solid rgba(56,189,248,0.3); box-shadow:0 8px 32px rgba(0,0,0,0.6);">
+  <div id="dose-curve-modal" class="modal-backdrop" style="display:none; padding:20px;">
+    <div class="modal-dialog" style="max-width:740px; border-color:var(--accent-sky); max-height:92vh; overflow-y:auto;">
       <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px;">
         <div>
           <div style="display:flex; align-items:center; gap:10px;">
-            <h3 style="font-size:18px; margin:0;" id="dc-modal-worker-name">Worker Dose Trajectory</h3>
+            <h3 style="font-size:19px; margin:0;" id="dc-modal-worker-name">Worker Dose Trajectory</h3>
             <span id="dc-modal-tier-badge" class="tier-badge tier-emerald">Emerald</span>
           </div>
-          <p style="font-size:12px; color:var(--text-muted); margin-top:4px;" id="dc-modal-worker-meta">
+          <p style="font-size:12.5px; color:var(--text-muted); margin-top:4px;" id="dc-modal-worker-meta">
             Badge: BDG-542 • Dept: Refinery Operations • Method: Cu-PAN Optical
           </p>
         </div>
@@ -891,21 +919,21 @@
 
       <!-- Quick Metrics Grid -->
       <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:12px; margin-bottom:18px;">
-        <div style="background:rgba(15,23,42,0.6); padding:10px; border-radius:8px; border:1px solid var(--border-color);">
-          <div style="font-size:11px; color:var(--text-muted);">CUMULATIVE DOSE</div>
-          <div style="font-size:18px; font-weight:800; color:#38bdf8;" id="dc-stat-dose">-- ppm·h</div>
+        <div style="background:rgba(11,17,33,0.8); padding:12px; border-radius:10px; border:1px solid var(--border-subtle);">
+          <div style="font-size:10.5px; color:var(--text-muted); font-weight:800; text-transform:uppercase;">CUMULATIVE DOSE</div>
+          <div style="font-size:20px; font-weight:800; color:var(--accent-sky); font-family:'JetBrains Mono';" id="dc-stat-dose">-- ppm·h</div>
         </div>
-        <div style="background:rgba(15,23,42,0.6); padding:10px; border-radius:8px; border:1px solid var(--border-color);">
-          <div style="font-size:11px; color:var(--text-muted);">8-HR TWA AVG</div>
-          <div style="font-size:18px; font-weight:800; color:#34d399;" id="dc-stat-twa">-- ppm</div>
+        <div style="background:rgba(11,17,33,0.8); padding:12px; border-radius:10px; border:1px solid var(--border-subtle);">
+          <div style="font-size:10.5px; color:var(--text-muted); font-weight:800; text-transform:uppercase;">8-HR TWA AVG</div>
+          <div style="font-size:20px; font-weight:800; color:var(--accent-mint); font-family:'JetBrains Mono';" id="dc-stat-twa">-- ppm</div>
         </div>
-        <div style="background:rgba(15,23,42,0.6); padding:10px; border-radius:8px; border:1px solid var(--border-color);">
-          <div style="font-size:11px; color:var(--text-muted);">15-MIN STEL PEAK</div>
-          <div style="font-size:18px; font-weight:800; color:#fbbf24;" id="dc-stat-stel">-- ppm</div>
+        <div style="background:rgba(11,17,33,0.8); padding:12px; border-radius:10px; border:1px solid var(--border-subtle);">
+          <div style="font-size:10.5px; color:var(--text-muted); font-weight:800; text-transform:uppercase;">15-MIN STEL PEAK</div>
+          <div style="font-size:20px; font-weight:800; color:#fbbf24; font-family:'JetBrains Mono';" id="dc-stat-stel">-- ppm</div>
         </div>
-        <div style="background:rgba(15,23,42,0.6); padding:10px; border-radius:8px; border:1px solid var(--border-color);">
-          <div style="font-size:11px; color:var(--text-muted);">ACTION LEVEL</div>
-          <div style="font-size:16px; font-weight:800; color:#a78bfa;" id="dc-stat-action">NORMAL</div>
+        <div style="background:rgba(11,17,33,0.8); padding:12px; border-radius:10px; border:1px solid var(--border-subtle);">
+          <div style="font-size:10.5px; color:var(--text-muted); font-weight:800; text-transform:uppercase;">ACTION LEVEL</div>
+          <div style="font-size:18px; font-weight:800; color:#a78bfa;" id="dc-stat-action">NORMAL</div>
         </div>
       </div>
 
@@ -916,17 +944,17 @@
             <span>📈 8-Hour Shift Cumulative Dose Accumulation Curve</span>
           </div>
           <div class="chart-legend" style="flex-wrap:wrap; gap:8px;">
-            <div class="legend-item"><span class="legend-dot" style="background:#38bdf8;"></span> Dose (ppm·h)</div>
+            <div class="legend-item"><span class="legend-dot" style="background:#f97316;"></span> Dose (ppm·h)</div>
             <div class="legend-item"><span class="legend-dot" style="background:#facc15; border:1px dashed #facc15;"></span> Factories Act TWA (10 ppm)</div>
             <div class="legend-item"><span class="legend-dot" style="background:#ef4444; border:1px dashed #ef4444;"></span> Factories Act STEL (15 ppm)</div>
-            <div class="legend-item"><span class="legend-dot" style="background:#34d399; border:1px dashed #34d399;"></span> ACGIH TWA (1 ppm)</div>
+            <div class="legend-item"><span class="legend-dot" style="background:#10b981; border:1px dashed #10b981;"></span> ACGIH TWA (1 ppm)</div>
           </div>
         </div>
         <div class="svg-chart-container" style="height:230px; position:relative;" id="dc-chart-container">
           <svg id="dc-curve-svg" class="accuracy-svg" viewBox="0 0 540 220" preserveAspectRatio="none"></svg>
           <div id="dc-tooltip" class="chart-tooltip-box"></div>
         </div>
-        <div style="display:flex; justify-content:space-between; margin-top:8px; font-size:11px; color:var(--text-muted);">
+        <div style="display:flex; justify-content:space-between; margin-top:8px; font-size:11px; color:var(--text-muted); font-family:'JetBrains Mono';">
           <span>Shift Start (0h)</span>
           <span>Shift Mid (4h)</span>
           <span>Shift End (8h)</span>
@@ -934,12 +962,12 @@
       </div>
 
       <!-- Method Specific Scientific Curve Explanation -->
-      <div style="background:rgba(15,23,42,0.8); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:12px 14px;">
+      <div style="background:rgba(11,17,33,0.85); border:1px solid var(--border-medium); border-radius:10px; padding:14px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:6px;">
-          <span style="font-size:12px; font-weight:700; color:#38bdf8;" id="dc-method-title">🔬 Method: Cu-PAN Optical Colorimetric Strip</span>
-          <span style="font-family:'JetBrains Mono'; font-size:11px; color:#facc15;" id="dc-method-formula">Formula: a* = 4.65 + 4.34·[H₂S]</span>
+          <span style="font-size:12.5px; font-weight:800; color:var(--accent-sky);" id="dc-method-title">🔬 Method: Cu-PAN Optical Colorimetric Strip</span>
+          <span style="font-family:'JetBrains Mono'; font-size:11.5px; color:#facc15;" id="dc-method-formula">Formula: a* = 4.65 + 4.34·[H₂S]</span>
         </div>
-        <div style="font-size:12px; color:var(--text-secondary); line-height:1.4;" id="dc-method-desc">
+        <div style="font-size:12px; color:var(--text-secondary); line-height:1.5;" id="dc-method-desc">
           Calculates cumulative shift dose by integrating discrete scans over time using that method's calibration curve. Shared regulatory thresholds (Factories Act & ACGIH) apply uniformly across all detection methods.
         </div>
       </div>
@@ -947,22 +975,22 @@
   </div>
 
   <!-- Quick Scan Simulator Modal -->
-  <div id="scan-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); backdrop-filter:blur(8px); z-index:100; align-items:center; justify-content:center;">
-    <div class="glass-card" style="max-width:460px; width:90%;">
-      <h3 style="margin-bottom:12px;">Simulate Worker Strip Scan</h3>
+  <div id="scan-modal" class="modal-backdrop" style="display:none;">
+    <div class="modal-dialog" style="max-width:460px;">
+      <h3 style="margin-bottom:14px; font-size:18px;">Simulate Worker Strip Scan</h3>
       <div style="margin-bottom:14px;">
-        <label style="font-size:13px; color:var(--text-muted); display:block; margin-bottom:6px;">Worker:</label>
-        <select id="scan-worker-select" style="width:100%; padding:10px; background:#0f172a; color:#fff; border:1px solid var(--border-color); border-radius:8px;"></select>
+        <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:6px; font-weight:700;">Worker:</label>
+        <select id="scan-worker-select" style="width:100%; padding:10px 12px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-medium); border-radius:8px;"></select>
       </div>
       <div style="margin-bottom:14px;">
-        <label style="font-size:13px; color:var(--text-muted); display:block; margin-bottom:6px;">Strip ID:</label>
-        <input type="text" id="scan-strip-input" value="STR_0421" style="width:100%; padding:10px; background:#0f172a; color:#fff; border:1px solid var(--border-color); border-radius:8px;">
+        <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:6px; font-weight:700;">Strip ID:</label>
+        <input type="text" id="scan-strip-input" value="STR_0421" style="width:100%; padding:10px 12px; background:var(--bg-input); color:var(--accent-sky); border:1px solid var(--border-medium); border-radius:8px; font-family:'JetBrains Mono'; font-weight:700;">
       </div>
       <div style="margin-bottom:20px;">
-        <label style="font-size:13px; color:var(--text-muted); display:block; margin-bottom:6px;">Simulated Target PPM:</label>
+        <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:6px; font-weight:700;">Simulated Target PPM:</label>
         <div style="display:flex; align-items:center; gap:12px;">
           <input type="range" id="scan-ppm-slider" min="0" max="150" step="1" value="22" style="flex:1;">
-          <span id="scan-ppm-val" style="font-weight:700; width:60px;">22 ppm</span>
+          <span id="scan-ppm-val" style="font-weight:800; width:70px; font-family:'JetBrains Mono'; color:#facc15;">22 ppm</span>
         </div>
       </div>
       <div style="display:flex; justify-content:flex-end; gap:10px;">
@@ -973,30 +1001,30 @@
   </div>
 
   <!-- Issue New Strip Modal -->
-  <div id="issue-strip-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); backdrop-filter:blur(8px); z-index:100; align-items:center; justify-content:center;">
-    <div class="glass-card" style="max-width:460px; width:90%; border:1px solid #38bdf8;">
-      <h3 style="color:#38bdf8; margin-bottom:12px;">Issue / Register Fresh Strip</h3>
+  <div id="issue-strip-modal" class="modal-backdrop" style="display:none;">
+    <div class="modal-dialog" style="max-width:480px; border-color:var(--accent-sky);">
+      <h3 style="color:var(--accent-sky); margin-bottom:10px; font-size:18px;">Issue / Register Fresh Strip</h3>
       <p style="font-size:13px; color:var(--text-secondary); margin-bottom:18px;">
         Registers a fresh H₂S optical indicator strip and assigns it to a worker.
       </p>
       <div style="margin-bottom:14px;">
-        <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:6px;">Assign to Worker:</label>
-        <select id="issue-worker-select" style="width:100%; padding:10px; background:#0f172a; color:#fff; border:1px solid var(--border-color); border-radius:8px;"></select>
+        <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:6px; font-weight:700;">Assign to Worker:</label>
+        <select id="issue-worker-select" style="width:100%; padding:10px 12px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-medium); border-radius:8px;"></select>
       </div>
       <div style="margin-bottom:14px;">
-        <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:6px;">New Strip ID:</label>
+        <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:6px; font-weight:700;">New Strip ID:</label>
         <div style="display:flex; gap:8px;">
-          <input type="text" id="issue-strip-id" style="flex:1; padding:10px; background:#0f172a; color:#38bdf8; border:1px solid var(--border-color); border-radius:8px; font-family:'JetBrains Mono'; font-weight:700;">
-          <button class="btn btn-secondary" id="btn-gen-strip-id" style="font-size:12px; padding:6px 10px;">Auto</button>
+          <input type="text" id="issue-strip-id" style="flex:1; padding:10px 12px; background:var(--bg-input); color:var(--accent-sky); border:1px solid var(--border-medium); border-radius:8px; font-family:'JetBrains Mono'; font-weight:700;">
+          <button class="btn btn-secondary" id="btn-gen-strip-id" style="font-size:12px; padding:6px 12px;">Auto</button>
         </div>
       </div>
       <div style="margin-bottom:14px;">
-        <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:6px;">Batch Number:</label>
-        <input type="text" id="issue-batch-id" value="BATCH_2024_Q4_LOT_03" style="width:100%; padding:10px; background:#0f172a; color:#fff; border:1px solid var(--border-color); border-radius:8px;">
+        <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:6px; font-weight:700;">Batch Number:</label>
+        <input type="text" id="issue-batch-id" value="BATCH_2024_Q4_LOT_03" style="width:100%; padding:10px 12px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-medium); border-radius:8px; font-family:'JetBrains Mono';">
       </div>
       <div style="margin-bottom:20px;">
-        <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:6px;">Shelf Validity (Days):</label>
-        <input type="number" id="issue-days-valid" value="90" min="1" max="365" style="width:100%; padding:10px; background:#0f172a; color:#fff; border:1px solid var(--border-color); border-radius:8px;">
+        <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:6px; font-weight:700;">Shelf Validity (Days):</label>
+        <input type="number" id="issue-days-valid" value="90" min="1" max="365" style="width:100%; padding:10px 12px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-medium); border-radius:8px;">
       </div>
       <div style="display:flex; justify-content:flex-end; gap:10px;">
         <button class="btn btn-secondary" id="btn-cancel-issue-strip">Cancel</button>
@@ -1005,40 +1033,40 @@
     </div>
   </div>
 
-  <!-- Cast New Batch Modal (Section 1) -->
-  <div id="modal-cast-batch" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); backdrop-filter:blur(8px); z-index:100; align-items:center; justify-content:center;">
-    <div class="glass-card" style="max-width:480px; width:90%; border:1px solid #38bdf8;">
+  <!-- Cast New Batch Modal -->
+  <div id="modal-cast-batch" class="modal-backdrop" style="display:none;">
+    <div class="modal-dialog" style="max-width:500px; border-color:var(--accent-sky);">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-        <h3 style="color:#38bdf8; margin:0;">Cast New Dosimeter Batch</h3>
+        <h3 style="color:var(--accent-sky); margin:0; font-size:18px;">Cast New Dosimeter Batch</h3>
         <button class="btn btn-secondary" id="btn-close-cast-modal" style="padding:4px 8px;">✕</button>
       </div>
       <p style="font-size:13px; color:var(--text-secondary); margin-bottom:18px;">
         Registers freshly synthesized Cu-PAN indicator strips with virgin baseline verification.
       </p>
       <div style="margin-bottom:12px;">
-        <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;">Batch ID:</label>
-        <input type="text" id="cast-batch-id" value="BATCH_2026_Q2_01" style="width:100%; padding:10px; background:#0f172a; color:#38bdf8; border:1px solid var(--border-color); border-radius:8px; font-family:'JetBrains Mono'; font-weight:700;">
+        <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px; font-weight:700;">Batch ID:</label>
+        <input type="text" id="cast-batch-id" value="BATCH_2026_Q2_01" style="width:100%; padding:10px 12px; background:var(--bg-input); color:var(--accent-sky); border:1px solid var(--border-medium); border-radius:8px; font-family:'JetBrains Mono'; font-weight:700;">
       </div>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
         <div>
-          <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;">Shelf Validity (Days):</label>
-          <input type="number" id="cast-days-expiry" value="90" min="1" max="365" style="width:100%; padding:10px; background:#0f172a; color:#fff; border:1px solid var(--border-color); border-radius:8px;">
+          <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px; font-weight:700;">Shelf Validity (Days):</label>
+          <input type="number" id="cast-days-expiry" value="90" min="1" max="365" style="width:100%; padding:10px 12px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-medium); border-radius:8px;">
         </div>
         <div>
-          <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;">Total Strips Cast:</label>
-          <input type="number" id="cast-total-strips" value="500" min="50" max="5000" style="width:100%; padding:10px; background:#0f172a; color:#fff; border:1px solid var(--border-color); border-radius:8px;">
+          <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px; font-weight:700;">Total Strips Cast:</label>
+          <input type="number" id="cast-total-strips" value="500" min="50" max="5000" style="width:100%; padding:10px 12px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-medium); border-radius:8px;">
         </div>
       </div>
       <div style="margin-bottom:12px;">
-        <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;">Storage Condition:</label>
-        <input type="text" id="cast-storage" value="Desiccated pouch, 4°C sealed dark container" style="width:100%; padding:10px; background:#0f172a; color:#fff; border:1px solid var(--border-color); border-radius:8px;">
+        <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px; font-weight:700;">Storage Condition:</label>
+        <input type="text" id="cast-storage" value="Desiccated pouch, 4°C sealed dark container" style="width:100%; padding:10px 12px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-medium); border-radius:8px;">
       </div>
       <div style="margin-bottom:18px;">
-        <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;">Virgin Baseline CIE L*a*b* (Target: 42.0, 38.0, -12.0):</label>
+        <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px; font-weight:700;">Virgin Baseline CIE L*a*b* (Target: 42.0, 38.0, -12.0):</label>
         <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
-          <input type="number" step="0.1" id="cast-lab-l" value="42.1" placeholder="L*" style="padding:8px; background:#0f172a; color:#fff; border:1px solid var(--border-color); border-radius:8px; text-align:center;">
-          <input type="number" step="0.1" id="cast-lab-a" value="37.9" placeholder="a*" style="padding:8px; background:#0f172a; color:#fff; border:1px solid var(--border-color); border-radius:8px; text-align:center;">
-          <input type="number" step="0.1" id="cast-lab-b" value="-11.9" placeholder="b*" style="padding:8px; background:#0f172a; color:#fff; border:1px solid var(--border-color); border-radius:8px; text-align:center;">
+          <input type="number" step="0.1" id="cast-lab-l" value="42.1" placeholder="L*" style="padding:8px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-medium); border-radius:8px; text-align:center; font-family:'JetBrains Mono';">
+          <input type="number" step="0.1" id="cast-lab-a" value="37.9" placeholder="a*" style="padding:8px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-medium); border-radius:8px; text-align:center; font-family:'JetBrains Mono';">
+          <input type="number" step="0.1" id="cast-lab-b" value="-11.9" placeholder="b*" style="padding:8px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-medium); border-radius:8px; text-align:center; font-family:'JetBrains Mono';">
         </div>
       </div>
       <div style="display:flex; justify-content:flex-end; gap:10px;">
@@ -1048,77 +1076,77 @@
     </div>
   </div>
 
-  <!-- Run Virgin Baseline QC Check Modal (Section 1) -->
-  <div id="modal-batch-qc" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); backdrop-filter:blur(8px); z-index:100; align-items:center; justify-content:center;">
-    <div class="glass-card" style="max-width:500px; width:90%; border:1px solid #f59e0b;">
+  <!-- Run Virgin Baseline QC Check Modal -->
+  <div id="modal-batch-qc" class="modal-backdrop" style="display:none;">
+    <div class="modal-dialog" style="max-width:520px; border-color:#f59e0b;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-        <h3 style="color:#f59e0b; margin:0;">🧪 Virgin Baseline QC Specification Check</h3>
+        <h3 style="color:#f59e0b; margin:0; font-size:18px;">🧪 Virgin Baseline QC Specification Check</h3>
         <button class="btn btn-secondary" id="btn-close-qc-modal" style="padding:4px 8px;">✕</button>
       </div>
-      <p style="font-size:13px; color:var(--text-secondary); margin-bottom:16px;">
+      <p style="font-size:13px; color:var(--text-secondary); margin-bottom:16px; line-height:1.5;">
         Evaluates virgin indicator strip chemistry against pristine Cu(II)–PAN complex S₀ (L*=42.0, a*=38.0, b*=-12.0). If CIEDE2000 ΔE > 3.0, the batch is rejected.
       </p>
       <div style="margin-bottom:12px;">
-        <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;">Select Target Batch:</label>
-        <select id="qc-batch-select" style="width:100%; padding:10px; background:#0f172a; color:#38bdf8; border:1px solid var(--border-color); border-radius:8px; font-weight:700;"></select>
+        <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px; font-weight:700;">Select Target Batch:</label>
+        <select id="qc-batch-select" style="width:100%; padding:10px 12px; background:#0b1120; color:var(--accent-sky); border:1px solid var(--border-medium); border-radius:8px; font-weight:700;"></select>
       </div>
 
       <!-- Presets -->
       <div style="margin-bottom:14px;">
-        <span style="font-size:11px; color:var(--text-muted); text-transform:uppercase;">Test Presets:</span>
+        <span style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">Test Presets:</span>
         <div style="display:flex; gap:8px; margin-top:4px;">
-          <button class="btn btn-secondary" id="qc-preset-pass" style="padding:4px 10px; font-size:11px; color:#34d399;">
+          <button class="btn btn-secondary" id="qc-preset-pass" style="padding:5px 12px; font-size:11.5px; color:var(--accent-primary);">
             ✓ Pristine Cu-PAN (ΔE ≈ 0.3)
           </button>
-          <button class="btn btn-secondary" id="qc-preset-fail" style="padding:4px 10px; font-size:11px; color:#f87171;">
+          <button class="btn btn-secondary" id="qc-preset-fail" style="padding:5px 12px; font-size:11.5px; color:#f87171;">
             ⚠️ Compromised / Aged (ΔE ≈ 4.8)
           </button>
         </div>
       </div>
 
       <div style="margin-bottom:14px;">
-        <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;">Measured Virgin CIE L*a*b*:</label>
+        <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px; font-weight:700;">Measured Virgin CIE L*a*b*:</label>
         <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
-          <input type="number" step="0.1" id="qc-lab-l" value="42.2" placeholder="L*" style="padding:8px; background:#0f172a; color:#fff; border:1px solid var(--border-color); border-radius:8px; text-align:center;">
-          <input type="number" step="0.1" id="qc-lab-a" value="37.8" placeholder="a*" style="padding:8px; background:#0f172a; color:#fff; border:1px solid var(--border-color); border-radius:8px; text-align:center;">
-          <input type="number" step="0.1" id="qc-lab-b" value="-12.1" placeholder="b*" style="padding:8px; background:#0f172a; color:#fff; border:1px solid var(--border-color); border-radius:8px; text-align:center;">
+          <input type="number" step="0.1" id="qc-lab-l" value="42.2" placeholder="L*" style="padding:8px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-medium); border-radius:8px; text-align:center; font-family:'JetBrains Mono';">
+          <input type="number" step="0.1" id="qc-lab-a" value="37.8" placeholder="a*" style="padding:8px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-medium); border-radius:8px; text-align:center; font-family:'JetBrains Mono';">
+          <input type="number" step="0.1" id="qc-lab-b" value="-12.1" placeholder="b*" style="padding:8px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-medium); border-radius:8px; text-align:center; font-family:'JetBrains Mono';">
         </div>
       </div>
 
-      <div id="qc-result-box" style="display:none; padding:12px; border-radius:10px; margin-bottom:16px; font-size:12px; line-height:1.4;"></div>
+      <div id="qc-result-box" style="display:none; padding:12px 14px; border-radius:10px; margin-bottom:16px; font-size:12.5px; line-height:1.5;"></div>
 
       <div style="display:flex; justify-content:flex-end; gap:10px;">
         <button class="btn btn-secondary" id="btn-cancel-batch-qc">Cancel</button>
-        <button class="btn btn-primary" id="btn-execute-batch-qc" style="background:#f59e0b; border-color:#f59e0b; color:#020617;">Execute QC Decision →</button>
+        <button class="btn btn-primary" id="btn-execute-batch-qc" style="background:#f59e0b; border-color:#f59e0b; color:#020617; font-weight:800;">Execute QC Decision →</button>
       </div>
     </div>
   </div>
 
-  <!-- Issue Wristband QR Modal (Section 7) -->
-  <div id="modal-wristband-issue-qr" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); z-index:100; align-items:center; justify-content:center;">
-    <div class="glass-card" style="max-width:540px; width:92%; border:1px solid #38bdf8;">
+  <!-- Issue Wristband QR Modal -->
+  <div id="modal-wristband-issue-qr" class="modal-backdrop" style="display:none;">
+    <div class="modal-dialog" style="max-width:540px; border-color:var(--accent-sky);">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-        <h3 style="color:#38bdf8; margin:0;">🪪 Issue Dosimeter Wristband QR</h3>
+        <h3 style="color:var(--accent-sky); margin:0; font-size:18px;">🪪 Issue Dosimeter Wristband QR</h3>
         <button class="btn btn-secondary" id="btn-close-wristband-modal" style="padding:4px 8px;">✕</button>
       </div>
-      <p style="font-size:12.5px; color:var(--text-secondary); margin-bottom:16px;">
+      <p style="font-size:12.5px; color:var(--text-secondary); margin-bottom:16px; line-height:1.45;">
         Encodes <strong>Worker ↔ Batch ↔ Method</strong> into an unforgeable QR code on the physical wristband, eliminating manual entry and mix-ups.
       </p>
 
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
         <div>
-          <label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:4px;">Worker:</label>
-          <select id="wb-assign-worker-select" style="width:100%; padding:8px; background:#0f172a; color:#fff; border:1px solid var(--border-color); border-radius:8px;"></select>
+          <label style="font-size:11.5px; color:var(--text-muted); display:block; margin-bottom:4px; font-weight:700;">Worker:</label>
+          <select id="wb-assign-worker-select" style="width:100%; padding:9px 12px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-medium); border-radius:8px;"></select>
         </div>
         <div>
-          <label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:4px;">Stock Batch (QC Passed):</label>
-          <select id="wb-assign-batch-select" style="width:100%; padding:8px; background:#0f172a; color:#34d399; border:1px solid var(--border-color); border-radius:8px; font-weight:700;"></select>
+          <label style="font-size:11.5px; color:var(--text-muted); display:block; margin-bottom:4px; font-weight:700;">Stock Batch (QC Passed):</label>
+          <select id="wb-assign-batch-select" style="width:100%; padding:9px 12px; background:var(--bg-input); color:var(--accent-mint); border:1px solid var(--border-medium); border-radius:8px; font-weight:700;"></select>
         </div>
       </div>
 
       <div style="margin-bottom:14px;">
-        <label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:4px;">Detection Method:</label>
-        <select id="wb-assign-method-select" style="width:100%; padding:8px; background:#0f172a; color:#facc15; border:1px solid var(--border-color); border-radius:8px; font-weight:600;">
+        <label style="font-size:11.5px; color:var(--text-muted); display:block; margin-bottom:4px; font-weight:700;">Detection Method:</label>
+        <select id="wb-assign-method-select" style="width:100%; padding:9px 12px; background:var(--bg-input); color:var(--accent-amber); border:1px solid var(--border-medium); border-radius:8px; font-weight:600;">
           <option value="cupan_optical">Cu-PAN Optical Strip (SIH26118 Standard, 0.1-100 ppm)</option>
           <option value="lead_acetate">Lead Acetate Colorimetric (Historical Indicator, 1-20 ppm)</option>
           <option value="gold_np">Gold Nanoparticle Resonator (High Sensitivity, 0.05-10 ppm)</option>
@@ -1135,18 +1163,18 @@
     </div>
   </div>
 
-  <!-- Trust Certificate Modal (Section 8) -->
-  <div id="modal-audit-cert" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); z-index:100; align-items:center; justify-content:center; padding:16px;">
-    <div class="glass-card" style="max-width:560px; width:92%; border:1px solid #38bdf8; max-height:92vh; overflow-y:auto;">
-      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; border-bottom:1px solid #334155; padding-bottom:12px;">
+  <!-- Trust Certificate Modal -->
+  <div id="modal-audit-cert" class="modal-backdrop" style="display:none; padding:16px;">
+    <div class="modal-dialog" style="max-width:580px; border-color:var(--accent-sky); max-height:92vh; overflow-y:auto;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; border-bottom:1px solid var(--border-subtle); padding-bottom:12px;">
         <div>
-          <div style="color:#38bdf8; font-size:11px; font-weight:800; letter-spacing:1px;">CYBER-PHYSICAL SYSTEM VERIFICATION</div>
-          <h3 style="margin:4px 0 0 0; color:#fff; font-size:18px;">🛡️ Cryptographic Scan Audit Certificate</h3>
+          <div style="color:var(--accent-sky); font-size:11px; font-weight:800; letter-spacing:1px; text-transform:uppercase;">Cyber-Physical System Verification</div>
+          <h3 style="margin:4px 0 0 0; color:var(--text-heading); font-size:18px;">🛡️ Cryptographic Scan Audit Certificate</h3>
         </div>
         <button class="btn btn-secondary" id="btn-close-audit-cert" style="padding:4px 10px;">✕</button>
       </div>
 
-      <div id="audit-cert-content" style="font-size:13px; color:#cbd5e1; line-height:1.5;">
+      <div id="audit-cert-content" style="font-size:13px; color:#cbd5e1; line-height:1.6;">
         <div style="text-align:center; padding:30px; color:var(--text-muted);">Loading cryptographic certificate...</div>
       </div>
     </div>

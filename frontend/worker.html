@@ -3,19 +3,30 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>H₂S Worker Mobile Scanner</title>
+  <title>H₂S Worker Mobile Scanner - Industrial Optical Dosimeter</title>
   <link rel="manifest" href="/manifest.json">
-  <meta name="theme-color" content="#0f172a">
+  <meta name="theme-color" content="#080c16">
+  <meta name="color-scheme" content="light dark">
   <link rel="stylesheet" href="/static/css/style.css">
+  <script>
+    (function() {
+      try {
+        var savedTheme = localStorage.getItem("theme");
+        var prefersLight = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches;
+        var theme = savedTheme ? savedTheme : (prefersLight ? "light" : "dark");
+        document.documentElement.setAttribute("data-theme", theme);
+      } catch (e) {}
+    })();
+  </script>
   <script src="/static/js/qr_generator.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
   <style>
     html, body {
       margin: 0;
       padding: 0;
-      background: #020617;
+      background: radial-gradient(circle at 50% 20%, rgba(249, 115, 22, 0.10) 0%, transparent 60%), #040711;
       min-height: 100vh;
       display: flex;
       align-items: center;
@@ -23,409 +34,116 @@
       overflow: hidden;
       -ms-overflow-style: none;
       scrollbar-width: none;
+      transition: background-color 0.25s ease;
     }
-    html::-webkit-scrollbar,
-    body::-webkit-scrollbar {
-      display: none;
-      width: 0;
-      height: 0;
+    [data-theme="light"] html,
+    [data-theme="light"] body {
+      background: radial-gradient(circle at 50% 20%, rgba(249, 115, 22, 0.12) 0%, transparent 60%), #e2e8f0;
     }
-
-    .phone-frame {
-      width: 380px;
-      height: 740px;
-      max-height: 96vh;
-      background: #0b0f19;
-      border: 3px solid #334155;
-      border-radius: 40px;
-      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 30px rgba(59, 130, 246, 0.2);
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      position: relative;
-      -ms-overflow-style: none;
-      scrollbar-width: none;
-    }
-    .phone-frame::-webkit-scrollbar {
-      display: none;
-      width: 0;
-      height: 0;
-    }
-
-    @media (max-width: 420px) {
-      body { padding: 0; }
-      .phone-frame {
-        width: 100vw;
-        max-width: 100vw;
-        height: 100vh;
-        max-height: 100vh;
-        border-radius: 0;
-        border: none;
-        box-shadow: none;
-      }
-    }
-    .camera-notch {
-      position: absolute;
-      top: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 120px;
-      height: 20px;
-      background: #1e293b;
-      border-radius: 20px;
-      z-index: 50;
-    }
-    .worker-screen {
-      flex: 1;
-      padding: 38px 16px 16px;
-      display: none;
-      flex-direction: column;
-      overflow-y: auto;
-      -ms-overflow-style: none;  /* IE and Edge */
-      scrollbar-width: none;     /* Firefox */
-    }
-    .worker-screen::-webkit-scrollbar {
-      display: none;             /* Chrome, Safari, Opera */
-      width: 0;
-      height: 0;
-    }
-    .worker-screen.active {
-      display: flex;
-    }
-    .viewfinder {
-      width: 100%;
-      height: 240px;
-      background: #111827;
-      border: 2px dashed #38bdf8;
-      border-radius: 16px;
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 20px;
-      overflow: hidden;
-    }
-    .roi-guide {
-      width: 140px;
-      height: 140px;
-      border: 2px solid #22c55e;
-      border-radius: 8px;
-      box-shadow: 0 0 15px rgba(34, 197, 94, 0.4);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #22c55e;
-      font-size: 11px;
-      text-align: center;
-      text-transform: uppercase;
-      font-weight: 700;
-    }
-    .corner-bracket {
-      position: absolute;
-      width: 20px;
-      height: 20px;
-      border: 3px solid #38bdf8;
-    }
-    .corner-tl { top: 12px; left: 12px; border-right: none; border-bottom: none; }
-    .corner-tr { top: 12px; right: 12px; border-left: none; border-bottom: none; }
-    .corner-bl { bottom: 12px; left: 12px; border-right: none; border-top: none; }
-    .corner-br { bottom: 12px; right: 12px; border-left: none; border-top: none; }
-    .guidance-box {
-      background: rgba(15, 23, 42, 0.9);
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      padding: 14px;
-      margin-bottom: 20px;
-    }
-    .guidance-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      font-size: 13px;
-      margin-bottom: 6px;
-    }
-    .guidance-item:last-child { margin-bottom: 0; }
   </style>
 </head>
 <body>
   <div class="phone-frame">
     <div class="camera-notch"></div>
 
-    <!-- Plant Dead-Zone / Offline Vault Status Bar (Section 10) -->
-    <div id="pwa-network-bar" style="margin:28px 16px 0; padding:6px 12px; background:rgba(15,23,42,0.85); border:1px solid #334155; border-radius:20px; font-size:11px; display:flex; align-items:center; justify-content:space-between; z-index:40;">
-      <div style="display:flex; align-items:center; gap:6px;">
-        <span id="pwa-status-dot" style="width:8px; height:8px; border-radius:50%; background:#22c55e; display:inline-block; box-shadow:0 0 8px #22c55e;"></span>
-        <span id="pwa-status-text" style="color:#94a3b8; font-weight:600;">Plant Network Online</span>
+    <!-- Plant Dead-Zone / Offline Vault Status Bar -->
+    <div id="pwa-network-bar" style="margin:26px 16px 0; padding:6px 12px; background:rgba(15,23,42,0.85); border:1px solid rgba(255,255,255,0.1); border-radius:20px; font-size:11.5px; display:flex; align-items:center; justify-content:space-between; z-index:40; backdrop-filter:blur(8px);">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span id="pwa-status-dot" style="width:8px; height:8px; border-radius:50%; background:#22c55e; display:inline-block; box-shadow:0 0 10px #22c55e;"></span>
+        <span id="pwa-status-text" style="color:var(--text-secondary); font-weight:700; font-size:11px;">Plant Network Online</span>
       </div>
-      <span id="pwa-sync-pill" style="display:none; background:#f59e0b; color:#020617; font-weight:700; font-size:10px; padding:2px 8px; border-radius:10px;">0 Queued</span>
+      <div style="display:flex; align-items:center; gap:6px;">
+        <span id="pwa-sync-pill" style="display:none; background:#f59e0b; color:#020617; font-weight:800; font-size:10px; padding:2px 8px; border-radius:10px; font-family:'JetBrains Mono';">0 Queued</span>
+        <button type="button" id="worker-theme-toggle" class="worker-theme-toggle-btn" title="Toggle Light / Dark Mode" aria-label="Toggle theme">
+          <span id="worker-theme-icon">🌙</span>
+        </button>
+      </div>
     </div>
 
     <!-- 1. LOGIN SCREEN -->
     <div id="screen-login" class="worker-screen active">
-      <div style="text-align:center; margin-top:20px; margin-bottom:32px;">
-        <div class="brand-icon" style="margin:0 auto 12px; width:52px; height:52px; font-size:22px;">H₂S</div>
-        <h2 style="font-size:20px; font-weight:800;">Worker Terminal</h2>
-        <p style="font-size:13px; color:var(--text-muted);">Industrial Optical Dosimeter</p>
+      <div style="text-align:center; margin-top:16px; margin-bottom:28px;">
+        <div class="brand-icon" style="margin:0 auto 14px; width:56px; height:56px; font-size:24px;">H₂S</div>
+        <h2 style="font-size:22px; font-weight:800; letter-spacing:-0.02em;">Worker Terminal</h2>
+        <p style="font-size:13px; color:var(--text-muted); margin-top:4px;">Industrial Optical Dosimetry System</p>
       </div>
 
       <div style="display:flex; flex-direction:column; gap:16px; flex:1;">
         <div>
-          <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:6px;">Worker ID / Badge:</label>
-          <input type="text" id="login-worker-id" value="EMP_00542" placeholder="e.g. EMP_00542 or W101" style="width:100%; padding:12px; background:#0f172a; color:#fff; border:1px solid var(--border-color); border-radius:10px; font-size:15px; font-family:'JetBrains Mono';">
+          <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:6px; font-weight:700;">Worker ID / Badge Number:</label>
+          <input type="text" id="login-worker-id" value="EMP_00542" placeholder="e.g. EMP_00542 or W101" style="width:100%; padding:12px 14px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-medium); border-radius:12px; font-size:15px; font-family:'JetBrains Mono'; font-weight:700;">
         </div>
 
         <div>
-          <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:6px;">4-Digit Security PIN:</label>
-          <input type="password" id="login-pin" value="1234" maxlength="6" style="width:100%; padding:12px; background:#0f172a; color:#fff; border:1px solid var(--border-color); border-radius:10px; font-size:18px; text-align:center; letter-spacing:4px;">
+          <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:6px; font-weight:700;">4-Digit Security PIN:</label>
+          <input type="password" id="login-pin" value="1234" maxlength="6" style="width:100%; padding:12px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-medium); border-radius:12px; font-size:20px; text-align:center; letter-spacing:6px; font-family:'JetBrains Mono';">
         </div>
 
         <!-- Quick Demo Profiles (1-Tap Login) -->
-        <div style="background:rgba(255,255,255,0.03); border:1px solid #334155; border-radius:10px; padding:10px;">
-          <div style="font-size:10px; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; font-weight:700;">Quick Demo Profiles (1-Tap Login):</div>
+        <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-subtle); border-radius:12px; padding:12px;">
+          <div style="font-size:10.5px; text-transform:uppercase; color:var(--text-muted); margin-bottom:8px; font-weight:800; letter-spacing:0.5px;">Quick Demo Profiles (1-Tap):</div>
           <div style="display:flex; flex-wrap:wrap; gap:6px;">
-            <button type="button" class="btn btn-secondary" style="padding:6px 10px; font-size:11px; cursor:pointer;" onclick="document.getElementById('login-worker-id').value='EMP_00542'; document.getElementById('login-pin').value='1234'; handleWorkerLogin();">⚡ EMP_00542 (1-Tap)</button>
-            <button type="button" class="btn btn-secondary" style="padding:6px 10px; font-size:11px; cursor:pointer;" onclick="document.getElementById('login-worker-id').value='W101'; document.getElementById('login-pin').value='1234'; handleWorkerLogin();">⚡ W101 (1-Tap)</button>
-            <button type="button" class="btn btn-secondary" style="padding:6px 10px; font-size:11px; cursor:pointer;" onclick="document.getElementById('login-worker-id').value='BDG-542'; document.getElementById('login-pin').value='1234'; handleWorkerLogin();">⚡ BDG-542 (1-Tap)</button>
+            <button type="button" class="btn btn-secondary" style="padding:6px 10px; font-size:11px; cursor:pointer;" onclick="document.getElementById('login-worker-id').value='EMP_00542'; document.getElementById('login-pin').value='1234'; handleWorkerLogin();">⚡ EMP_00542</button>
+            <button type="button" class="btn btn-secondary" style="padding:6px 10px; font-size:11px; cursor:pointer;" onclick="document.getElementById('login-worker-id').value='W101'; document.getElementById('login-pin').value='1234'; handleWorkerLogin();">⚡ W101</button>
+            <button type="button" class="btn btn-secondary" style="padding:6px 10px; font-size:11px; cursor:pointer;" onclick="document.getElementById('login-worker-id').value='BDG-542'; document.getElementById('login-pin').value='1234'; handleWorkerLogin();">⚡ BDG-542</button>
           </div>
         </div>
 
-        <div id="login-error" style="display:none; color:#f87171; font-size:13px; background:rgba(239,68,68,0.1); padding:10px; border-radius:8px; border:1px solid rgba(239,68,68,0.3);"></div>
+        <div id="login-error" style="display:none; color:#f87171; font-size:13px; background:rgba(239,68,68,0.12); padding:12px; border-radius:10px; border:1px solid rgba(239,68,68,0.35); line-height:1.4;"></div>
 
-        <button type="button" class="btn btn-primary" id="btn-login" onclick="handleWorkerLogin()" style="margin-top:auto; width:100%; justify-content:center; padding:14px; font-size:16px; cursor:pointer;">
+        <button type="button" class="btn btn-primary" id="btn-login" onclick="handleWorkerLogin()" style="margin-top:auto; width:100%; justify-content:center; padding:14px; font-size:15px; font-weight:800; border-radius:12px;">
           Authenticate Worker →
         </button>
       </div>
     </div>
 
-    <script>
-      window.handleWorkerLogin = async function() {
-        const btn = document.getElementById("btn-login");
-        const workerIdInput = document.getElementById("login-worker-id");
-        const pinInput = document.getElementById("login-pin");
-        const errDiv = document.getElementById("login-error");
-
-        const workerId = (workerIdInput ? workerIdInput.value : "").trim();
-        const pin = (pinInput ? pinInput.value : "").trim();
-
-        if (!workerId || !pin) {
-          if (errDiv) {
-            errDiv.textContent = "Please enter both Worker ID and PIN.";
-            errDiv.style.display = "block";
-          }
-          return;
-        }
-
-        if (btn) {
-          btn.disabled = true;
-          btn.textContent = "⏳ Authenticating...";
-          btn.style.opacity = "0.7";
-        }
-        if (errDiv) errDiv.style.display = "none";
-
-        try {
-          const res = await fetch("/api/auth/worker-login", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ worker_id: workerId, pin: pin })
-          });
-
-          const data = await res.json().catch(() => null);
-
-          if (!res.ok) {
-            const errorMsg = (data && data.detail) ? data.detail : ("Login failed (HTTP " + res.status + ")");
-            throw new Error(errorMsg);
-          }
-
-          window.currentWorker = data.user_info;
-          if (data.access_token) {
-            try { localStorage.setItem("h2s_worker_token", data.access_token); } catch(e) {}
-          }
-
-          const pill = document.getElementById("worker-profile-pill");
-          if (pill && data.user_info) {
-            pill.textContent = data.user_info.name + " (" + data.user_info.id + ")";
-          }
-
-          if (btn) btn.textContent = "✓ Success! Loading...";
-
-          const screenLogin = document.getElementById("screen-login");
-          const screenStrip = document.getElementById("screen-strip-validate");
-          if (screenLogin) screenLogin.classList.remove("active");
-          if (screenStrip) screenStrip.classList.add("active");
-
-        } catch (err) {
-          if (errDiv) {
-            errDiv.textContent = err.message || "Authentication failed. Check worker ID and PIN.";
-            errDiv.style.display = "block";
-          }
-        } finally {
-          if (btn) {
-            btn.disabled = false;
-            btn.textContent = "Authenticate Worker →";
-            btn.style.opacity = "1";
-          }
-        }
-      };
-
-      window.handleVerifyStrip = async function() {
-        const btn = document.getElementById("btn-verify-strip");
-        const stripInput = document.getElementById("strip-input-id");
-        const errBanner = document.getElementById("strip-error-banner");
-
-        const stripId = (stripInput ? stripInput.value : "").trim();
-        if (!stripId) {
-          if (errBanner) {
-            errBanner.textContent = "Please enter a Strip ID.";
-            errBanner.style.display = "block";
-          }
-          return;
-        }
-
-        const workerId = (window.currentWorker && window.currentWorker.id) || "EMP_00542";
-
-        if (btn) {
-          btn.disabled = true;
-          btn.textContent = "⏳ Verifying Strip...";
-          btn.style.opacity = "0.7";
-        }
-        if (errBanner) errBanner.style.display = "none";
-
-        try {
-          const res = await fetch("/api/strips/validate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ worker_id: workerId, strip_id: stripId })
-          });
-
-          const data = await res.json().catch(() => null);
-
-          if (!res.ok || !data) {
-            throw new Error((data && data.detail) || ("Server error HTTP " + res.status));
-          }
-
-          if (!data.valid) {
-            if (errBanner) {
-              errBanner.style.background = "rgba(239,68,68,0.15)";
-              errBanner.style.borderColor = "rgba(239,68,68,0.4)";
-              errBanner.style.color = "#f87171";
-              errBanner.innerHTML = `<strong>⚠️ Validation Failed (${data.reason_code || 'INVALID'})</strong><br>${data.message || 'Strip validation failed.'}
-                <div style="margin-top:8px;">
-                  <button type="button" class="btn btn-secondary" style="font-size:11px; padding:4px 8px; color:#38bdf8;" onclick="window.issueAndUseFreshStrip()">+ Tap here to auto-issue fresh strip</button>
-                </div>`;
-              errBanner.style.display = "block";
-              errBanner.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-            return;
-          }
-
-          // Strip is valid!
-          window.currentStripId = stripId;
-          if (btn) btn.textContent = "✓ Valid! Opening Scanner...";
-
-          // Transition to Camera Scanner Screen
-          const allScreens = document.querySelectorAll(".worker-screen");
-          allScreens.forEach(s => s.classList.remove("active"));
-          const screenCamera = document.getElementById("screen-camera");
-          if (screenCamera) screenCamera.classList.add("active");
-
-          if (typeof window.onStripValidated === "function") {
-            window.onStripValidated(stripId);
-          }
-
-        } catch (err) {
-          if (errBanner) {
-            errBanner.style.background = "rgba(239,68,68,0.15)";
-            errBanner.style.borderColor = "rgba(239,68,68,0.4)";
-            errBanner.style.color = "#f87171";
-            errBanner.textContent = "Strip validation service unavailable: " + (err.message || "Network error");
-            errBanner.style.display = "block";
-          }
-        } finally {
-          if (btn) {
-            btn.disabled = false;
-            btn.textContent = "Verify Strip Validity ✓";
-            btn.style.opacity = "1";
-          }
-        }
-      };
-
-      window.issueAndUseFreshStrip = async function() {
-        const workerId = (window.currentWorker && window.currentWorker.id) || "EMP_00542";
-        const randId = "STR_" + Math.floor(1000 + Math.random() * 9000);
-        const errBanner = document.getElementById("strip-error-banner");
-        try {
-          const res = await fetch("/api/strips", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              strip_id: randId,
-              batch_id: "BATCH_2024_Q4_LOT_03",
-              assigned_worker_id: workerId,
-              days_valid: 90
-            })
-          });
-          const stripInput = document.getElementById("strip-input-id");
-          if (stripInput) stripInput.value = randId;
-          if (errBanner) {
-            errBanner.style.background = "rgba(16, 185, 129, 0.2)";
-            errBanner.style.borderColor = "rgba(16, 185, 129, 0.5)";
-            errBanner.style.color = "#34d399";
-            errBanner.innerHTML = `<strong>✓ Fresh Strip Issued!</strong><br>${randId} is active and ready. Click "Verify Strip Validity ✓".`;
-            errBanner.style.display = "block";
-          }
-        } catch (e) {
-          alert("Error issuing strip: " + e.message);
-        }
-      };
-    </script>
-
     <!-- 2. STRIP VALIDATION SCREEN -->
     <div id="screen-strip-validate" class="worker-screen">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-        <span style="font-size:13px; color:var(--text-muted);">Step 1 of 3: Validate Strip</span>
+        <span style="font-size:12px; color:var(--text-muted); font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Step 1 of 3: Validate Strip</span>
         <span class="badge-cat badge-green" id="worker-profile-pill">EMP_00542</span>
       </div>
 
-      <!-- Wristband QR Scan Auto-Binding (Section 7) -->
-      <button type="button" class="btn btn-outline" id="btn-open-qr-modal" style="width:100%; justify-content:center; padding:9px; font-size:12px; font-weight:700; border-color:#38bdf8; color:#38bdf8; background:rgba(56,189,248,0.08); margin-bottom:12px;">
-        🪪 Scan Wristband QR (Auto-Fill & Lock)
+      <!-- Wristband QR Scan Auto-Binding -->
+      <button type="button" class="btn btn-outline" id="btn-open-qr-modal" style="width:100%; justify-content:center; padding:10px; font-size:12.5px; font-weight:800; border-color:var(--accent-sky); color:var(--accent-sky); background:rgba(56,189,248,0.08); margin-bottom:12px; border-radius:10px;">
+        🪪 Scan Wristband QR (Auto-Bind)
       </button>
 
-      <div id="wristband-locked-card" style="display:none; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.4); border-radius:10px; padding:8px 10px; margin-bottom:12px;">
-        <div style="display:flex; align-items:center; gap:6px; color:#34d399; font-size:11px; font-weight:800; margin-bottom:2px;">
+      <div id="wristband-locked-card" style="display:none; background:rgba(249,115,22,0.1); border:1px solid rgba(249,115,22,0.4); border-radius:10px; padding:10px 12px; margin-bottom:12px;">
+        <div style="display:flex; align-items:center; gap:6px; color:#fb923c; font-size:11.5px; font-weight:800; margin-bottom:2px;">
           <span>🔒</span> WRISTBAND QR LINKED & METHOD BOUND
         </div>
-        <div id="wb-lock-info" style="font-size:10px; color:#cbd5e1; line-height:1.4;"></div>
+        <div id="wb-lock-info" style="font-size:11px; color:#cbd5e1; line-height:1.4;"></div>
       </div>
 
-      <h3 style="font-size:16px; margin-bottom:6px;">Optical Strip Verification</h3>
-      <p style="font-size:12px; color:var(--text-secondary); margin-bottom:16px;">
-        Scan your wristband QR or enter the unique 8-character ID stamped on your strip pouch.
+      <h3 style="font-size:17px; margin-bottom:4px; font-weight:800;">Optical Strip Verification</h3>
+      <p style="font-size:12.5px; color:var(--text-secondary); margin-bottom:16px; line-height:1.45;">
+        Scan your wristband QR or enter the unique ID stamped on your indicator strip pouch.
       </p>
 
       <div style="margin-bottom:14px;">
-        <label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:4px;">Strip Identifier:</label>
-        <input type="text" id="strip-input-id" value="STR_001234" onkeydown="if(event.key==='Enter')handleVerifyStrip()" style="width:100%; padding:10px; background:#0f172a; color:#38bdf8; border:1px solid var(--border-color); border-radius:10px; font-size:15px; font-family:'JetBrains Mono'; font-weight:700;">
+        <label style="font-size:11.5px; color:var(--text-muted); display:block; margin-bottom:6px; font-weight:700;">Strip Identifier:</label>
+        <input type="text" id="strip-input-id" value="STR_001234" onkeydown="if(event.key==='Enter')handleVerifyStrip()" style="width:100%; padding:11px 14px; background:#0b1120; color:var(--accent-sky); border:1px solid var(--border-medium); border-radius:10px; font-size:15px; font-family:'JetBrains Mono'; font-weight:800;">
       </div>
 
       <!-- Quick Test Strips -->
-      <div style="background:rgba(255,255,255,0.03); padding:12px; border-radius:10px; margin-bottom:20px;">
+      <div style="background:rgba(255,255,255,0.03); padding:12px; border-radius:12px; margin-bottom:18px; border:1px solid var(--border-subtle);">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-          <span style="font-size:11px; text-transform:uppercase; color:var(--text-muted);">Test Presets:</span>
-          <button type="button" class="btn btn-secondary" id="btn-worker-quick-issue" onclick="issueAndUseFreshStrip()" style="padding:4px 8px; font-size:11px; color:#38bdf8; border-color:rgba(56,189,248,0.4);">+ Issue Fresh Strip</button>
+          <span style="font-size:10.5px; text-transform:uppercase; color:var(--text-muted); font-weight:800; letter-spacing:0.5px;">Test Presets:</span>
+          <button type="button" class="btn btn-secondary" id="btn-worker-quick-issue" onclick="issueAndUseFreshStrip()" style="padding:4px 8px; font-size:11px; color:var(--accent-sky); border-color:rgba(56,189,248,0.4);">+ Issue Fresh</button>
         </div>
         <div style="display:flex; flex-wrap:wrap; gap:6px;">
-          <button type="button" class="btn btn-secondary" style="padding:4px 8px; font-size:11px;" onclick="document.getElementById('strip-input-id').value='STR_001234'">STR_001234 (Valid)</button>
-          <button type="button" class="btn btn-secondary" style="padding:4px 8px; font-size:11px;" onclick="document.getElementById('strip-input-id').value='STR_0421'">STR_0421 (Valid)</button>
-          <button type="button" class="btn btn-secondary" style="padding:4px 8px; font-size:11px;" onclick="document.getElementById('strip-input-id').value='STR_EXPIRED'">STR_EXPIRED (Fail)</button>
-          <button type="button" class="btn btn-secondary" style="padding:4px 8px; font-size:11px;" onclick="document.getElementById('strip-input-id').value='STR_USED'">STR_USED (Fail)</button>
+          <button type="button" class="btn btn-secondary" style="padding:5px 8px; font-size:11px;" onclick="document.getElementById('strip-input-id').value='STR_001234'">STR_001234 (Valid)</button>
+          <button type="button" class="btn btn-secondary" style="padding:5px 8px; font-size:11px;" onclick="document.getElementById('strip-input-id').value='STR_0421'">STR_0421 (Valid)</button>
+          <button type="button" class="btn btn-secondary" style="padding:5px 8px; font-size:11px;" onclick="document.getElementById('strip-input-id').value='STR_EXPIRED'">STR_EXPIRED (Fail)</button>
+          <button type="button" class="btn btn-secondary" style="padding:5px 8px; font-size:11px;" onclick="document.getElementById('strip-input-id').value='STR_USED'">STR_USED (Fail)</button>
         </div>
       </div>
 
-      <!-- Validation Error Banner (Section 2.2) -->
-      <div id="strip-error-banner" style="display:none; color:#f87171; font-size:13px; background:rgba(239,68,68,0.15); padding:12px; border-radius:10px; border:1px solid rgba(239,68,68,0.4); margin-bottom:20px;"></div>
+      <!-- Validation Error Banner -->
+      <div id="strip-error-banner" style="display:none; color:#f87171; font-size:12.5px; background:rgba(239,68,68,0.15); padding:12px; border-radius:10px; border:1px solid rgba(239,68,68,0.4); margin-bottom:18px; line-height:1.45;"></div>
 
-      <button type="button" class="btn btn-primary" id="btn-verify-strip" onclick="handleVerifyStrip()" style="margin-top:auto; width:100%; justify-content:center; padding:14px; font-weight:700;">
+      <button type="button" class="btn btn-primary" id="btn-verify-strip" onclick="handleVerifyStrip()" style="margin-top:auto; width:100%; justify-content:center; padding:13px; font-weight:800; border-radius:12px;">
         Verify Strip Validity ✓
       </button>
     </div>
@@ -433,92 +151,87 @@
     <!-- 3. CAMERA SCANNING SCREEN -->
     <div id="screen-camera" class="worker-screen">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-        <span style="font-size:13px; color:var(--text-muted);">Step 2 of 3: Camera Scan</span>
-        <button type="button" class="btn btn-secondary" id="btn-back-strip" onclick="goBackToStrip()" style="padding:4px 8px; font-size:11px;">Back</button>
+        <span style="font-size:12px; color:var(--text-muted); font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Step 2 of 3: Camera Scan</span>
+        <button type="button" class="btn btn-secondary" id="btn-back-strip" onclick="goBackToStrip()" style="padding:4px 10px; font-size:11px;">Back</button>
       </div>
 
       <!-- Input Mode Selector -->
-      <div style="display:flex; background:#0f172a; border:1px solid var(--border-color); border-radius:10px; padding:3px; margin-bottom:14px;">
-        <button type="button" id="mode-btn-camera" onclick="setScanMode('camera')" style="flex:1; padding:7px 4px; font-size:12px; background:#0284c7; color:#fff; border-radius:7px; border:none; font-weight:700; cursor:pointer;">
+      <div style="display:flex; background:#14121a; border:1px solid var(--border-medium); border-radius:10px; padding:3px; margin-bottom:14px;">
+        <button type="button" id="mode-btn-camera" onclick="setScanMode('camera')" style="flex:1; padding:7px 4px; font-size:12px; background:linear-gradient(135deg, #f97316, #e11d48); color:#fff; border-radius:7px; border:none; font-weight:800; cursor:pointer; box-shadow:0 2px 8px rgba(249,115,22,0.4);">
           📷 Live Camera / Photo
         </button>
-        <button type="button" id="mode-btn-sim" onclick="setScanMode('sim')" style="flex:1; padding:7px 4px; font-size:12px; background:transparent; color:#94a3b8; border-radius:7px; border:none; cursor:pointer;">
+        <button type="button" id="mode-btn-sim" onclick="setScanMode('sim')" style="flex:1; padding:7px 4px; font-size:12px; background:transparent; color:#94a3b8; border-radius:7px; border:none; cursor:pointer; font-weight:700;">
           🧪 Chemical Sim
         </button>
       </div>
 
-      <!-- Viewfinder Area -->
-      <div class="viewfinder" id="camera-viewfinder" onclick="document.getElementById('file-gallery-input').click()" style="position:relative; background:#0b0f19; min-height:240px; cursor:pointer;" title="Click to upload strip photo or drag & drop file">
+      <!-- Viewfinder Area with HUD Scan Line -->
+      <div class="viewfinder" id="camera-viewfinder" onclick="document.getElementById('file-gallery-input').click()" style="cursor:pointer;" title="Click to upload strip photo or drag & drop file">
         <video id="webcam-video" autoplay playsinline muted style="display:none; width:100%; height:100%; object-fit:cover; position:absolute; top:0; left:0; z-index:2;"></video>
         <img id="photo-preview-img" style="display:none; width:100%; height:100%; object-fit:contain; position:absolute; top:0; left:0; z-index:2; background:#0b0f19;" alt="Preview" />
         <canvas id="capture-canvas" style="display:none;"></canvas>
 
+        <div class="hud-scan-line"></div>
         <div class="corner-bracket corner-tl" style="z-index:5;"></div>
         <div class="corner-bracket corner-tr" style="z-index:5;"></div>
         <div class="corner-bracket corner-bl" style="z-index:5;"></div>
         <div class="corner-bracket corner-br" style="z-index:5;"></div>
-        <div class="roi-guide" id="strip-reaction-preview" style="z-index:10; pointer-events:none; border:2px solid #22c55e; background:rgba(34,197,94,0.06);">
+        <div class="roi-guide" id="strip-reaction-preview" style="z-index:10; pointer-events:none;">
           Click or Drop<br>Photo Here
         </div>
       </div>
 
       <!-- REAL CAMERA & PHOTO CONTROLS -->
       <div id="camera-mode-controls" style="margin-bottom:12px;">
-        <!-- Native camera shutter input (forces camera shutter on mobile) -->
         <input type="file" id="file-camera-input" accept="image/*" capture="environment" style="display:none;">
-        <!-- Standard file/gallery picker (allows picking existing photos from phone gallery or desktop folder) -->
         <input type="file" id="file-gallery-input" accept="image/*,.jpg,.jpeg,.png,.webp,.bmp" style="display:none;">
         
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
-          <!-- Dedicated Native Upload Image Button -->
-          <button type="button" class="btn btn-primary" id="btn-upload-image" onclick="document.getElementById('file-gallery-input').click()" style="font-size:12px; padding:10px 8px; justify-content:center; background:#0284c7; border:none; font-weight:700; cursor:pointer; text-align:center; display:flex; align-items:center;">
+          <button type="button" class="btn btn-primary" id="btn-upload-image" onclick="document.getElementById('file-gallery-input').click()" style="font-size:12px; padding:10px 8px; justify-content:center; font-weight:800; cursor:pointer;">
             📁 Upload Image
           </button>
-          <!-- Native Mobile Camera Shutter Button -->
-          <button type="button" class="btn btn-secondary" id="btn-native-camera" onclick="document.getElementById('file-camera-input').click()" style="font-size:12px; padding:10px 8px; justify-content:center; cursor:pointer; text-align:center; display:flex; align-items:center;">
+          <button type="button" class="btn btn-secondary" id="btn-native-camera" onclick="document.getElementById('file-camera-input').click()" style="font-size:12px; padding:10px 8px; justify-content:center; cursor:pointer; font-weight:700;">
             📸 Snap Photo
           </button>
         </div>
 
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
-          <!-- Browser Webcam Live Stream -->
-          <button type="button" class="btn btn-secondary" id="btn-toggle-webcam" onclick="toggleWebcam()" style="font-size:11px; padding:7px 6px; justify-content:center;">
+          <button type="button" class="btn btn-secondary" id="btn-toggle-webcam" onclick="toggleWebcam()" style="font-size:11.5px; padding:7px 6px; justify-content:center;">
             📹 Live Webcam
           </button>
-          <!-- Sample Demo Strip -->
-          <button type="button" class="btn btn-secondary" id="btn-load-sample" onclick="loadSampleStripPhoto()" style="font-size:11px; padding:7px 6px; justify-content:center; color:#38bdf8; font-weight:700; border-color:rgba(56,189,248,0.4);">
+          <button type="button" class="btn btn-secondary" id="btn-load-sample" onclick="loadSampleStripPhoto()" style="font-size:11.5px; padding:7px 6px; justify-content:center; color:var(--accent-mint); font-weight:800; border-color:rgba(16,185,129,0.45);">
             🖼️ Load Sample
           </button>
         </div>
 
-        <div id="camera-status-text" style="font-size:11px; color:#38bdf8; text-align:center; min-height:16px; line-height:1.4;">
-          Ready: Click <strong>Upload Image</strong> to choose a file, or <strong>Snap Photo</strong> to use camera. (Or tap <strong>Load Sample</strong> to test instantly!)
+        <div id="camera-status-text" style="font-size:11.5px; color:var(--accent-sky); text-align:center; min-height:18px; line-height:1.4;">
+          Ready: Click <strong>Upload Image</strong> or <strong>Load Sample</strong> to test instantly!
         </div>
       </div>
 
       <!-- SIMULATION CONTROLS -->
       <div id="sim-mode-controls" style="display:none; margin-bottom:12px;">
-        <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-muted); margin-bottom:4px;">
+        <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:700;">
           <span>Cu-PAN PPM Reaction:</span>
-          <span id="worker-sim-ppm-val" style="color:#38bdf8; font-weight:700;">18.5 ppm (S5)</span>
+          <span id="worker-sim-ppm-val" style="color:var(--accent-sky); font-family:'JetBrains Mono';">18.5 ppm (S5)</span>
         </div>
         <input type="range" id="worker-sim-ppm" min="0" max="110" step="1" value="18" style="width:100%; margin-bottom:10px;">
 
         <!-- Foreign Color Gating Test Buttons -->
-        <div style="background:rgba(255,255,255,0.03); border-radius:8px; padding:8px; border:1px solid var(--border-color);">
-          <div style="font-size:10px; text-transform:uppercase; color:var(--text-muted); margin-bottom:4px; font-weight:700;">Alien Color & Stage Presets:</div>
-          <div style="display:flex; flex-wrap:wrap; gap:4px;">
-            <button type="button" class="btn btn-secondary" id="btn-test-green" onclick="setSimPreset('green')" style="padding:3px 6px; font-size:10px; color:#4ade80; border-color:rgba(74,222,128,0.4);">🟢 Green</button>
-            <button type="button" class="btn btn-secondary" id="btn-test-blue" onclick="setSimPreset('blue')" style="padding:3px 6px; font-size:10px; color:#60a5fa; border-color:rgba(96,165,250,0.4);">🔵 Blue</button>
-            <button type="button" class="btn btn-secondary" id="btn-test-s0" onclick="setSimPreset('s0')" style="padding:3px 6px; font-size:10px; color:#d946ef; border-color:rgba(217,70,239,0.4);">🟣 S0 (0ppm)</button>
-            <button type="button" class="btn btn-secondary" id="btn-test-s10" onclick="setSimPreset('s10')" style="padding:3px 6px; font-size:10px; color:#facc15; border-color:rgba(250,204,21,0.4);">🟡 S10 (110ppm)</button>
+        <div style="background:rgba(255,255,255,0.03); border-radius:10px; padding:10px; border:1px solid var(--border-subtle);">
+          <div style="font-size:10px; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; font-weight:800; letter-spacing:0.5px;">Alien Color & Stage Presets:</div>
+          <div style="display:flex; flex-wrap:wrap; gap:6px;">
+            <button type="button" class="btn btn-secondary" id="btn-test-green" onclick="setSimPreset('green')" style="padding:4px 8px; font-size:11px; color:#4ade80; border-color:rgba(74,222,128,0.4);">🟢 Green (Alien)</button>
+            <button type="button" class="btn btn-secondary" id="btn-test-blue" onclick="setSimPreset('blue')" style="padding:4px 8px; font-size:11px; color:#60a5fa; border-color:rgba(96,165,250,0.4);">🔵 Blue (Alien)</button>
+            <button type="button" class="btn btn-secondary" id="btn-test-s0" onclick="setSimPreset('s0')" style="padding:4px 8px; font-size:11px; color:#d946ef; border-color:rgba(217,70,239,0.4);">🟣 S0 (0ppm)</button>
+            <button type="button" class="btn btn-secondary" id="btn-test-s10" onclick="setSimPreset('s10')" style="padding:4px 8px; font-size:11px; color:#facc15; border-color:rgba(250,204,21,0.4);">🟡 S10 (110ppm)</button>
           </div>
         </div>
       </div>
 
       <!-- Pre-Scan Environmental Checks -->
-      <div class="guidance-box" style="margin-bottom:14px; padding:10px;">
-        <div style="font-size:10px; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; font-weight:700;">Environmental Standards:</div>
+      <div class="guidance-box" style="margin-bottom:14px; padding:12px;">
+        <div style="font-size:10px; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; font-weight:800; letter-spacing:0.5px;">Environmental Quality Gate:</div>
         <div class="guidance-item" style="font-size:12px; margin-bottom:4px;">
           <span style="color:var(--text-secondary);">Lighting:</span>
           <span style="color:#22c55e; font-weight:700;" id="guidance-lighting">✓ 132 lx (Nominal)</span>
@@ -535,56 +248,54 @@
 
       <!-- Spectral Rejection Error Banner -->
       <div id="scan-rejection-card" style="display:none; background:rgba(239,68,68,0.15); border:1px solid #ef4444; border-radius:12px; padding:12px; margin-bottom:14px; color:#fca5a5; font-size:12px;">
-        <div style="font-weight:700; font-size:13px; color:#f87171; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+        <div style="font-weight:800; font-size:13px; color:#f87171; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
           <span>⛔</span> <span id="rejection-title">INVALID COLOR SPECTRUM (422)</span>
         </div>
-        <div id="rejection-desc" style="line-height:1.4; margin-bottom:6px;"></div>
-        <div style="background:rgba(0,0,0,0.3); padding:6px; border-radius:6px; font-family:'JetBrains Mono'; font-size:11px; color:#cbd5e1;" id="rejection-tech-details"></div>
+        <div id="rejection-desc" style="line-height:1.45; margin-bottom:6px;"></div>
+        <div style="background:rgba(0,0,0,0.4); padding:6px 8px; border-radius:6px; font-family:'JetBrains Mono'; font-size:11px; color:#cbd5e1;" id="rejection-tech-details"></div>
       </div>
 
-      <button type="button" class="btn btn-primary" id="btn-capture-scan" onclick="handleCaptureScan()" style="margin-top:auto; width:100%; justify-content:center; padding:14px; font-size:16px; background:linear-gradient(135deg, #10b981, #059669); font-weight:800;">
+      <button type="button" class="btn btn-primary" id="btn-capture-scan" onclick="handleCaptureScan()" style="margin-top:auto; width:100%; justify-content:center; padding:14px; font-size:15px; background:linear-gradient(135deg, #f97316, #e11d48); font-weight:800; border-radius:12px; box-shadow:0 4px 16px rgba(249,115,22,0.35);">
         ⚡ SCAN NOW (AI Analysis)
       </button>
     </div>
 
-    <!-- 4. RESULT DISPLAY SCREEN (Matches Official Inspection Report Layout in Mobile Ratio) -->
-    <div id="screen-result" class="worker-screen" style="padding: 38px 14px 20px;">
+    <!-- 4. RESULT DISPLAY SCREEN (Official Air Quality Inspection Certificate) -->
+    <div id="screen-result" class="worker-screen" style="padding: 34px 14px 20px;">
       <!-- REPORT HEADER -->
-      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.08);">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.1);">
         <div>
-          <div style="color:#38bdf8; font-weight:800; font-size:12px; letter-spacing:0.2px; line-height:1.2;">H₂S INDUSTRIAL OPTICAL DOSIMETER</div>
-          <div style="color:#94a3b8; font-size:9.5px; font-weight:500;">OFFICIAL AIR QUALITY INSPECTION REPORT</div>
+          <div style="color:var(--accent-sky); font-weight:800; font-size:12.5px; letter-spacing:0.2px; line-height:1.2;">H₂S INDUSTRIAL OPTICAL DOSIMETER</div>
+          <div style="color:#94a3b8; font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">AIR QUALITY INSPECTION REPORT</div>
         </div>
         <div style="text-align:right;">
-          <div style="color:#cbd5e1; font-family:'JetBrains Mono',monospace; font-size:9px;" id="res-report-date">9/16/2026, 3:09:23 PM</div>
-          <div style="color:#cbd5e1; font-family:'JetBrains Mono',monospace; font-size:9px;" id="res-report-audit-id">AUDIT ID: SCAN_001</div>
+          <div style="color:#cbd5e1; font-family:'JetBrains Mono'; font-size:10px;" id="res-report-date">9/23/2026, 4:30 PM</div>
+          <div style="color:var(--accent-sky); font-family:'JetBrains Mono'; font-size:10px; font-weight:700;" id="res-report-audit-id">AUDIT: SCAN_001</div>
         </div>
       </div>
 
       <!-- 1. VERDICT & PPM HERO CARD -->
-      <div id="res-verdict-card" style="background:rgba(250,204,21,0.08); border-radius:12px; padding:9px 12px; margin-bottom:8px; transition:all 0.3s ease;">
-        <!-- Top Row: Verdict Title Left, PPM Value Right -->
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; gap:6px;">
-          <div id="res-verdict-title" style="font-size:13px; font-weight:800; color:#facc15; display:flex; align-items:center; gap:5px; line-height:1.2;">
+      <div id="res-verdict-card" style="background:rgba(250,204,21,0.08); border:1px solid rgba(250,204,21,0.3); border-radius:14px; padding:12px 14px; margin-bottom:10px; transition:all 0.3s ease;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; gap:8px;">
+          <div id="res-verdict-title" style="font-size:13.5px; font-weight:800; color:#facc15; display:flex; align-items:center; gap:6px; line-height:1.2;">
             <span id="res-verdict-icon">🟡</span>
             <span id="res-verdict-text">CAUTION — TRACE GAS DETECTED</span>
           </div>
-          <div id="res-ppm" style="font-size:28px; font-weight:800; font-family:'JetBrains Mono',monospace; color:#facc15; line-height:1; white-space:nowrap;">
-            8.8 <span style="font-size:14px; font-weight:600; opacity:0.8; font-family:'Inter',sans-serif;">ppm</span>
+          <div id="res-ppm" style="font-size:32px; font-weight:800; font-family:'JetBrains Mono',monospace; color:#facc15; line-height:1; white-space:nowrap;">
+            8.8 <span style="font-size:15px; font-weight:700; opacity:0.8; font-family:'Inter',sans-serif;">ppm</span>
           </div>
         </div>
 
-        <!-- Bottom Row: Action Left, Range Right -->
-        <div style="display:flex; justify-content:space-between; align-items:center; font-size:9.5px; flex-wrap:wrap; gap:4px; padding-top:4px; border-top:1px solid rgba(255,255,255,0.06);">
-          <div style="display:flex; align-items:center; gap:4px; color:#ffffff;">
-            <span style="color:var(--text-muted); font-weight:500;">Required Action:</span>
+        <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; flex-wrap:wrap; gap:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.08);">
+          <div style="display:flex; align-items:center; gap:5px; color:var(--text-primary);">
+            <span style="color:var(--text-muted); font-weight:600;">Action:</span>
             <span id="res-action-icon">🔍</span>
             <strong id="res-worker-action">Monitor closely</strong>
           </div>
-          <div style="color:#94a3b8; font-size:9px; display:flex; align-items:center; gap:4px;">
-            <span id="res-ppm-range">Est. Range: 7.3-10.0 ppm</span>
+          <div style="color:#94a3b8; font-size:10.5px; display:flex; align-items:center; gap:6px;">
+            <span id="res-ppm-range" style="font-family:'JetBrains Mono';">7.3 - 10.0 ppm</span>
             <span>•</span>
-            <span id="res-safe-status-label" style="font-weight:700; color:#facc15;">🟡 CAUTION LEVEL</span>
+            <span id="res-safe-status-label" style="font-weight:800; color:#facc15;">🟡 CAUTION</span>
           </div>
         </div>
 
@@ -598,93 +309,93 @@
         </div>
       </div>
 
-      <!-- 2. SCANNED DOSIMETER & TARGET ANALYSIS AREA (ROI) CARD -->
-      <div style="background:rgba(15, 23, 42, 0.85); border-radius:12px; padding:9px 10px; margin-bottom:8px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:7px;">
-          <div style="color:#38bdf8; font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; display:flex; align-items:center; gap:4px;">
-            <span>📷</span> SCANNED DOSIMETER &amp; TARGET ANALYSIS AREA (ROI)
+      <!-- 2. SCANNED DOSIMETER & TARGET ROI CARD -->
+      <div style="background:rgba(15, 23, 42, 0.88); border:1px solid var(--border-subtle); border-radius:14px; padding:12px; margin-bottom:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <div style="color:var(--accent-sky); font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; display:flex; align-items:center; gap:5px;">
+            <span>📷</span> ANALYZED STRIP &amp; SPECTRAL ROI
           </div>
-          <span id="res-roi-badge" style="color:#4ade80; font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; background:rgba(34,197,94,0.12); padding:1px 5px; border-radius:4px;">
+          <span id="res-roi-badge" class="result-roi-badge">
             TARGET ROI: 60% × 60%
           </span>
         </div>
 
-        <!-- Two-Column Grid: Photo Left, Colorimetry Right (Side-by-Side in Mobile Ratio) -->
-        <div class="result-proof-grid" style="display:grid; grid-template-columns: 140px 1fr; gap:10px; align-items:stretch;">
+        <!-- Two-Column Grid: Photo Left, Colorimetry Right -->
+        <div class="result-proof-grid" style="display:grid; grid-template-columns: 135px 1fr; gap:10px; align-items:stretch;">
           <!-- Left: Photo Viewport -->
-          <div style="position:relative; background:#020617; border-radius:8px; height:155px; overflow:hidden; display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,0.06);">
+          <div style="position:relative; background:#020617; border-radius:10px; height:150px; overflow:hidden; display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,0.08);">
             <img id="res-scanned-img" src="" alt="Scanned Strip" style="width:100%; height:100%; object-fit:contain; display:block;">
             
             <!-- ROI Target Overlay -->
-            <div id="res-roi-overlay" style="position:absolute; top:20%; left:20%; width:60%; height:60%; border:2px solid #22c55e; background:rgba(34,197,94,0.18); display:flex; align-items:center; justify-content:center; pointer-events:none; transition:all 0.3s ease;">
-              <div style="position:absolute; top:-2px; left:-2px; width:7px; height:7px; border-top:2px solid #38bdf8; border-left:2px solid #38bdf8;"></div>
-              <div style="position:absolute; top:-2px; right:-2px; width:7px; height:7px; border-top:2px solid #38bdf8; border-right:2px solid #38bdf8;"></div>
-              <div style="position:absolute; bottom:-2px; left:-2px; width:7px; height:7px; border-bottom:2px solid #38bdf8; border-left:2px solid #38bdf8;"></div>
-              <div style="position:absolute; bottom:-2px; right:-2px; width:7px; height:7px; border-bottom:2px solid #38bdf8; border-right:2px solid #38bdf8;"></div>
-              <div id="res-roi-tag" style="background:rgba(0,0,0,0.85); border:1px solid #22c55e; border-radius:3px; padding:1px 4px; font-size:7.5px; font-weight:700; color:#4ade80; text-transform:uppercase; letter-spacing:0.3px; white-space:nowrap;">
-                ANALYZED ZONE
+            <div id="res-roi-overlay" class="result-roi-overlay">
+              <div class="corner-reticle corner-tl"></div>
+              <div class="corner-reticle corner-tr"></div>
+              <div class="corner-reticle corner-bl"></div>
+              <div class="corner-reticle corner-br"></div>
+              <div id="res-roi-tag" class="result-roi-tag">
+                ANALYZED
               </div>
             </div>
 
-            <button type="button" id="btn-toggle-roi-zoom" style="position:absolute; bottom:4px; right:4px; background:rgba(0,0,0,0.65); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; font-size:8.5px; padding:2px 5px; border-radius:4px; cursor:pointer; font-weight:700;">
+            <button type="button" id="btn-toggle-roi-zoom" style="position:absolute; bottom:5px; right:5px; background:rgba(0,0,0,0.85); border:1px solid rgba(16,185,129,0.45); color:var(--accent-mint); font-size:9.5px; padding:3px 6px; border-radius:4px; cursor:pointer; font-weight:700;">
               🔍 Zoom
             </button>
           </div>
 
           <!-- Right: Colorimetric Analysis Panel -->
-          <div style="display:flex; flex-direction:column; justify-content:space-between; gap:3px; font-size:9.5px; overflow:hidden;">
+          <div style="display:flex; flex-direction:column; justify-content:space-between; gap:4px; font-size:11px; overflow:hidden;">
             <!-- Swatch & Hex -->
-            <div style="display:flex; align-items:center; gap:6px;">
-              <div id="res-swatch-box" style="width:30px; height:30px; border-radius:6px; background:#D16662; box-shadow:0 0 8px rgba(0,0,0,0.5); flex-shrink:0;"></div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <div id="res-swatch-box" style="width:32px; height:32px; border-radius:7px; background:#D16662; box-shadow:0 0 10px rgba(0,0,0,0.6); flex-shrink:0; border:1px solid rgba(255,255,255,0.2);"></div>
               <div style="overflow:hidden;">
-                <div id="res-swatch-hex" style="font-size:12px; font-weight:800; font-family:'JetBrains Mono',monospace; color:#ffffff; line-height:1.1;">#D16662</div>
-                <div style="font-size:8px; color:#94a3b8; white-space:nowrap;">Sampled Dye Color</div>
+                <div id="res-swatch-hex" style="font-size:13px; font-weight:800; font-family:'JetBrains Mono'; color:var(--text-primary); line-height:1.1;">#D16662</div>
+                <div style="font-size:9px; color:#94a3b8;">Sampled Reaction Dye</div>
               </div>
             </div>
 
             <!-- RGB Channels -->
             <div>
-              <div style="font-size:7.5px; color:#64748b; text-transform:uppercase; font-weight:700; line-height:1;">RGB CHANNELS:</div>
-              <div id="res-rgb-val" style="font-size:10px; font-weight:700; font-family:'JetBrains Mono',monospace; color:#ffffff; margin-top:1px;">[160, 124, 113]</div>
+              <div style="font-size:8.5px; color:#64748b; text-transform:uppercase; font-weight:800;">RGB CHANNELS:</div>
+              <div id="res-rgb-val" style="font-size:11px; font-weight:700; font-family:'JetBrains Mono'; color:var(--text-primary);">[160, 124, 113]</div>
             </div>
 
             <!-- Hue & Chroma -->
             <div>
-              <div style="font-size:7.5px; color:#64748b; text-transform:uppercase; font-weight:700; line-height:1;">HUE &amp; CHROMA:</div>
-              <div style="font-size:9.5px; font-weight:700; font-family:'JetBrains Mono',monospace; color:#38bdf8; margin-top:1px; white-space:nowrap;">
+              <div style="font-size:8.5px; color:#64748b; text-transform:uppercase; font-weight:800;">HUE &amp; CHROMA:</div>
+              <div style="font-size:10.5px; font-weight:700; font-family:'JetBrains Mono'; color:var(--accent-sky);">
                 Hue: <span id="res-hue-val">42.8°</span> | <span id="res-chroma-val">17</span>
               </div>
             </div>
 
             <!-- Chemical Reaction -->
             <div>
-              <div style="font-size:7.5px; color:#64748b; text-transform:uppercase; font-weight:700; line-height:1;">CHEMICAL REACTION:</div>
-              <div id="res-reaction-val" style="font-size:9.5px; font-weight:700; color:#f59e0b; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Cu-PAN Displacement</div>
+              <div style="font-size:8.5px; color:#64748b; text-transform:uppercase; font-weight:800;">REACTION MECHANISM:</div>
+              <div id="res-reaction-val" style="font-size:10.5px; font-weight:700; color:#f59e0b; overflow:hidden; text-overflow:ellipsis;">Cu-PAN Displacement</div>
             </div>
 
             <!-- AI Vision Confidence -->
             <div>
-              <div style="font-size:7.5px; color:#64748b; text-transform:uppercase; font-weight:700; line-height:1;">AI VISION CONFIDENCE:</div>
-              <div id="res-confidence-val" style="font-size:9.5px; font-weight:700; color:#22c55e; margin-top:1px;">70% Nominal</div>
+              <div style="font-size:8.5px; color:#64748b; text-transform:uppercase; font-weight:800;">AI VISION CONFIDENCE:</div>
+              <div id="res-confidence-val" style="font-size:10.5px; font-weight:800; color:#22c55e;">70% Nominal</div>
               <span id="res-confidence" style="display:none;"></span>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- 3. GAS EXPOSURE METER SPECTRUM (0 TO >100 PPM) -->
-      <div style="background:rgba(15, 23, 42, 0.85); border-radius:12px; padding:8px 12px; margin-bottom:8px;">
-        <div style="color:#94a3b8; font-size:8.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:5px;">
-          GAS EXPOSURE METER SPECTRUM (0 TO &gt;100 PPM):
+      <!-- 3. GAS EXPOSURE METER SPECTRUM -->
+      <div style="background:rgba(15, 23, 42, 0.88); border:1px solid var(--border-subtle); border-radius:14px; padding:10px 14px; margin-bottom:10px;">
+        <div style="color:#94a3b8; font-size:9.5px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">
+          GAS EXPOSURE SPECTRUM (0 TO &gt;100 PPM):
         </div>
-        <div class="risk-gauge-track-wrap" style="padding:3px 0 8px;">
-          <div class="risk-gauge-track" style="height:7px; border-radius:7px;"></div>
+        <div class="risk-gauge-track-wrap">
+          <div class="risk-gauge-track"></div>
           <div class="risk-gauge-needle" id="res-gauge-needle" style="left:38%;">
-            <div class="risk-gauge-pin" id="res-gauge-pin" style="border-color:#facc15; color:#facc15; width:11px; height:11px;"></div>
+            <div class="risk-gauge-pin" id="res-gauge-pin" style="border-color:#facc15; color:#facc15;"></div>
             <div class="risk-gauge-arrow"></div>
           </div>
         </div>
-        <div class="risk-gauge-labels" style="font-size:7.5px;">
+        <div class="risk-gauge-labels">
           <span style="color:#4ade80;">Safe (0-1)</span>
           <span style="color:#facc15;">Caution (1-10)</span>
           <span style="color:#fb923c;">Warning (10-50)</span>
@@ -694,62 +405,62 @@
         <span id="res-gauge-status" style="display:none;"></span>
       </div>
 
-      <!-- 4. INSPECTION METADATA CARD (3-Column Layout) -->
-      <div style="background:rgba(15, 23, 42, 0.85); border-radius:12px; padding:8px 12px; margin-bottom:8px;">
-        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:5px 6px; font-size:9px;">
+      <!-- 4. INSPECTION METADATA CARD -->
+      <div style="background:rgba(15, 23, 42, 0.88); border:1px solid var(--border-subtle); border-radius:14px; padding:10px 14px; margin-bottom:10px;">
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; font-size:10px;">
           <div>
-            <div style="font-size:7.5px; color:#64748b; text-transform:uppercase; font-weight:600;">Worker:</div>
-            <div id="res-meta-worker-name" style="font-weight:700; color:#ffffff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">John Martinez</div>
+            <div style="font-size:8px; color:#64748b; text-transform:uppercase; font-weight:700;">Worker:</div>
+            <div id="res-meta-worker-name" style="font-weight:700; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">John Martinez</div>
           </div>
           <div>
-            <div style="font-size:7.5px; color:#64748b; text-transform:uppercase; font-weight:600;">Badge ID:</div>
-            <div id="res-meta-badge-id" style="font-weight:700; color:#ffffff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">EMP_00542</div>
+            <div style="font-size:8px; color:#64748b; text-transform:uppercase; font-weight:700;">Badge ID:</div>
+            <div id="res-meta-badge-id" style="font-weight:700; color:var(--text-primary); font-family:'JetBrains Mono';">EMP_00542</div>
           </div>
           <div>
-            <div style="font-size:7.5px; color:#64748b; text-transform:uppercase; font-weight:600;">Strip ID:</div>
-            <div id="res-meta-strip-id" style="font-weight:700; color:#ffffff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">STR_7755</div>
+            <div style="font-size:8px; color:#64748b; text-transform:uppercase; font-weight:700;">Strip ID:</div>
+            <div id="res-meta-strip-id" style="font-weight:700; color:var(--accent-sky); font-family:'JetBrains Mono';">STR_7755</div>
           </div>
           <div>
-            <div style="font-size:7.5px; color:#64748b; text-transform:uppercase; font-weight:600;">Chemical Batch:</div>
-            <div id="res-meta-batch" style="font-weight:700; color:#ffffff; font-size:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">BATCH_2024_Q4</div>
+            <div style="font-size:8px; color:#64748b; text-transform:uppercase; font-weight:700;">Chemical Batch:</div>
+            <div id="res-meta-batch" style="font-weight:700; color:var(--text-primary); font-size:9.5px; font-family:'JetBrains Mono';">BATCH_2024_Q4</div>
           </div>
           <div>
-            <div style="font-size:7.5px; color:#64748b; text-transform:uppercase; font-weight:600;">AI Model:</div>
-            <div id="res-meta-model-ver" style="font-weight:700; color:#ffffff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">MobileNetV3 v1.0</div>
+            <div style="font-size:8px; color:#64748b; text-transform:uppercase; font-weight:700;">AI Model:</div>
+            <div id="res-meta-model-ver" style="font-weight:700; color:var(--text-primary);">MobileNetV3 v1.1</div>
             <span id="res-model-ver" style="display:none;"></span>
           </div>
           <div>
-            <div style="font-size:7.5px; color:#64748b; text-transform:uppercase; font-weight:600;">Compliance:</div>
-            <div id="res-meta-compliance" style="font-weight:700; color:#ffffff; font-size:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">OSHA / NIOSH</div>
+            <div style="font-size:8px; color:#64748b; text-transform:uppercase; font-weight:700;">Compliance:</div>
+            <div id="res-meta-compliance" style="font-weight:700; color:#34d399;">OSHA / NIOSH</div>
           </div>
         </div>
         <span id="res-scan-id" style="display:none;"></span>
       </div>
 
       <!-- 5. DIGITALLY VERIFIED INDUSTRIAL AI SAFETY CERTIFICATE -->
-      <div id="btn-inspect-trust-cert" style="background:rgba(2, 132, 199, 0.1); border-radius:10px; padding:8px 12px; margin-bottom:8px; border:1px solid rgba(56,189,248,0.3); cursor:pointer; transition:all 0.2s ease;">
-        <div style="color:#38bdf8; font-weight:800; font-size:9.5px; margin-bottom:2px; display:flex; align-items:center; justify-content:space-between;">
-          <span style="display:flex; align-items:center; gap:4px;"><span>🛡️</span> DIGITALLY VERIFIED INDUSTRIAL AI SAFETY CERTIFICATE</span>
-          <span style="font-size:9px; color:#38bdf8; font-weight:700; text-decoration:underline;">Inspect Proof ↗</span>
+      <div id="btn-inspect-trust-cert" style="background:linear-gradient(135deg, rgba(249, 115, 22, 0.12), rgba(251, 146, 60, 0.04)); border-radius:12px; padding:10px 14px; margin-bottom:10px; border:1px solid rgba(249,115,22,0.4); cursor:pointer; transition:all 0.2s ease;">
+        <div style="color:var(--accent-mint); font-weight:800; font-size:10.5px; margin-bottom:3px; display:flex; align-items:center; justify-content:space-between;">
+          <span style="display:flex; align-items:center; gap:5px;"><span>🛡️</span> DIGITAL AI SAFETY CERTIFICATE</span>
+          <span style="font-size:9.5px; color:var(--accent-mint); font-weight:700; text-decoration:underline;">Inspect Proof ↗</span>
         </div>
-        <div id="res-verified-audit-line" style="color:#cbd5e1; font-size:8.5px; margin-bottom:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-family:'JetBrains Mono';">
-          Cryptographic Audit ID: SCAN_20260916_361C16 • Instant Assessment
+        <div id="res-verified-audit-line" style="color:#cbd5e1; font-size:9.5px; margin-bottom:2px; font-family:'JetBrains Mono';">
+          Audit ID: SCAN_20260916_361C16 • Verified
         </div>
-        <div style="color:#64748b; font-size:7.5px;">
-          Standard: OSHA PEL (10-20 ppm), ACGIH TLV (1 ppm), NIOSH IDLH (100 ppm) • SHA-256 Verified
+        <div style="color:#64748b; font-size:8.5px;">
+          Standard: OSHA PEL (10 ppm), ACGIH TLV (1 ppm), NIOSH IDLH (100 ppm) • SHA-256
         </div>
       </div>
 
-      <!-- 6. DOWNLOAD & SHARE (MOVED TO THE END OF SCREEN) -->
-      <div class="download-section-card" style="margin-top:0; margin-bottom:8px; padding:9px 10px;">
-        <button type="button" class="btn-download-hero" id="btn-download-result" style="padding:9px; font-size:12px;">
+      <!-- 6. DOWNLOAD & SHARE ACTIONS -->
+      <div class="download-section-card" style="margin-top:0; margin-bottom:10px; padding:10px 12px;">
+        <button type="button" class="btn-download-hero" id="btn-download-result" style="padding:10px; font-size:12.5px;">
           <span>📥</span> Download Safety Result (PNG)
         </button>
-        <div class="download-quick-row" style="margin-top:6px; gap:6px;">
-          <button type="button" class="btn btn-secondary quick-btn" id="btn-copy-summary" style="padding:5px 7px; font-size:10px;">
+        <div class="download-quick-row" style="margin-top:8px; gap:8px;">
+          <button type="button" class="btn btn-secondary quick-btn" id="btn-copy-summary">
             📋 Copy Summary
           </button>
-          <button type="button" class="btn btn-secondary quick-btn" id="btn-print-slip" style="padding:5px 7px; font-size:10px;">
+          <button type="button" class="btn btn-secondary quick-btn" id="btn-print-slip">
             🖨️ Print Slip
           </button>
         </div>
@@ -757,52 +468,235 @@
       </div>
 
       <!-- 7. Complete & Return -->
-      <button class="btn btn-primary" id="btn-finish-scan" style="margin-top:auto; width:100%; justify-content:center; padding:11px; font-weight:700; font-size:12.5px;">
+      <button class="btn btn-primary" id="btn-finish-scan" style="margin-top:auto; width:100%; justify-content:center; padding:12px; font-weight:800; font-size:13px; border-radius:12px;">
         Complete Scan & Return
       </button>
     </div>
-  <!-- WRISTBAND QR MODAL (Section 7) -->
-  <div id="modal-wristband-qr" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:999; align-items:center; justify-content:center; padding:16px;">
-    <div style="background:#0f172a; border:1px solid #334155; border-radius:18px; width:100%; max-width:340px; padding:18px; box-shadow:0 20px 40px rgba(0,0,0,0.6);">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-        <h4 style="margin:0; font-size:14px; font-weight:800; color:#fff; display:flex; align-items:center; gap:6px;">
-          <span>🪪</span> Wristband QR Link
-        </h4>
-        <button type="button" id="btn-close-qr-modal" style="background:transparent; border:none; color:#94a3b8; font-size:20px; cursor:pointer; padding:0 4px;">&times;</button>
-      </div>
-      <p style="font-size:11.5px; color:#94a3b8; margin-bottom:14px; line-height:1.4;">
-        Scan or simulate the wristband QR to link Worker, Batch, and Method without manual entry.
-      </p>
 
-      <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:14px;">
-        <button type="button" class="btn btn-primary" id="btn-simulate-qr-scan" style="width:100%; justify-content:center; padding:10px; font-size:12px; font-weight:700;">
-          ⚡ Auto-Simulate Wristband Scan
-        </button>
-        <div style="font-size:10px; color:#64748b; text-align:center; text-transform:uppercase;">— or enter QR payload —</div>
-        <input type="text" id="manual-qr-payload" placeholder="H2S://V2?w=EMP_00542&b=BATCH_2026_Q1_01..." style="width:100%; padding:8px 10px; background:#1e293b; border:1px solid #475569; border-radius:8px; font-size:11px; font-family:'JetBrains Mono'; color:#38bdf8;">
-        <button type="button" class="btn btn-secondary" id="btn-apply-manual-qr" style="width:100%; justify-content:center; padding:8px; font-size:11.5px;">
-          Apply Payload
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- TRUST CERTIFICATE MODAL (Section 8) -->
-  <div id="modal-trust-cert" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:999; align-items:center; justify-content:center; padding:16px;">
-    <div style="background:#0b0f19; border:1px solid #38bdf8; border-radius:18px; width:100%; max-width:360px; max-height:90vh; overflow-y:auto; padding:18px; box-shadow:0 25px 50px rgba(0,0,0,0.7), 0 0 25px rgba(56,189,248,0.2);">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid #1e293b; padding-bottom:10px;">
-        <div>
-          <div style="color:#38bdf8; font-size:9.5px; font-weight:800; letter-spacing:1px;">CYBER-PHYSICAL INTEGRITY</div>
-          <h4 style="margin:2px 0 0; font-size:15px; font-weight:800; color:#fff;">🛡️ Trust Certificate</h4>
+    <!-- WRISTBAND QR MODAL -->
+    <div id="modal-wristband-qr" class="modal-backdrop" style="display:none; padding:16px;">
+      <div class="modal-dialog" style="max-width:340px; padding:18px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <h4 style="margin:0; font-size:14px; font-weight:800; color:var(--text-heading); display:flex; align-items:center; gap:6px;">
+            <span>🪪</span> Wristband QR Link
+          </h4>
+          <button type="button" id="btn-close-qr-modal" style="background:transparent; border:none; color:#94a3b8; font-size:20px; cursor:pointer;">&times;</button>
         </div>
-        <button type="button" id="btn-close-trust-modal" style="background:transparent; border:none; color:#94a3b8; font-size:20px; cursor:pointer;">&times;</button>
-      </div>
+        <p style="font-size:12px; color:#94a3b8; margin-bottom:14px; line-height:1.45;">
+          Scan or simulate the wristband QR to link Worker, Batch, and Method without manual entry.
+        </p>
 
-      <div id="trust-modal-body" style="font-size:11.5px; color:#cbd5e1; line-height:1.5;">
-        <div style="text-align:center; padding:20px; color:#94a3b8;">Loading verified cryptographic audit trail...</div>
+        <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:14px;">
+          <button type="button" class="btn btn-primary" id="btn-simulate-qr-scan" style="width:100%; justify-content:center; padding:11px; font-size:12px; font-weight:800;">
+            ⚡ Auto-Simulate Wristband Scan
+          </button>
+          <div style="font-size:10px; color:#64748b; text-align:center; text-transform:uppercase; font-weight:700;">— or enter QR payload —</div>
+          <input type="text" id="manual-qr-payload" placeholder="H2S://V2?w=EMP_00542&b=BATCH_2026_Q1_01..." style="width:100%; padding:9px 12px; background:var(--bg-input); border:1px solid var(--border-medium); border-radius:8px; font-size:11px; font-family:'JetBrains Mono'; color:var(--accent-sky);">
+          <button type="button" class="btn btn-secondary" id="btn-apply-manual-qr" style="width:100%; justify-content:center; padding:9px; font-size:12px;">
+            Apply Payload
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TRUST CERTIFICATE MODAL -->
+    <div id="modal-trust-cert" class="modal-backdrop" style="display:none; padding:16px;">
+      <div class="modal-dialog" style="max-width:360px; max-height:90vh; overflow-y:auto; padding:18px; border-color:var(--accent-sky);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid var(--border-subtle); padding-bottom:10px;">
+          <div>
+            <div style="color:var(--accent-sky); font-size:10px; font-weight:800; letter-spacing:1px; text-transform:uppercase;">Cyber-Physical Integrity</div>
+            <h4 style="margin:2px 0 0; font-size:15px; font-weight:800; color:var(--text-heading);">🛡️ Trust Certificate</h4>
+          </div>
+          <button type="button" id="btn-close-trust-modal" style="background:transparent; border:none; color:#94a3b8; font-size:20px; cursor:pointer;">&times;</button>
+        </div>
+
+        <div id="trust-modal-body" style="font-size:12px; color:#cbd5e1; line-height:1.5;">
+          <div style="text-align:center; padding:20px; color:#94a3b8;">Loading verified cryptographic audit trail...</div>
+        </div>
       </div>
     </div>
   </div>
+
+  <script>
+    window.handleWorkerLogin = async function() {
+      const btn = document.getElementById("btn-login");
+      const workerIdInput = document.getElementById("login-worker-id");
+      const pinInput = document.getElementById("login-pin");
+      const errDiv = document.getElementById("login-error");
+
+      const workerId = (workerIdInput ? workerIdInput.value : "").trim();
+      const pin = (pinInput ? pinInput.value : "").trim();
+
+      if (!workerId || !pin) {
+        if (errDiv) {
+          errDiv.textContent = "Please enter both Worker ID and PIN.";
+          errDiv.style.display = "block";
+        }
+        return;
+      }
+
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = "⏳ Authenticating...";
+        btn.style.opacity = "0.7";
+      }
+      if (errDiv) errDiv.style.display = "none";
+
+      try {
+        const res = await fetch("/api/auth/worker-login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ worker_id: workerId, pin: pin })
+        });
+
+        const data = await res.json().catch(() => null);
+
+        if (!res.ok) {
+          const errorMsg = (data && data.detail) ? data.detail : ("Login failed (HTTP " + res.status + ")");
+          throw new Error(errorMsg);
+        }
+
+        window.currentWorker = data.user_info;
+        if (data.access_token) {
+          try { localStorage.setItem("h2s_worker_token", data.access_token); } catch(e) {}
+        }
+
+        const pill = document.getElementById("worker-profile-pill");
+        if (pill && data.user_info) {
+          pill.textContent = data.user_info.name + " (" + data.user_info.id + ")";
+        }
+
+        if (btn) btn.textContent = "✓ Success! Loading...";
+
+        const screenLogin = document.getElementById("screen-login");
+        const screenStrip = document.getElementById("screen-strip-validate");
+        if (screenLogin) screenLogin.classList.remove("active");
+        if (screenStrip) screenStrip.classList.add("active");
+
+      } catch (err) {
+        if (errDiv) {
+          errDiv.textContent = err.message || "Authentication failed. Check worker ID and PIN.";
+          errDiv.style.display = "block";
+        }
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = "Authenticate Worker →";
+          btn.style.opacity = "1";
+        }
+      }
+    };
+
+    window.handleVerifyStrip = async function() {
+      const btn = document.getElementById("btn-verify-strip");
+      const stripInput = document.getElementById("strip-input-id");
+      const errBanner = document.getElementById("strip-error-banner");
+
+      const stripId = (stripInput ? stripInput.value : "").trim();
+      if (!stripId) {
+        if (errBanner) {
+          errBanner.textContent = "Please enter a Strip ID.";
+          errBanner.style.display = "block";
+        }
+        return;
+      }
+
+      const workerId = (window.currentWorker && window.currentWorker.id) || "EMP_00542";
+
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = "⏳ Verifying Strip...";
+        btn.style.opacity = "0.7";
+      }
+      if (errBanner) errBanner.style.display = "none";
+
+      try {
+        const res = await fetch("/api/strips/validate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ worker_id: workerId, strip_id: stripId })
+        });
+
+        const data = await res.json().catch(() => null);
+
+        if (!res.ok || !data) {
+          throw new Error((data && data.detail) || ("Server error HTTP " + res.status));
+        }
+
+        if (!data.valid) {
+          if (errBanner) {
+            errBanner.style.background = "rgba(239,68,68,0.15)";
+            errBanner.style.borderColor = "rgba(239,68,68,0.4)";
+            errBanner.style.color = "#f87171";
+            errBanner.innerHTML = `<strong>⚠️ Validation Failed (${data.reason_code || 'INVALID'})</strong><br>${data.message || 'Strip validation failed.'}
+              <div style="margin-top:8px;">
+                <button type="button" class="btn btn-secondary" style="font-size:11px; padding:4px 8px; color:var(--accent-primary); border-color:rgba(249,115,22,0.4);" onclick="window.issueAndUseFreshStrip()">+ Tap here to auto-issue fresh strip</button>
+              </div>`;
+            errBanner.style.display = "block";
+            errBanner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+          return;
+        }
+
+        // Strip is valid!
+        window.currentStripId = stripId;
+        if (btn) btn.textContent = "✓ Valid! Opening Scanner...";
+
+        const allScreens = document.querySelectorAll(".worker-screen");
+        allScreens.forEach(s => s.classList.remove("active"));
+        const screenCamera = document.getElementById("screen-camera");
+        if (screenCamera) screenCamera.classList.add("active");
+
+        if (typeof window.onStripValidated === "function") {
+          window.onStripValidated(stripId);
+        }
+
+      } catch (err) {
+        if (errBanner) {
+          errBanner.style.background = "rgba(239,68,68,0.15)";
+          errBanner.style.borderColor = "rgba(239,68,68,0.4)";
+          errBanner.style.color = "#f87171";
+          errBanner.textContent = "Strip validation service unavailable: " + (err.message || "Network error");
+          errBanner.style.display = "block";
+        }
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = "Verify Strip Validity ✓";
+          btn.style.opacity = "1";
+        }
+      }
+    };
+
+    window.issueAndUseFreshStrip = async function() {
+      const workerId = (window.currentWorker && window.currentWorker.id) || "EMP_00542";
+      const randId = "STR_" + Math.floor(1000 + Math.random() * 9000);
+      const errBanner = document.getElementById("strip-error-banner");
+      try {
+        const res = await fetch("/api/strips", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            strip_id: randId,
+            batch_id: "BATCH_2024_Q4_LOT_03",
+            assigned_worker_id: workerId,
+            days_valid: 90
+          })
+        });
+        const stripInput = document.getElementById("strip-input-id");
+        if (stripInput) stripInput.value = randId;
+        if (errBanner) {
+          errBanner.style.background = "rgba(249, 115, 22, 0.2)";
+          errBanner.style.borderColor = "rgba(249, 115, 22, 0.5)";
+          errBanner.style.color = "#fb923c";
+          errBanner.innerHTML = `<strong>✓ Fresh Strip Issued!</strong><br>${randId} is active and ready. Click "Verify Strip Validity ✓".`;
+          errBanner.style.display = "block";
+        }
+      } catch (e) {
+        alert("Error issuing strip: " + e.message);
+      }
+    };
+  </script>
 
   <script type="module" src="/static/js/worker.js?v=3.2"></script>
 </body>

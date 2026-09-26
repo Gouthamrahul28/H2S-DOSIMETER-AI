@@ -113,14 +113,15 @@ let lastScanResult = null;
 // H2S Safety Tier & Color Resolver (OSHA, NIOSH, ACGIH & Cu-PAN Scale)
 export function getPpmSafetyInfo(ppm, alertLevel = null, badgeClass = null) {
   const numPpm = (ppm !== null && ppm !== undefined) ? parseFloat(ppm) : 0.0;
+  const isLight = typeof document !== "undefined" && document.documentElement && document.documentElement.getAttribute("data-theme") === "light";
   
   if (badgeClass === "badge-green" || alertLevel === "Green" || numPpm < 1.0) {
     const pct = Math.max(4, Math.min(19, 4 + (numPpm / 1.0) * 15));
     return {
       level: "safe",
       cssClass: "ppm-safe",
-      color: "#22c55e",
-      textShadow: "0 0 24px rgba(34, 197, 94, 0.5)",
+      color: isLight ? "#15803d" : "#22c55e",
+      textShadow: isLight ? "none" : "0 0 24px rgba(34, 197, 94, 0.5)",
       label: "🟢 SAFE LEVEL",
       safeStatus: "Safe to Breathe (0 - 1 ppm)",
       isSafe: true,
@@ -137,8 +138,8 @@ export function getPpmSafetyInfo(ppm, alertLevel = null, badgeClass = null) {
     return {
       level: "caution",
       cssClass: "ppm-caution",
-      color: "#facc15",
-      textShadow: "0 0 24px rgba(250, 204, 21, 0.55)",
+      color: isLight ? "#b45309" : "#facc15",
+      textShadow: isLight ? "none" : "0 0 24px rgba(250, 204, 21, 0.55)",
       label: "🟡 CAUTION LEVEL",
       safeStatus: "Caution (1 - 10 ppm)",
       isSafe: false,
@@ -155,8 +156,8 @@ export function getPpmSafetyInfo(ppm, alertLevel = null, badgeClass = null) {
     return {
       level: "warning",
       cssClass: "ppm-warning",
-      color: "#fb923c",
-      textShadow: "0 0 24px rgba(251, 146, 60, 0.55)",
+      color: isLight ? "#c2410c" : "#fb923c",
+      textShadow: isLight ? "none" : "0 0 24px rgba(251, 146, 60, 0.55)",
       label: "⚡ MODERATE HAZARD",
       safeStatus: "Exceeds Safe Limit (10 - 50 ppm)",
       isSafe: false,
@@ -173,8 +174,8 @@ export function getPpmSafetyInfo(ppm, alertLevel = null, badgeClass = null) {
     return {
       level: "danger",
       cssClass: "ppm-danger",
-      color: "#ef4444",
-      textShadow: "0 0 28px rgba(239, 68, 68, 0.65)",
+      color: isLight ? "#dc2626" : "#ef4444",
+      textShadow: isLight ? "none" : "0 0 28px rgba(239, 68, 68, 0.65)",
       label: "⛔ HIGH DANGER",
       safeStatus: "Dangerous Air (50 - 100 ppm)",
       isSafe: false,
@@ -192,8 +193,8 @@ export function getPpmSafetyInfo(ppm, alertLevel = null, badgeClass = null) {
     return {
       level: "alarm",
       cssClass: "ppm-alarm",
-      color: "#f87171",
-      textShadow: "0 0 32px rgba(248, 113, 113, 0.9)",
+      color: isLight ? "#991b1b" : "#f87171",
+      textShadow: isLight ? "none" : "0 0 32px rgba(248, 113, 113, 0.9)",
       label: "🚨 CRITICAL EVACUATION",
       safeStatus: "EVACUATE IMMEDIATELY (> 100 ppm)",
       isSafe: false,
@@ -288,7 +289,7 @@ function setScanMode(mode) {
   if (rejectionCard) rejectionCard.style.display = "none";
 
   if (mode === "camera") {
-    modeBtnCamera.style.background = "#0284c7";
+    modeBtnCamera.style.background = "linear-gradient(135deg, #f97316, #e11d48)";
     modeBtnCamera.style.color = "#fff";
     modeBtnCamera.style.fontWeight = "700";
 
@@ -303,23 +304,23 @@ function setScanMode(mode) {
     if (uploadedPhotoBase64) {
       photoPreviewEl.style.display = "block";
       roiPreview.style.display = "flex";
-      roiPreview.style.background = "rgba(34, 197, 94, 0.06)";
-      roiPreview.style.color = "#22c55e";
+      roiPreview.style.background = "rgba(249, 115, 22, 0.08)";
+      roiPreview.style.color = "#fb923c";
       roiPreview.innerHTML = "Position<br>Strip Here";
     } else if (webcamStream) {
       videoEl.style.display = "block";
       roiPreview.style.display = "flex";
-      roiPreview.style.background = "rgba(34, 197, 94, 0.06)";
-      roiPreview.style.color = "#22c55e";
+      roiPreview.style.background = "rgba(249, 115, 22, 0.08)";
+      roiPreview.style.color = "#fb923c";
       roiPreview.innerHTML = "Position<br>Strip Here";
     } else {
       roiPreview.style.display = "flex";
-      roiPreview.style.background = "#111827";
-      roiPreview.style.color = "#38bdf8";
+      roiPreview.style.background = "#14121a";
+      roiPreview.style.color = "#fb923c";
       roiPreview.innerHTML = "Position<br>Strip Here";
     }
   } else {
-    modeBtnSim.style.background = "#0284c7";
+    modeBtnSim.style.background = "linear-gradient(135deg, #f97316, #e11d48)";
     modeBtnSim.style.color = "#fff";
     modeBtnSim.style.fontWeight = "700";
 
@@ -403,11 +404,11 @@ function handleImageFile(file) {
     photoPreviewEl.style.display = "block";
 
     roiPreview.style.display = "flex";
-    roiPreview.style.background = "rgba(34, 197, 94, 0.06)";
-    roiPreview.style.color = "#22c55e";
+    roiPreview.style.background = "rgba(249, 115, 22, 0.08)";
+    roiPreview.style.color = "var(--accent-mint, #fb923c)";
     roiPreview.innerHTML = "Position<br>Strip Here";
 
-    cameraStatusText.innerHTML = `✓ <strong style='color:#34d399;'>Image Loaded:</strong> <span style='color:#fff;'>${file.name}</span> (${Math.round(file.size/1024)} KB). Click <strong>⚡ SCAN NOW</strong>!`;
+    cameraStatusText.innerHTML = `✓ <strong style='color:var(--accent-mint, #fb923c);'>Image Loaded:</strong> <span style='color:#fff;'>${file.name}</span> (${Math.round(file.size/1024)} KB). Click <strong>⚡ SCAN NOW</strong>!`;
   };
   reader.onerror = function() {
     alert("Failed to read image file. Please try another image.");
@@ -433,8 +434,8 @@ fileCameraInput?.addEventListener("change", (e) => {
 if (cameraViewfinder) {
   cameraViewfinder.addEventListener("dragover", (e) => {
     e.preventDefault();
-    cameraViewfinder.style.boxShadow = "0 0 25px rgba(56, 189, 248, 0.5)";
-    cameraViewfinder.style.borderColor = "#38bdf8";
+    cameraViewfinder.style.boxShadow = "0 0 25px rgba(249, 115, 22, 0.5)";
+    cameraViewfinder.style.borderColor = "#f97316";
   });
   cameraViewfinder.addEventListener("dragleave", (e) => {
     e.preventDefault();
@@ -467,8 +468,8 @@ btnToggleWebcam?.addEventListener("click", async () => {
     btnToggleWebcam.style.background = "";
     cameraStatusText.textContent = "Webcam stopped. Tap 'Upload Image' or 'Snap Photo'.";
     if (!uploadedPhotoBase64) {
-      roiPreview.style.background = "#111827";
-      roiPreview.style.color = "#38bdf8";
+      roiPreview.style.background = "#14121a";
+      roiPreview.style.color = "#fb923c";
       roiPreview.innerHTML = "Position<br>Strip Here";
     }
     return;
@@ -476,7 +477,7 @@ btnToggleWebcam?.addEventListener("click", async () => {
 
   // Check if getUserMedia is supported in this context
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    cameraStatusText.innerHTML = "⚠️ Live webcam requires HTTPS/localhost.<br><span style='color:#34d399;'>Opening file/image upload mode...</span>";
+    cameraStatusText.innerHTML = "⚠️ Live webcam requires HTTPS/localhost.<br><span style='color:var(--accent-mint, #fb923c);'>Opening file/image upload mode...</span>";
     fileGalleryInput?.click();
     return;
   }
@@ -513,8 +514,8 @@ btnToggleWebcam?.addEventListener("click", async () => {
     videoEl.style.display = "block";
 
     roiPreview.style.display = "flex";
-    roiPreview.style.background = "rgba(34, 197, 94, 0.06)";
-    roiPreview.style.color = "#22c55e";
+    roiPreview.style.background = "rgba(249, 115, 22, 0.08)";
+    roiPreview.style.color = "var(--accent-mint, #fb923c)";
     roiPreview.innerHTML = "Align Strip<br>Inside Box";
 
     // Play video explicitly
@@ -526,7 +527,7 @@ btnToggleWebcam?.addEventListener("click", async () => {
 
     btnToggleWebcam.textContent = "⏹ Stop Webcam";
     btnToggleWebcam.style.background = "#dc2626";
-    cameraStatusText.innerHTML = "<span style='color:#34d399;'>● Webcam streaming active.</span> Align strip in box and click SCAN NOW.";
+    cameraStatusText.innerHTML = "<span style='color:var(--accent-mint, #fb923c);'>● Webcam streaming active.</span> Align strip in box and click SCAN NOW.";
   } catch (err) {
     console.warn("Webcam error:", err);
     let advice = "Camera permission not granted or device has no webcam.";
@@ -538,7 +539,7 @@ btnToggleWebcam?.addEventListener("click", async () => {
       advice = "Webcam is already in use by another program.";
     }
 
-    cameraStatusText.innerHTML = `⚠️ <strong>${advice}</strong><br><span style='color:#38bdf8;'>Opening image file picker...</span>`;
+    cameraStatusText.innerHTML = `⚠️ <strong>${advice}</strong><br><span style='color:var(--accent-mint, #fb923c);'>Opening image file picker...</span>`;
     setTimeout(() => fileGalleryInput?.click(), 500);
   }
 });
@@ -561,11 +562,11 @@ btnLoadSample?.addEventListener("click", () => {
   photoPreviewEl.style.display = "block";
 
   roiPreview.style.display = "flex";
-  roiPreview.style.background = "rgba(34, 197, 94, 0.06)";
-  roiPreview.style.color = "#22c55e";
+  roiPreview.style.background = "rgba(249, 115, 22, 0.08)";
+  roiPreview.style.color = "var(--accent-mint, #fb923c)";
   roiPreview.innerHTML = "Position<br>Strip Here";
 
-  cameraStatusText.innerHTML = "✓ <strong style='color:#34d399;'>Sample Cu-PAN Strip Loaded</strong> (Orange / ~22 ppm). Click <strong>⚡ SCAN NOW</strong> to run AI model!";
+  cameraStatusText.innerHTML = "✓ <strong style='color:var(--accent-mint, #fb923c);'>Sample Cu-PAN Strip Loaded</strong> (Orange / ~22 ppm). Click <strong>⚡ SCAN NOW</strong> to run AI model!";
 });
 
 
@@ -884,15 +885,15 @@ async function downloadSafetyReportPNG() {
 
   // 1. Sleek Frameless Background Gradient (NO BORDERS)
   const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-  grad.addColorStop(0, "#080e1a");
-  grad.addColorStop(0.5, "#0b1328");
-  grad.addColorStop(1, "#040711");
+  grad.addColorStop(0, "#0c0d12");
+  grad.addColorStop(0.5, "#141520");
+  grad.addColorStop(1, "#09090b");
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   // NOTE: Zero outer stroke borders or corner frames for pure modern aesthetic
 
   // 2. Header
-  ctx.fillStyle = "#38bdf8";
+  ctx.fillStyle = "#fb923c";
   ctx.font = "bold 21px 'Inter', sans-serif";
   ctx.fillText("H₂S INDUSTRIAL OPTICAL DOSIMETER", 44, 52);
 
@@ -945,12 +946,12 @@ async function downloadSafetyReportPNG() {
   // 4. SCANNED STRIP & ANALYSIS AREA (THE PIC & ANALYSIS AREA!)
   const picCardY = 234;
   const picCardH = 340;
-  ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
+  ctx.fillStyle = "rgba(20, 21, 32, 0.92)";
   ctx.beginPath();
   ctx.roundRect(44, picCardY, canvas.width - 88, picCardH, 14);
   ctx.fill();
 
-  ctx.fillStyle = "#38bdf8";
+  ctx.fillStyle = "#fb923c";
   ctx.font = "bold 13px 'Inter', sans-serif";
   ctx.fillText("📷 SCANNED DOSIMETER & TARGET ANALYSIS AREA (ROI)", 68, picCardY + 30);
 
@@ -958,7 +959,7 @@ async function downloadSafetyReportPNG() {
   const p = roiCoords.percent || { x: 20, y: 20, width: 60, height: 60 };
 
   ctx.textAlign = "right";
-  ctx.fillStyle = "#4ade80";
+  ctx.fillStyle = "#f97316";
   ctx.font = "bold 11px 'JetBrains Mono', monospace";
   ctx.fillText(`TARGET ROI: ${Math.round(p.width)}% × ${Math.round(p.height)}%`, canvas.width - 68, picCardY + 30);
   ctx.textAlign = "left";
@@ -1026,17 +1027,17 @@ async function downloadSafetyReportPNG() {
     const roiH = (p.height / 100) * drawH;
 
     // Glowing highlight over the analyzed chemical core
-    ctx.fillStyle = "rgba(34, 197, 94, 0.22)";
+    ctx.fillStyle = "rgba(249, 115, 22, 0.2)";
     ctx.fillRect(roiX, roiY, roiW, roiH);
 
     // Precision bounding border
-    ctx.strokeStyle = "#22c55e";
+    ctx.strokeStyle = "#f97316";
     ctx.lineWidth = 2.5;
     ctx.strokeRect(roiX, roiY, roiW, roiH);
 
     // Corner reticle accents
     const rCorner = Math.min(12, roiW / 4, roiH / 4);
-    ctx.strokeStyle = "#38bdf8";
+    ctx.strokeStyle = "#fb923c";
     ctx.lineWidth = 3;
     // TL
     ctx.beginPath();
@@ -1064,11 +1065,11 @@ async function downloadSafetyReportPNG() {
     ctx.beginPath();
     ctx.roundRect(tagX, tagY, tagW, tagH, 4);
     ctx.fill();
-    ctx.strokeStyle = "#22c55e";
+    ctx.strokeStyle = "#f97316";
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    ctx.fillStyle = "#4ade80";
+    ctx.fillStyle = "#fb923c";
     ctx.font = "bold 9px 'Inter', sans-serif";
     ctx.textAlign = "center";
     ctx.fillText("ANALYZED ZONE", tagX + tagW / 2, tagY + 14);
@@ -1114,7 +1115,7 @@ async function downloadSafetyReportPNG() {
   ctx.fillStyle = "#64748b";
   ctx.font = "11px 'Inter', sans-serif";
   ctx.fillText("HUE & CHROMA:", sideX, photoBoxY + 130);
-  ctx.fillStyle = "#38bdf8";
+  ctx.fillStyle = "#fb923c";
   ctx.font = "bold 13px 'JetBrains Mono', monospace";
   ctx.fillText(`Hue: ${feat.hue_angle ?? '24.4'}° | Chroma: ${feat.chroma ?? '54.2'}`, sideX, photoBoxY + 148);
 
@@ -1221,12 +1222,12 @@ async function downloadSafetyReportPNG() {
   // 7. Verified Stamp Footer
   const footerY = 852;
   const footerH = 92;
-  ctx.fillStyle = "rgba(2, 132, 199, 0.08)";
+  ctx.fillStyle = "rgba(249, 115, 22, 0.12)";
   ctx.beginPath();
   ctx.roundRect(44, footerY, canvas.width - 88, footerH, 14);
   ctx.fill();
 
-  ctx.fillStyle = "#38bdf8";
+  ctx.fillStyle = "#fb923c";
   ctx.font = "bold 13px 'Inter', sans-serif";
   ctx.fillText("✓ DIGITALLY VERIFIED INDUSTRIAL AI SAFETY CERTIFICATE", 68, footerY + 30);
 
@@ -1328,7 +1329,7 @@ function applyParsedQRPayload(parsed) {
       <strong>Worker:</strong> ${parsed.workerId || (currentWorker ? currentWorker.id : 'Auto')} • 
       <strong>Batch:</strong> ${parsed.batchId || 'BATCH_2026_Q1_01'}<br>
       <strong>Strip:</strong> <span class="font-mono">${parsed.stripId}</span> • 
-      <strong>Method:</strong> <span style="color:#38bdf8; font-weight:700;">${(parsed.methodKey || 'CUPAN_OPTICAL').toUpperCase()}</span> • 
+      <strong>Method:</strong> <span style="color:var(--accent-primary); font-weight:700;">${(parsed.methodKey || 'CUPAN_OPTICAL').toUpperCase()}</span> • 
       <strong>Exp:</strong> ${parsed.expiry || 'Active'}
     `;
   }
@@ -1375,23 +1376,23 @@ async function openTrustCertificateModal(scanId) {
   try {
     const cert = await API.getAuditCertificate(scanId);
     trustModalBody.innerHTML = `
-      <div style="background:rgba(2,132,199,0.1); border:1px solid rgba(56,189,248,0.25); border-radius:12px; padding:12px; margin-bottom:12px;">
-        <div style="color:#38bdf8; font-weight:800; font-size:11px; margin-bottom:4px;">CRYPTOGRAPHIC SEAL</div>
-        <div style="font-family:'JetBrains Mono'; font-size:11px; color:#ffffff; word-break:break-all;">${cert.cryptographic_seal}</div>
-        <div style="font-size:10px; color:#94a3b8; margin-top:4px;">Algorithm: ${cert.hash_algorithm} • Certified Immutable</div>
+      <div style="background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.35); border-radius:12px; padding:12px; margin-bottom:12px;">
+        <div style="color:var(--accent-mint); font-weight:800; font-size:11px; margin-bottom:4px;">CRYPTOGRAPHIC SEAL</div>
+        <div style="font-family:'JetBrains Mono'; font-size:11px; color:var(--text-primary); word-break:break-all;">${cert.cryptographic_seal}</div>
+        <div style="font-size:10px; color:var(--text-muted); margin-top:4px;">Algorithm: ${cert.hash_algorithm} • Certified Immutable</div>
       </div>
 
-      <div style="background:#1e293b; border-radius:10px; padding:10px; margin-bottom:12px; font-size:11px; display:flex; flex-direction:column; gap:6px;">
-        <div><span style="color:#94a3b8;">Raw Optical Hash (SHA-256):</span><br><strong style="font-family:'JetBrains Mono'; color:#38bdf8; font-size:10px; word-break:break-all;">${cert.raw_image_hash}</strong></div>
-        <div><span style="color:#94a3b8;">CV Pipeline Version:</span> <strong style="color:#fff;">${cert.pipeline_version}</strong></div>
-        <div><span style="color:#94a3b8;">Calibration Ladder ID:</span> <strong style="color:#fff;">${cert.calibration_version} (${cert.calibration_curve_id})</strong></div>
-        <div><span style="color:#94a3b8;">Logged Operator:</span> <strong style="color:#fff;">${cert.operator_id} (${cert.worker_name})</strong></div>
-        <div><span style="color:#94a3b8;">Timestamp:</span> <strong style="color:#fff;">${cert.timestamp}</strong></div>
+      <div style="background:var(--bg-card); border:1px solid var(--border-medium); border-radius:10px; padding:10px; margin-bottom:12px; font-size:11px; display:flex; flex-direction:column; gap:6px;">
+        <div><span style="color:var(--text-muted);">Raw Optical Hash (SHA-256):</span><br><strong style="font-family:'JetBrains Mono'; color:var(--accent-mint); font-size:10px; word-break:break-all;">${cert.raw_image_hash}</strong></div>
+        <div><span style="color:var(--text-muted);">CV Pipeline Version:</span> <strong style="color:var(--text-primary);">${cert.pipeline_version}</strong></div>
+        <div><span style="color:var(--text-muted);">Calibration Ladder ID:</span> <strong style="color:var(--text-primary);">${cert.calibration_version} (${cert.calibration_curve_id})</strong></div>
+        <div><span style="color:var(--text-muted);">Logged Operator:</span> <strong style="color:var(--text-primary);">${cert.operator_id} (${cert.worker_name})</strong></div>
+        <div><span style="color:var(--text-muted);">Timestamp:</span> <strong style="color:var(--text-primary);">${cert.timestamp}</strong></div>
       </div>
 
-      <div style="background:rgba(255,255,255,0.02); border:1px solid #334155; border-radius:10px; padding:10px; margin-bottom:12px;">
-        <div style="color:#f59e0b; font-weight:700; font-size:11px; margin-bottom:4px;">HOW DO WE TRUST THIS NUMBER?</div>
-        <pre style="white-space:pre-wrap; font-size:10.5px; color:#cbd5e1; font-family:inherit; margin:0; line-height:1.4;">${cert.trust_explanation}</pre>
+      <div style="background:var(--bg-input); border:1px solid var(--border-medium); border-radius:10px; padding:10px; margin-bottom:12px;">
+        <div style="color:#d97706; font-weight:700; font-size:11px; margin-bottom:4px;">HOW DO WE TRUST THIS NUMBER?</div>
+        <pre style="white-space:pre-wrap; font-size:10.5px; color:var(--text-secondary); font-family:inherit; margin:0; line-height:1.4;">${cert.trust_explanation}</pre>
       </div>
 
       <button type="button" class="btn btn-secondary" onclick="window.print()" style="width:100%; justify-content:center; padding:8px; font-size:11px;">
@@ -1604,13 +1605,13 @@ window.loadSampleStripPhoto = function() {
 
   if (roiPreview) {
     roiPreview.style.display = "flex";
-    roiPreview.style.background = "rgba(34, 197, 94, 0.06)";
-    roiPreview.style.color = "#22c55e";
+    roiPreview.style.background = "rgba(249, 115, 22, 0.08)";
+    roiPreview.style.color = "var(--accent-mint, #fb923c)";
     roiPreview.innerHTML = "Position<br>Strip Here";
   }
 
   if (cameraStatusText) {
-    cameraStatusText.innerHTML = "✓ <strong style='color:#34d399;'>Sample Cu-PAN Strip Loaded</strong> (Orange / ~22 ppm). Click <strong>⚡ SCAN NOW</strong> to run AI model!";
+    cameraStatusText.innerHTML = "✓ <strong style='color:var(--accent-mint, #fb923c);'>Sample Cu-PAN Strip Loaded</strong> (Orange / ~22 ppm). Click <strong>⚡ SCAN NOW</strong> to run AI model!";
   }
 };
 
@@ -1663,4 +1664,62 @@ document.getElementById("res-verified-audit-line")?.addEventListener("click", ()
   const scanId = lastScanResult?.scan_id || document.getElementById("res-scan-id")?.textContent || "SCAN_20260916_361C16";
   openTrustCertificateModal(scanId);
 });
+
+// ============================================================================
+// Section 11: Worker Terminal Theme Controller (Light / Dark Mode)
+// ============================================================================
+function initWorkerTheme() {
+  const toggleBtn = document.getElementById("worker-theme-toggle");
+  const iconEl = document.getElementById("worker-theme-icon");
+
+  function updateIcon(theme) {
+    if (iconEl) {
+      iconEl.textContent = theme === "light" ? "☀️" : "🌙";
+    }
+  }
+
+  function refreshScanResultTheme() {
+    if (!lastScanResult) return;
+    const safety = getPpmSafetyInfo(lastScanResult.predicted_ppm, lastScanResult.alert_level, lastScanResult.badge_class);
+    const verdictCard = document.getElementById("res-verdict-card");
+    if (verdictCard) verdictCard.style.background = `${safety.color}15`;
+    const verdictTitle = document.getElementById("res-verdict-title");
+    if (verdictTitle) verdictTitle.style.color = safety.color;
+    const resPpmEl = document.getElementById("res-ppm");
+    if (resPpmEl) {
+      resPpmEl.style.color = safety.color;
+      resPpmEl.style.textShadow = safety.textShadow;
+    }
+  }
+
+  const currentTheme = document.documentElement.getAttribute("data-theme") || "dark";
+  updateIcon(currentTheme);
+
+  if (toggleBtn) {
+    toggleBtn.addEventListener("click", () => {
+      const active = document.documentElement.getAttribute("data-theme") || "dark";
+      const nextTheme = active === "light" ? "dark" : "light";
+      document.documentElement.setAttribute("data-theme", nextTheme);
+      try {
+        localStorage.setItem("theme", nextTheme);
+      } catch (e) {}
+      updateIcon(nextTheme);
+      refreshScanResultTheme();
+    });
+  }
+
+  window.addEventListener("storage", (e) => {
+    if (e.key === "theme" && e.newValue) {
+      document.documentElement.setAttribute("data-theme", e.newValue);
+      updateIcon(e.newValue);
+      refreshScanResultTheme();
+    }
+  });
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initWorkerTheme);
+} else {
+  initWorkerTheme();
+}
 

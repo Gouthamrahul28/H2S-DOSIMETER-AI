@@ -29,6 +29,61 @@ tabButtons.forEach(btn => {
   });
 });
 
+// Theme Controller (Light / Dark Mode)
+let activeModelCache = null;
+
+function initTheme() {
+  const toggleBtn = document.getElementById("theme-toggle-btn");
+  const toggleText = document.getElementById("theme-toggle-text");
+
+  function updateToggleUI(theme) {
+    if (toggleText) {
+      toggleText.textContent = theme === "light" ? "Light" : "Dark";
+    }
+  }
+
+  const currentTheme = document.documentElement.getAttribute("data-theme") || "dark";
+  updateToggleUI(currentTheme);
+
+  if (toggleBtn) {
+    toggleBtn.addEventListener("click", () => {
+      const active = document.documentElement.getAttribute("data-theme") || "dark";
+      const nextTheme = active === "light" ? "dark" : "light";
+      document.documentElement.setAttribute("data-theme", nextTheme);
+      try {
+        localStorage.setItem("theme", nextTheme);
+      } catch (e) {}
+      updateToggleUI(nextTheme);
+
+      // Re-render graphs so that SVG dynamic elements update to new theme
+      if (activeModelCache) {
+        renderLearningCurve(activeModelCache.training_curve || []);
+        renderVersionComparison(activeModelCache.model_comparison || []);
+        renderPerClassAccuracy(activeModelCache.per_class_metrics || []);
+        renderConfusionMatrix(activeModelCache.confusion_matrix, activeModelCache.classes);
+        renderCalibrationCurve(activeModelCache.calibration_curve || []);
+        renderParityPlot(activeModelCache.parity_plot || {});
+      }
+    });
+  }
+
+  // Cross-tab synchronization
+  window.addEventListener("storage", (e) => {
+    if (e.key === "theme" && e.newValue) {
+      document.documentElement.setAttribute("data-theme", e.newValue);
+      updateToggleUI(e.newValue);
+      if (activeModelCache) {
+        renderLearningCurve(activeModelCache.training_curve || []);
+        renderVersionComparison(activeModelCache.model_comparison || []);
+        renderPerClassAccuracy(activeModelCache.per_class_metrics || []);
+        renderConfusionMatrix(activeModelCache.confusion_matrix, activeModelCache.classes);
+        renderCalibrationCurve(activeModelCache.calibration_curve || []);
+        renderParityPlot(activeModelCache.parity_plot || {});
+      }
+    }
+  });
+}
+
 // Shift Monitor State
 let currentStandard = "FACTORIES_ACT";
 let shiftWorkersCache = [];
@@ -128,11 +183,18 @@ function renderShiftWorkersTable(workers, standard) {
     const pct = standard === "ACGIH" ? comp.acgih_pct : comp.factories_act_pct;
     const barColor = pct >= 100 ? "#ef4444" : (pct >= 50 ? "#f59e0b" : "#10b981");
 
+    const initials = (w.name || "W").split(" ").map(p => p[0]).slice(0, 2).join("");
+
     return `
       <tr>
         <td>
-          <div style="font-weight:700; color:#fff;">${w.name}</div>
-          <div style="font-size:11px; color:var(--text-muted);">${w.badge_number} • ${w.department}</div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div style="width:34px; height:34px; border-radius:9px; background:linear-gradient(135deg, rgba(16,185,129,0.22), rgba(5,150,105,0.15)); border:1px solid rgba(16,185,129,0.35); display:flex; align-items:center; justify-content:center; font-weight:800; color:var(--accent-mint); font-size:12px; font-family:'Plus Jakarta Sans'; flex-shrink:0;">${initials}</div>
+            <div>
+              <div style="font-weight:700; color:var(--text-primary); font-size:13.5px;">${w.name}</div>
+              <div style="font-size:11px; color:var(--text-muted); font-family:'JetBrains Mono';">${w.badge_number} • ${w.department}</div>
+            </div>
+          </div>
         </td>
         <td>
           <span class="method-badge ${mBadgeClass}" title="${methodInfo.name} - Calibration: ${methodInfo.formula || 'Calibrated'}">
@@ -142,7 +204,7 @@ function renderShiftWorkersTable(workers, standard) {
           <div style="font-size:10px; color:var(--text-muted); margin-top:3px; font-family:'JetBrains Mono';">${methodInfo.formula || ''}</div>
         </td>
         <td>
-          <div class="dose-val-display" style="color:#38bdf8;">${w.cumulative_dose_ppm_h.toFixed(2)} <span style="font-size:11px; color:var(--text-muted);">ppm·h</span></div>
+          <div class="dose-val-display" style="color:var(--accent-mint);">${w.cumulative_dose_ppm_h.toFixed(2)} <span style="font-size:11px; color:var(--text-muted);">ppm·h</span></div>
           <div style="font-size:10.5px; color:var(--text-muted);">TWA: ${w.twa_current_ppm.toFixed(2)} ppm</div>
         </td>
         <td>
@@ -153,7 +215,7 @@ function renderShiftWorkersTable(workers, standard) {
           <div style="font-size:10px; color:${tier.color_hex}; margin-top:3px; font-weight:600;">${tier.status_text}</div>
         </td>
         <td>
-          <div style="font-weight:600; color:#cbd5e1;">${w.last_read_str}</div>
+          <div style="font-weight:600; color:var(--text-secondary);">${w.last_read_str}</div>
           <div style="font-size:10.5px; color:var(--text-muted);">${w.last_ppm.toFixed(1)} ppm • ${w.scan_count} scans</div>
         </td>
         <td>
@@ -175,7 +237,7 @@ function renderShiftWorkersTable(workers, standard) {
           </div>
         </td>
         <td>
-          <button class="btn btn-secondary" style="padding:5px 10px; font-size:11px; display:inline-flex; align-items:center; gap:4px; color:#38bdf8; border-color:rgba(56,189,248,0.35);" onclick="window.openWorkerDoseModal('${w.worker_id}')">
+          <button class="btn btn-secondary" style="padding:5px 10px; font-size:11px; display:inline-flex; align-items:center; gap:4px; color:var(--accent-primary); border-color:rgba(249,115,22,0.35);" onclick="window.openWorkerDoseModal('${w.worker_id}')">
             📈 Dose Curve
           </button>
         </td>
@@ -215,9 +277,9 @@ async function loadScans() {
 
     return `
       <tr>
-        <td style="font-weight:600; color:#fff;">${s.worker_name} (${s.worker_id})</td>
+        <td style="font-weight:600; color:var(--text-primary);">${s.worker_name} (${s.worker_id})</td>
         <td>${timeFormatted}</td>
-        <td><code style="color:#38bdf8;">${s.strip_id}</code></td>
+        <td><code style="color:var(--accent-mint); font-weight:700;">${s.strip_id}</code></td>
         <td><span class="badge-cat ${s.badge_class}">${s.predicted_class}</span></td>
         <td style="font-weight:700;">${s.predicted_ppm} ppm <span style="font-size:11px; color:var(--text-muted);">(${s.predicted_ppm_range})</span></td>
         <td>${statusPill}</td>
@@ -227,7 +289,7 @@ async function loadScans() {
             <button class="btn btn-secondary" style="padding:4px 8px; font-size:11px;" onclick="window.reviewScan('${s.scan_id}')">
               ${s.supervisor_reviewed ? "✓ Reviewed" : "Approve"}
             </button>
-            <button class="btn btn-secondary" style="padding:4px 8px; font-size:11px; color:#38bdf8; border-color:rgba(56,189,248,0.4);" onclick="window.openAuditCertificateModal('${s.scan_id}')" title="Inspect cryptographic SHA-256 hash & certified calibration curve">
+            <button class="btn btn-secondary" style="padding:4px 8px; font-size:11px; color:var(--accent-primary); border-color:rgba(249,115,22,0.4);" onclick="window.openAuditCertificateModal('${s.scan_id}')" title="Inspect cryptographic SHA-256 hash & certified calibration curve">
               🛡️ Audit
             </button>
           </div>
@@ -265,7 +327,7 @@ async function loadAlerts() {
     return `
       <tr>
         <td><code>${a.alert_id}</code></td>
-        <td style="font-weight:600; color:#fff;">${a.worker_name}</td>
+        <td style="font-weight:600; color:var(--text-primary);">${a.worker_name}</td>
         <td><span class="alert-pill ${pillClass}">${a.alert_level}</span></td>
         <td style="font-weight:700;">${a.ppm_value} ppm</td>
         <td style="max-width:280px;">${a.message}</td>
@@ -275,7 +337,7 @@ async function loadAlerts() {
             <button class="btn btn-secondary" style="padding:4px 10px; font-size:12px;" onclick="window.ackAlert('${a.alert_id}')">
               Acknowledge
             </button>
-          ` : `<span style="color:#10b981; font-size:12px;">Acknowledged</span>`}
+          ` : `<span style="color:var(--accent-mint); font-size:12px; font-weight:700;">Acknowledged</span>`}
         </td>
       </tr>
     `;
@@ -291,6 +353,7 @@ window.ackAlert = async function(alertId) {
 // 2. AI Model Center
 async function loadAIModelCenter() {
   const activeModel = await API.getActiveModel();
+  activeModelCache = activeModel;
   document.getElementById("model-center-active-ver").textContent = activeModel.version;
   document.getElementById("model-center-acc").textContent = `${Math.round(activeModel.test_accuracy * 1000) / 10}%`;
   document.getElementById("model-center-status").textContent = activeModel.approval_status;
@@ -319,17 +382,17 @@ async function loadAIModelCenter() {
     } else if (!isAct) {
       actionBtn = `<button class="btn btn-undo" style="padding:4px 8px; font-size:11px;" onclick="window.quickRollback('${m.version}')">Rollback To This</button>`;
     } else {
-      actionBtn = `<span style="color:#10b981; font-size:12px; font-weight:700;">✓ In Production</span>`;
+      actionBtn = `<span style="color:var(--accent-mint); font-size:12px; font-weight:700;">✓ In Production</span>`;
     }
 
     const f1Score = (m.metrics && m.metrics.f1_macro) ? `${Math.round(m.metrics.f1_macro * 1000) / 10}%` : `${Math.round(m.test_accuracy * 995) / 10}%`;
 
     return `
       <tr>
-        <td style="font-weight:700; color:#60a5fa;">${m.version}</td>
+        <td style="font-weight:700; color:var(--accent-mint);">${m.version}</td>
         <td>${m.model_name}</td>
-        <td style="font-weight:700; color:#34d399;">${Math.round(m.test_accuracy * 1000) / 10}%</td>
-        <td style="color:#38bdf8;">${f1Score}</td>
+        <td style="font-weight:700; color:var(--accent-mint);">${Math.round(m.test_accuracy * 1000) / 10}%</td>
+        <td style="color:var(--accent-mint);">${f1Score}</td>
         <td>${badge}</td>
         <td>${actionBtn}</td>
       </tr>
@@ -391,8 +454,8 @@ function renderLearningCurve(curve) {
   svg.innerHTML = `
     <defs>
       <linearGradient id="valGrad" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.3" />
-        <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.0" />
+        <stop offset="0%" stop-color="#f97316" stop-opacity="0.35" />
+        <stop offset="100%" stop-color="#f97316" stop-opacity="0.0" />
       </linearGradient>
       <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
         <feGaussianBlur stdDeviation="2" result="blur" />
@@ -411,12 +474,12 @@ function renderLearningCurve(curve) {
     <!-- Loss curve -->
     <polyline points="${lossPts}" fill="none" stroke="#f43f5e" stroke-width="1.8" stroke-dasharray="4,3" opacity="0.85" />
     <!-- Train Acc curve -->
-    <polyline points="${trainPts}" fill="none" stroke="#10b981" stroke-width="2.2" opacity="0.9" />
+    <polyline points="${trainPts}" fill="none" stroke="#f59e0b" stroke-width="2.2" opacity="0.9" />
     <!-- Val Acc curve -->
-    <polyline points="${valPts}" fill="none" stroke="#38bdf8" stroke-width="2.8" filter="url(#glow)" />
+    <polyline points="${valPts}" fill="none" stroke="#f97316" stroke-width="2.8" filter="url(#glow)" />
     <!-- Data points -->
     ${curve.map((pt, i) => `
-      <circle cx="${x(i).toFixed(1)}" cy="${yAcc(pt.val_accuracy).toFixed(1)}" r="3" fill="#0f172a" stroke="#38bdf8" stroke-width="1.5" class="chart-point" data-epoch="${pt.epoch}" data-train="${pt.train_accuracy}" data-val="${pt.val_accuracy}" data-loss="${pt.loss}" style="cursor:pointer;" />
+      <circle cx="${x(i).toFixed(1)}" cy="${yAcc(pt.val_accuracy).toFixed(1)}" r="3" fill="#181412" stroke="#f97316" stroke-width="1.5" class="chart-point" data-epoch="${pt.epoch}" data-train="${pt.train_accuracy}" data-val="${pt.val_accuracy}" data-loss="${pt.loss}" style="cursor:pointer;" />
     `).join("")}
   `;
 
@@ -438,7 +501,7 @@ function renderLearningCurve(curve) {
 
         tooltip.style.left = `${ptX}px`;
         tooltip.style.top = `${ptY}px`;
-        tooltip.innerHTML = `<strong>Epoch ${ep}/25</strong><br><span style="color:#10b981;">Train: ${tr}%</span> | <span style="color:#38bdf8;">Val: ${va}%</span><br><span style="color:#f43f5e;">Loss: ${lo}</span>`;
+        tooltip.innerHTML = `<strong>Epoch ${ep}/25</strong><br><span style="color:#f59e0b;">Train: ${tr}%</span> | <span style="color:#f97316;">Val: ${va}%</span><br><span style="color:#f43f5e;">Loss: ${lo}</span>`;
         tooltip.style.display = "block";
       });
       p.addEventListener("mouseleave", () => {
@@ -455,25 +518,25 @@ function renderVersionComparison(models) {
 
   const colors = {
     "v0.9": "linear-gradient(90deg, #475569, #64748b)",
-    "v1.0": "linear-gradient(90deg, #2563eb, #3b82f6)",
-    "v1.1": "linear-gradient(90deg, #059669, #10b981)"
+    "v1.0": "linear-gradient(90deg, #ea580c, #f97316)",
+    "v1.1": "linear-gradient(90deg, #f97316, #fb923c)"
   };
 
   let html = "";
   models.forEach(m => {
-    const fill = colors[m.version] || "linear-gradient(90deg, #3b82f6, #06b6d4)";
+    const fill = colors[m.version] || "linear-gradient(90deg, #f97316, #f43f5e)";
     const isActive = m.is_active;
-    const activeBadge = isActive ? `<span class="badge-cat badge-green" style="font-size:10px; padding:2px 6px; margin-left:6px;">ACTIVE</span>` : "";
+    const activeBadge = isActive ? `<span class="badge-cat badge-orange" style="font-size:10px; padding:2px 6px; margin-left:6px;">ACTIVE</span>` : "";
 
     html += `
       <div class="acc-bar-item">
         <div class="acc-bar-label">
           <span>
-            <strong style="color:${isActive ? '#34d399' : '#fff'};">${m.version}</strong>
+            <strong style="color:${isActive ? '#fb923c' : '#fff'};">${m.version}</strong>
             <span style="color:var(--text-muted); font-size:12px; margin-left:4px;">(${m.model_name})</span>
             ${activeBadge}
           </span>
-          <span style="font-family:'JetBrains Mono'; font-weight:700; color:${isActive ? '#34d399' : '#38bdf8'}; font-size:13px;">
+          <span style="font-family:'JetBrains Mono'; font-weight:700; color:${isActive ? '#fb923c' : '#f97316'}; font-size:13px;">
             ${m.test_accuracy}%
           </span>
         </div>
@@ -510,18 +573,18 @@ function renderPerClassAccuracy(classes) {
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
           <div style="display:flex; align-items:center; gap:8px;">
             <span style="width:12px; height:12px; border-radius:3px; background:${c.color}; display:inline-block; box-shadow:0 0 8px ${c.color}66;"></span>
-            <span style="font-weight:700; font-size:13px; color:#fff;">${c.class_id}: ${c.label}</span>
+            <span style="font-weight:700; font-size:13px; color:var(--text-primary);">${c.class_id}: ${c.label}</span>
           </div>
-          <span style="font-family:'JetBrains Mono'; font-weight:700; color:#34d399; font-size:14px;">${c.accuracy}% Acc</span>
+          <span style="font-family:'JetBrains Mono'; font-weight:700; color:var(--accent-mint); font-size:14px;">${c.accuracy}% Acc</span>
         </div>
         <div class="acc-bar-track" style="height:6px; margin-bottom:6px;">
           <div class="acc-bar-fill" style="width:${c.accuracy}%; background:${c.color};"></div>
         </div>
         <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--text-muted); font-family:'JetBrains Mono';">
-          <span>Precision: <b style="color:#94a3b8;">${c.precision}%</b></span>
-          <span>Recall: <b style="color:#94a3b8;">${c.recall}%</b></span>
-          <span>F1: <b style="color:#38bdf8;">${c.f1_score}%</b></span>
-          <span>Tested: <b style="color:#cbd5e1;">${c.samples} strips</b></span>
+          <span>Precision: <b style="color:var(--text-secondary);">${c.precision}%</b></span>
+          <span>Recall: <b style="color:var(--text-secondary);">${c.recall}%</b></span>
+          <span>F1: <b style="color:var(--accent-mint);">${c.f1_score}%</b></span>
+          <span>Tested: <b style="color:var(--text-secondary);">${c.samples} strips</b></span>
         </div>
       </div>
     `;
@@ -783,7 +846,7 @@ function renderCalibrationCurve(calibData) {
       <text x="12" y="21" font-size="11" font-family="'JetBrains Mono', monospace" fill="#f8fafc" font-weight="600">
         <tspan font-style="italic">a</tspan><tspan dy="-3" font-size="8.5">*</tspan><tspan dy="3">=4.65+4.34·[H</tspan><tspan dy="2" font-size="8.5">2</tspan><tspan dy="-2">S]</tspan>
       </text>
-      <text x="12" y="38" font-size="10.5" font-family="'JetBrains Mono', monospace" fill="#38bdf8" font-weight="700">R²=0.99070 (0–1.5 ppm)</text>
+      <text x="12" y="38" font-size="10.5" font-family="'JetBrains Mono', monospace" fill="var(--accent-primary, #f97316)" font-weight="700">R²=0.99070 (0–1.5 ppm)</text>
     </g>
 
     <!-- Calibration Data Points (18 precision points up to 20 ppm) accurately colored from Cu-PAN chemical spectrum -->
@@ -825,22 +888,22 @@ function renderCalibrationCurve(calibData) {
         tooltip.style.left = `${ptX}px`;
         tooltip.style.top = `${ptY}px`;
         tooltip.innerHTML = `
-          <div style="font-size:11px; font-weight:700; color:#f8fafc; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
+          <div style="font-size:11px; font-weight:700; color:var(--text-primary); margin-bottom:4px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
             <span>[H₂S] = ${ppm} ppm</span>
-            <span style="font-size:9.5px; padding:1px 5px; border-radius:3px; font-weight:600; ${isLinear ? 'background:rgba(56,189,248,0.2); color:#38bdf8;' : 'background:rgba(244,114,182,0.2); color:#f472b6;'}">${isLinear ? 'Linear Dynamic Range' : 'Saturation Plateau'}</span>
+            <span style="font-size:9.5px; padding:1px 5px; border-radius:3px; font-weight:600; ${isLinear ? 'background:rgba(249,115,22,0.18); color:var(--accent-mint);' : 'background:rgba(244,114,182,0.2); color:#f472b6;'}">${isLinear ? 'Linear Dynamic Range' : 'Saturation Plateau'}</span>
           </div>
-          <div style="font-size:11px; color:#cbd5e1; margin-bottom:4px;">
-            <em>a*</em> coordinate: <strong style="color:#ffffff; font-family:'JetBrains Mono';">${aStar}</strong>
-            ${isLinear ? `<span style="color:#94a3b8; font-size:10px;"> (Fit: ${(4.65 + 4.34 * ppm).toFixed(2)})</span>` : `<span style="color:#f472b6; font-size:10px;"> (Ceiling)</span>`}
+          <div style="font-size:11px; color:var(--text-secondary); margin-bottom:4px;">
+            <em>a*</em> coordinate: <strong style="color:var(--text-primary); font-family:'JetBrains Mono';">${aStar}</strong>
+            ${isLinear ? `<span style="color:var(--text-muted); font-size:10px;"> (Fit: ${(4.65 + 4.34 * ppm).toFixed(2)})</span>` : `<span style="color:#f472b6; font-size:10px;"> (Ceiling)</span>`}
           </div>
           <div style="margin-top:6px; display:flex; align-items:center; gap:8px; padding-top:4px; border-top:1px solid rgba(255,255,255,0.08);">
             <span style="width:16px; height:16px; border-radius:4px; background:${hex}; border:1px solid #ffffff; display:inline-block; box-shadow:0 0 4px rgba(0,0,0,0.5);"></span>
             <div>
               <div style="font-family:'JetBrains Mono'; font-size:10.5px; font-weight:700; color:${hex};">${hex.toUpperCase()}</div>
-              <div style="font-size:9.5px; color:#94a3b8;">Spectrum rgb(${rgb})</div>
+              <div style="font-size:9.5px; color:var(--text-muted);">Spectrum rgb(${rgb})</div>
             </div>
           </div>
-          ${stage ? `<div style="font-size:9.5px; color:#cbd5e1; margin-top:4px; font-weight:500;">${stage}</div>` : ''}
+          ${stage ? `<div style="font-size:9.5px; color:var(--text-secondary); margin-top:4px; font-weight:500;">${stage}</div>` : ''}
         `;
         tooltip.style.display = "block";
       });
@@ -979,13 +1042,13 @@ function renderParityPlot(parityData) {
         tooltip.innerHTML = `
           <div style="display:flex; align-items:center; gap:7px; margin-bottom:4px;">
             <span style="width:12px; height:12px; border-radius:3px; background:${pointColor}; border:1px solid #fff; display:inline-block; box-shadow:0 0 8px ${pointColor}99;"></span>
-            <strong style="color:#ffffff; font-size:12px;">${stageName}</strong>
-            <span style="color:#94a3b8; font-size:10px;">(${cat})</span>
+            <strong style="color:var(--text-primary); font-size:12px;">${stageName}</strong>
+            <span style="color:var(--text-muted); font-size:10px;">(${cat})</span>
           </div>
-          <div style="font-family:'JetBrains Mono'; font-size:10px; color:#cbd5e1; margin-bottom:4px;">Spectrum Color: <span style="color:${pointColor}; font-weight:700;">${pointColor.toUpperCase()}</span></div>
+          <div style="font-family:'JetBrains Mono'; font-size:10px; color:var(--text-secondary); margin-bottom:4px;">Spectrum Color: <span style="color:${pointColor}; font-weight:700;">${pointColor.toUpperCase()}</span></div>
           <span>True H₂S: <strong>${truePpm} ppm</strong></span><br>
-          <span>Predicted: <strong style="color:#38bdf8;">${estPpm} ppm</strong></span><br>
-          <span>Error: <strong style="color:${absErr > 2.0 ? '#f59e0b' : '#34d399'};">${sign}${err.toFixed(2)} ppm</strong></span>
+          <span>Predicted: <strong style="color:var(--accent-mint);">${estPpm} ppm</strong></span><br>
+          <span>Error: <strong style="color:${absErr > 2.0 ? 'var(--accent-coral)' : 'var(--accent-mint)'};">${sign}${err.toFixed(2)} ppm</strong></span>
         `;
         tooltip.style.display = "block";
       });
@@ -1051,7 +1114,7 @@ async function loadSafetyCenter() {
     const isAct = h.is_active;
     const badge = isAct ? `<span class="badge-cat badge-green">ACTIVE</span>` : `<span class="badge-cat badge-yellow">Historical</span>`;
     const revertBtn = isAct
-      ? `<span style="color:#10b981; font-size:12px; font-weight:700;">Current</span>`
+      ? `<span style="color:var(--accent-mint); font-size:12px; font-weight:700;">Current</span>`
       : `<button class="btn btn-undo" style="padding:4px 10px; font-size:12px;" onclick="window.revertThreshold(${h.id}, '${h.version_tag}')">↺ Revert to this</button>`;
 
     return `
@@ -1125,16 +1188,24 @@ window.revertThreshold = async function(configId, versionTag) {
 async function loadWorkers() {
   const workers = await API.getWorkers();
   const container = document.getElementById("worker-list-cards");
-  container.innerHTML = workers.map(w => `
-    <div class="glass-card" style="padding:14px; cursor:pointer; border:1px solid var(--border-color);" onclick="window.selectWorker('${w.id}')">
-      <div style="font-weight:700; color:#fff;">${w.name}</div>
-      <div style="font-size:12px; color:var(--text-muted);">${w.id} • ${w.department}</div>
-      <div style="margin-top:8px; display:flex; justify-content:space-between; font-size:12px;">
-        <span>Scans: <b>${w.total_scans}</b></span>
-        <span>Alerts: <b style="color:${w.total_alerts > 0 ? '#ef4444' : '#10b981'};">${w.total_alerts}</b></span>
+  container.innerHTML = workers.map(w => {
+    const initials = (w.name || "W").split(" ").map(p => p[0]).slice(0, 2).join("");
+    return `
+      <div class="glass-card" style="padding:14px 16px; cursor:pointer; border:1px solid var(--border-subtle); transition:all 0.2s ease;" onclick="window.selectWorker('${w.id}')">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div style="width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg, rgba(56,189,248,0.2), rgba(59,130,246,0.2)); border:1px solid rgba(56,189,248,0.4); display:flex; align-items:center; justify-content:center; font-weight:800; color:var(--accent-sky); font-size:12.5px; font-family:'Plus Jakarta Sans'; flex-shrink:0;">${initials}</div>
+          <div style="flex:1; min-width:0;">
+            <div style="font-weight:700; color:var(--text-primary); font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${w.name}</div>
+            <div style="font-size:11.5px; color:var(--text-muted); font-family:'JetBrains Mono';">${w.id} • ${w.department}</div>
+          </div>
+        </div>
+        <div style="margin-top:10px; display:flex; justify-content:space-between; font-size:11.5px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.06);">
+          <span>Scans: <b style="color:var(--text-primary);">${w.total_scans}</b></span>
+          <span>Alerts: <b style="color:${w.total_alerts > 0 ? '#ef4444' : 'var(--accent-mint)'};">${w.total_alerts}</b></span>
+        </div>
       </div>
-    </div>
-  `).join("");
+    `;
+  }).join("");
 
   // Populate scan simulator & issue strip worker dropdown
   const workerSelect = document.getElementById("scan-worker-select");
@@ -1168,7 +1239,7 @@ window.selectWorker = async function(workerId) {
         <div class="timeline-dot"></div>
         <div style="font-size:12px; color:var(--text-muted);">${timeStr} • ${pt.scan_id}</div>
         <div style="display:flex; align-items:center; gap:10px; margin-top:4px;">
-          <span style="font-size:16px; font-weight:800; color:#fff;">${pt.predicted_ppm} ppm</span>
+          <span style="font-size:16px; font-weight:800; color:var(--text-primary);">${pt.predicted_ppm} ppm</span>
           <span class="badge-cat badge-yellow">${pt.predicted_class}</span>
           ${pt.alert_triggered ? '<span class="alert-pill pill-red">Alert Triggered</span>' : ''}
         </div>
@@ -1187,8 +1258,8 @@ async function loadAuditAndGit() {
         <code style="color:#60a5fa;">commit ${c.hash}</code>
         <span>${c.date ? new Date(c.date).toLocaleDateString() : ''}</span>
       </div>
-      <div style="font-size:13px; font-weight:600; margin-top:4px; color:#fff;">${c.message}</div>
-      ${c.ref_names ? `<div style="font-size:11px; color:#34d399; margin-top:2px;">${c.ref_names}</div>` : ''}
+      <div style="font-size:13px; font-weight:600; margin-top:4px; color:var(--text-primary);">${c.message}</div>
+      ${c.ref_names ? `<div style="font-size:11px; color:var(--accent-mint); margin-top:2px;">${c.ref_names}</div>` : ''}
     </div>
   `).join("");
 
@@ -1200,7 +1271,7 @@ async function loadAuditAndGit() {
         <span class="badge-cat badge-yellow" style="font-size:10px;">${l.entity_type}</span>
         <span style="color:var(--text-muted);">${new Date(l.timestamp).toLocaleTimeString()}</span>
       </div>
-      <div style="font-weight:700; font-size:13px; margin-top:4px; color:#fff;">${l.action}</div>
+      <div style="font-weight:700; font-size:13px; margin-top:4px; color:var(--text-primary);">${l.action}</div>
       <div style="font-size:12px; color:var(--text-secondary); margin-top:2px;">${l.details}</div>
     </div>
   `).join("");
@@ -1500,7 +1571,7 @@ function renderDoseTrajectoryChart(data) {
 
   // Hourly plot circles
   const circlesSvg = observedPts.map(p => `
-    <circle cx="${x(p.hour).toFixed(1)}" cy="${y(p.cumulative_dose).toFixed(1)}" r="4" fill="#38bdf8" stroke="#0f172a" stroke-width="1.5" class="dose-chart-dot" data-hr="${p.hour}" data-time="${p.time_str}" data-dose="${p.cumulative_dose.toFixed(2)}" data-ppm="${p.instant_ppm.toFixed(1)}" style="cursor:pointer;" />
+    <circle cx="${x(p.hour).toFixed(1)}" cy="${y(p.cumulative_dose).toFixed(1)}" r="4" fill="#fb923c" stroke="#181412" stroke-width="1.5" class="dose-chart-dot" data-hr="${p.hour}" data-time="${p.time_str}" data-dose="${p.cumulative_dose.toFixed(2)}" data-ppm="${p.instant_ppm.toFixed(1)}" style="cursor:pointer;" />
   `).join("");
 
   // Discrete Scan Markers
@@ -1524,8 +1595,8 @@ function renderDoseTrajectoryChart(data) {
   svg.innerHTML = `
     <defs>
       <linearGradient id="doseGradArea" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.35" />
-        <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.0" />
+        <stop offset="0%" stop-color="#f97316" stop-opacity="0.35" />
+        <stop offset="100%" stop-color="#f97316" stop-opacity="0.0" />
       </linearGradient>
     </defs>
     ${gridLines}
@@ -1538,7 +1609,7 @@ function renderDoseTrajectoryChart(data) {
     <text x="${padL + plotW / 2}" y="${h - 4}" fill="#cbd5e1" font-size="9.5" font-weight="700" text-anchor="middle">Shift Elapsed Time (Hours) →</text>
     <text transform="rotate(-90)" x="${-(padT + plotH / 2)}" y="13" fill="#cbd5e1" font-size="9" font-weight="700" text-anchor="middle">Cumulative Dose (ppm·h) →</text>
     <!-- Trajectory Polyline -->
-    <polyline points="${polyCoords}" fill="none" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" filter="drop-shadow(0 0 6px #38bdf8)" />
+    <polyline points="${polyCoords}" fill="none" stroke="#f97316" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" filter="drop-shadow(0 0 6px #f97316)" />
     <!-- Circles & Markers -->
     ${circlesSvg}
     ${scanMarkersSvg}
@@ -1565,7 +1636,7 @@ function renderDoseTrajectoryChart(data) {
           const ppm = d.getAttribute("data-ppm");
           tooltip.innerHTML = `
             <strong>Hour ${hr} (${time})</strong><br>
-            <span>Cumulative Dose: <strong style="color:#38bdf8;">${dose} ppm·h</strong></span><br>
+            <span>Cumulative Dose: <strong style="color:var(--accent-mint);">${dose} ppm·h</strong></span><br>
             <span>Instant PPM: <strong>${ppm} ppm</strong></span>
           `;
         } else {
@@ -1575,7 +1646,7 @@ function renderDoseTrajectoryChart(data) {
           tooltip.innerHTML = `
             <strong style="color:#f59e0b;">Scan Event (${time})</strong><br>
             <span>Scan ID: <code>${scanId}</code></span><br>
-            <span>Reading: <strong style="color:#34d399;">${ppm} ppm</strong></span>
+            <span>Reading: <strong style="color:var(--accent-mint);">${ppm} ppm</strong></span>
           `;
         }
         tooltip.style.display = "block";
@@ -1629,25 +1700,25 @@ async function loadBatches() {
         : `<span class="badge-cat badge-red">⚠️ REJECTED</span>`;
 
       const deltaEBadge = b.virgin_baseline_delta_e <= 3.0
-        ? `<span style="color:#34d399; font-weight:700;">ΔE ${b.virgin_baseline_delta_e.toFixed(2)}</span>`
+        ? `<span style="color:var(--accent-mint); font-weight:700;">ΔE ${b.virgin_baseline_delta_e.toFixed(2)}</span>`
         : `<span style="color:#f87171; font-weight:700;">ΔE ${b.virgin_baseline_delta_e.toFixed(2)} (Out of Spec)</span>`;
 
       return `
         <tr>
-          <td><code style="color:#38bdf8; font-weight:700;">${b.batch_id}</code></td>
+          <td><code style="color:var(--accent-mint); font-weight:700;">${b.batch_id}</code></td>
           <td>${b.cast_date}</td>
           <td><span style="color:#e2e8f0;">${b.expiration_date}</span></td>
           <td style="font-size:12px; max-width:180px; color:#94a3b8;">${b.storage_condition}</td>
           <td>${deltaEBadge}</td>
           <td>${qcBadge}</td>
-          <td><strong style="color:${isPassed ? '#34d399' : '#64748b'};">${b.available_strips}</strong> / ${b.total_strips}</td>
+          <td><strong style="color:${isPassed ? 'var(--accent-mint)' : '#64748b'};">${b.available_strips}</strong> / ${b.total_strips}</td>
           <td>
             <div style="display:flex; gap:6px;">
               <button class="btn btn-secondary" style="padding:4px 8px; font-size:11px; color:#f59e0b;" onclick="window.openQCModalForBatch('${b.batch_id}')">
                 🧪 Test QC
               </button>
               ${isPassed ? `
-                <button class="btn btn-secondary" style="padding:4px 8px; font-size:11px; color:#38bdf8; border-color:rgba(56,189,248,0.4);" onclick="window.openWristbandModalForBatch('${b.batch_id}')">
+                <button class="btn btn-secondary" style="padding:4px 8px; font-size:11px; color:var(--accent-primary); border-color:rgba(249,115,22,0.4);" onclick="window.openWristbandModalForBatch('${b.batch_id}')">
                   🪪 Wristband
                 </button>
               ` : `
@@ -1764,9 +1835,9 @@ document.getElementById("btn-execute-batch-qc")?.addEventListener("click", async
     if (qcResultBox) {
       qcResultBox.style.display = "block";
       if (res.passed) {
-        qcResultBox.style.background = "rgba(16, 185, 129, 0.15)";
-        qcResultBox.style.border = "1px solid rgba(16, 185, 129, 0.4)";
-        qcResultBox.style.color = "#34d399";
+        qcResultBox.style.background = "rgba(249, 115, 22, 0.15)";
+        qcResultBox.style.border = "1px solid rgba(249, 115, 22, 0.4)";
+        qcResultBox.style.color = "var(--accent-mint)";
         qcResultBox.innerHTML = `
           <strong>✓ QC PASSED (WITHIN SPECIFICATION)</strong><br>
           Measured Virgin ΔE₀₀ = <strong>${res.virgin_baseline_delta_e}</strong> (Spec limit ≤ ${res.spec_threshold}).<br>
@@ -1884,8 +1955,8 @@ window.openAuditCertificateModal = async function(scanId) {
   try {
     const cert = await API.getAuditCertificate(scanId);
     auditCertContent.innerHTML = `
-      <div style="background:rgba(2,132,199,0.1); border:1px solid rgba(56,189,248,0.3); border-radius:12px; padding:14px; margin-bottom:14px;">
-        <div style="color:#38bdf8; font-weight:800; font-size:11px; letter-spacing:1px; margin-bottom:4px;">CRYPTOGRAPHIC DIGITAL SEAL</div>
+      <div style="background:linear-gradient(135deg, rgba(249,115,22,0.15), rgba(225,29,72,0.08)); border:1px solid rgba(249,115,22,0.4); border-radius:12px; padding:14px; margin-bottom:14px;">
+        <div style="color:var(--accent-mint); font-weight:800; font-size:11px; letter-spacing:1px; margin-bottom:4px;">CRYPTOGRAPHIC DIGITAL SEAL</div>
         <div style="font-family:'JetBrains Mono'; font-size:13px; color:#ffffff; font-weight:700;">${cert.cryptographic_seal}</div>
         <div style="font-size:11px; color:#94a3b8; margin-top:4px;">Algorithm: ${cert.hash_algorithm} • Certified Immutable Proof</div>
       </div>
@@ -1897,12 +1968,12 @@ window.openAuditCertificateModal = async function(scanId) {
         </div>
         <div class="glass-card" style="padding:10px;">
           <span style="font-size:10px; color:var(--text-muted); text-transform:uppercase;">PPM Reading & Exposure</span>
-          <div style="font-weight:700; color:#38bdf8; font-size:13px;">${cert.predicted_ppm} ppm • ${cert.exposure_level}</div>
+          <div style="font-weight:700; color:var(--accent-mint); font-size:13px;">${cert.predicted_ppm} ppm • ${cert.exposure_level}</div>
         </div>
       </div>
 
-      <div style="background:#0f172a; border:1px solid #334155; border-radius:10px; padding:12px; margin-bottom:14px; font-size:12px; display:flex; flex-direction:column; gap:6px;">
-        <div><span style="color:#94a3b8;">Raw Optical Image Hash (SHA-256):</span><br><strong style="font-family:'JetBrains Mono'; color:#38bdf8; font-size:11px; word-break:break-all;">${cert.raw_image_hash}</strong></div>
+      <div style="background:#13151f; border:1px solid rgba(249,115,22,0.25); border-radius:10px; padding:12px; margin-bottom:14px; font-size:12px; display:flex; flex-direction:column; gap:6px;">
+        <div><span style="color:#94a3b8;">Raw Optical Image Hash (SHA-256):</span><br><strong style="font-family:'JetBrains Mono'; color:var(--accent-mint); font-size:11px; word-break:break-all;">${cert.raw_image_hash}</strong></div>
         <div><span style="color:#94a3b8;">Vision Pipeline Version:</span> <strong style="color:#fff;">${cert.pipeline_version}</strong></div>
         <div><span style="color:#94a3b8;">Certified Calibration Curve:</span> <strong style="color:#fff;">${cert.calibration_version} (${cert.calibration_curve_id})</strong></div>
         <div><span style="color:#94a3b8;">Physical Strip / Batch:</span> <strong style="color:#fff;">${cert.strip_id} (Lot: ${cert.strip_batch})</strong></div>
@@ -1968,5 +2039,6 @@ function applyRBACOverlay(role) {
 
 // Initial Load
 document.addEventListener("DOMContentLoaded", () => {
+  initTheme();
   loadDashboard();
 });
